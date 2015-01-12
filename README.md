@@ -10,7 +10,7 @@ After downloading the files, open the OpenBCI_RFduino_Library file and move the 
 on Mac, right click the Arduino 1.5.x IDE and select Show Contents.
 Then place the file in
 
-/Applications/Arduino 154.app/Contents/Resources/Java/hardware
+/Applications/Arduino 154.app/Contents/Resources/Java/hardware/arduino
 
 
 on Windows
