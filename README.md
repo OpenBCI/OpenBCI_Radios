@@ -16,6 +16,6 @@ Then place the file in
 on Windows
 Place the file in 
 
-C\Arduino-1.5.x\hardware\arduino
+C\ProgramFiles (x86)\Arduino-1.5.x\hardware\arduino
 
 Install the FTDI drivers from here [FTDI Drivers](www.ftdichip.com/drivers/vcp.htm)
