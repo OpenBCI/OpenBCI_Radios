@@ -19,3 +19,8 @@ Place the file in
 C\ProgramFiles (x86)\Arduino-1.5.x\hardware\arduino
 
 Install the FTDI drivers from here [FTDI Drivers](www.ftdichip.com/drivers/vcp.htm)
+
+# OpenBCI_Donlge_PassThru
+The PassThru code is used to program the Dongle and use it to then program the Device radio on the OpenBCI board.
+There is a tutorial that describes the process here
+http://docs.openbci.com/tutorials/03-Upload_Code_to_OpenBCI_Dongle
