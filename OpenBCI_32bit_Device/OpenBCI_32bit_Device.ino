@@ -38,13 +38,12 @@ int packetsReceived = 0;              // used to count incoming packets
 boolean radioToSend = false;          // set when radio data is ready to go to serial
 
 unsigned long lastPoll;         // used to time null message to host
-unsigned int pollTime = 50;       // time between polls when idling
-// GPIO5 connected to PGC (D12 pin on chipKIT) which goes HIGH while PIC32 is in bootloader mode
-int PGCpin = 5;        // used to sense if chipKIT is in bootloader mode
-int PGCpinState;
-int lastPGCpinState;
-char inBoot[1] = {'9'};
-char outBoot[1] = {'('};
+unsigned int pollTime = 60;       // time between polls when idling
+int PGCpin = 5;        // this is not used
+//int PGCpinState;
+//int lastPGCpinState;
+//char inBoot[1] = {'9'};
+//char outBoot[1] = {'('};
 boolean inBootLoaderMode = false;    // uploading flag
 // streaming data stuff, 
 boolean firstStreamingByte = false; // used to get the checkSum (first byte in streaming serial)
@@ -61,16 +60,13 @@ int bytesInPacket;
 
 
 void setup(){
-  RFduinoGZLL.channel = 3;     // use channels 2-25
+  RFduinoGZLL.channel = 18;     // use channels 2-25
   RFduinoGZLL.begin(role);      // start the Gazelle stack
   pinMode(PGCpin,INPUT);        // feel the state of the PIC with this pin
   Serial.begin(115200,3,2);     // start the serial port, rx = GPIO3, tx = GPIO2
   
   initBuffer();
-  PGCpinState = lastPGCpinState = digitalRead(PGCpin); // prime the pinState variables
   lastPoll = millis();          // start Device poll timer
-  
-
   
 }
 
@@ -111,19 +107,6 @@ void loop(){
       lastPoll = millis();          // reset timer for next poll time
   }
 
-PGCpinState = digitalRead(PGCpin);
-if(PGCpinState != lastPGCpinState){
-  delay(5); // debounce
-  if(PGCpinState == LOW){
-    inBootLoaderMode = false;
-    RFduinoGZLL.sendToHost(outBoot,1);
-  }else{
-    inBootLoaderMode = true;
-    RFduinoGZLL.sendToHost(inBoot,1);
-  }
-  lastPGCpinState = PGCpinState;
-}
-
 if(Serial.available()){
   
 if(streamingData){    // if we are streaming data
@@ -147,7 +130,6 @@ if(streamingData){    // if we are streaming data
   else
   { 
   while(Serial.available() > 0){          // while the serial is active
-//    serialTimeOut();                  // go get 'em!  MAY NEED TO DITCH THIS FOR THE BELOWx
     serialBuffer[bufferLevel][serialIndex[bufferLevel]] = Serial.read();    
     serialIndex[bufferLevel]++;           // count up the buffer size
     if(serialIndex[bufferLevel] == 32){	  // when the buffer is full,
@@ -172,13 +154,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len)
     sendSerialToRadio();
   }      
 
-  if(!inBootLoaderMode){
     if(len == 4){   // single byte messages from PC is special for uC
       if((data[1] == '+') && (data[3] == '+')){
         testSecondRadioByte(data[2]);    // sniff special character for uC state
       }
     }
-  }
   
   if(len > 0){                    // we got a packet!!
     int startIndex = 0;	          // get ready to read this packet from 0
@@ -199,8 +179,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len)
       RFduinoGZLL.sendToHost(NULL,0);     // poll host for next packet
     }
   }
-//   RFduinoGZLL.sendToHost(NULL,0);
-//   lastPoll = millis();  // this might cause something? // whenever we get an ACK, reset the lastPoll time ?
 }
 
 
@@ -212,15 +190,8 @@ void sendSerialToRadio(){  // put a <=32 byte buffer on the radio in normal mode
     bufferLevel = 0;                        // initialize bufferLevel
     initBuffer();                           // initialize bufffer
   }
+  lastPoll = millis();
 }
-    
-//void serialTimeOut(){     // used in normal mode to receive serial bytes
-//  serialBuffer[bufferLevel][serialIndex[bufferLevel]] = Serial.read();    
-//  serialIndex[bufferLevel]++;           // count up the buffer size
-//  if(serialIndex[bufferLevel] == 32){	  // when this buffer is full,
-//    bufferLevel++;			                // next buffer please
-//  }  // if we just got the last byte, and advanced the bufferLevel, the serialTimeout will catch it 
-//}
 
   
 void streamSerialBytes(){   // used in streamingData mode to receive serial bytes

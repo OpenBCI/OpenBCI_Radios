@@ -52,12 +52,9 @@ int packetCount = 0;                    // used to keep track of packets in rece
 int packetsReceived = 0;                // used to count incoming packets
 boolean radioToSend = false;            // set to send data from Device
 int resetPin = 6;                       // GPIO6 connected to Arduino MCLR pin through 0.1uF 
-int resetPinValue;                      // used to hold digitalReadin
-int lastResetPinValue;                  // used to find rising/falling edge
+int resetPinValue;                      // this is not used
 char RFmessage[1];                      // can't get on the radio without an array
 boolean sendRFmessage = false;          // flag to send radio to radio message
-boolean inBootLoaderMode = false;
-boolean deviceInBoot = false;
 
 boolean streamingData = false;          // flag to get into streamingData mode
 int numBytes;                           // counter for receiving/sending stream
@@ -68,14 +65,13 @@ unsigned long streamingIdleTimer;	// used to escape streamingData mode
 
 
 void setup(){
-  RFduinoGZLL.channel = 3;  // use 2 to 25
+  RFduinoGZLL.channel = 18;  // use 2 to 25
   RFduinoGZLL.begin(role);   // start the GZLL stack
   Serial.begin(115200);      // start the serial port
   
   initBuffer();  // prime the serialBuffer
   
   pinMode(resetPin,INPUT);  // DTR from FTDI routed to GPIO6 through slide switch
-  lastResetPinValue = digitalRead(resetPin);  // prime lastResetPinValue
   pinMode(LED,OUTPUT);    // blue LED on GPIO2
   digitalWrite(LED,HIGH); // trun on blue LED!
   
@@ -84,28 +80,16 @@ void setup(){
 
 
 void loop(){
-  
-  resetPinValue = digitalRead(resetPin);
-  if(resetPinValue != lastResetPinValue){
-    if(resetPinValue == LOW){
-      if(deviceInBoot) {inBootLoaderMode = true;}  // only go inBootLoaderMode when PIC is also
-    }else{  // FTDI sets the DTR pin low when serial port is open (terminal software, apps, etc)
-      inBootLoaderMode = false; 
-    }
-    lastResetPinValue = resetPinValue;
-  }
 
   if(serialTiming){                   // if the serial port is active
     if(millis() - serialTimer > 3){   // check for idle time out
       serialTiming = false;	      // clear serialTiming flag
-      if(!inBootLoaderMode){          // don't sniff the serial if we're inBootLoaderMode
         if(serialIndex[0] == 2){      // single byte messages from uC are special we need to burgerize them
           testSerialByte(serialBuffer[0][1]);       // could be command to streamData, go sniff it
           serialBuffer[0][2] = serialBuffer[0][1];  // move the command byte into patty position
           serialBuffer[0][1] = serialBuffer[0][3] = '+';  // put the buns around the patty
           serialIndex[0] = 4;                       // now we're sending the burger protocol
         }                                           // if we started a buffer and didn't add any bytes,
-      }
       if(serialIndex[bufferLevel] == 0){bufferLevel--;}   // don't send more buffers than we have!
       serialBuffer[0][0] = bufferLevel +1;  // drop the packet count into zero position (Device knows where to find it)
       serialBuffCounter = 0;              // get ready to count the number of packets we send
@@ -167,13 +151,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len){
         initBuffer();                           // initialize serialBuffer
       }
     }
-    
-    if(len == 1){  // radios send messages to eachother in single byte packets
-      if(data[0] == '9') {deviceInBoot = true;} 
-      if(data[0] == '(') {deviceInBoot = false;} 
-      return;
-    }
-    
+        
     if(len > 0){
       int startIndex = 0;	// get ready to read this packet   
       if(packetCount == 0){	// if this is the first packet in transaction  
@@ -182,7 +160,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len){
       }		
       for(int i = startIndex; i < len; i++){
             radioBuffer[radioIndex] = data[i];  // retrieve the packet
-            radioIndex++; if(radioIndex == radioBuffMax){radioIndex = 0;}
+            radioIndex++; if(radioIndex == radioBuffMax){radioIndex = 0;}// ring
           }
           packetsReceived++;
           if(packetsReceived == packetCount){	// we got all the packets
