@@ -5,7 +5,7 @@ Current release of OpenBCI uses RFduino radio modules
 http://www.rfduino.com/product/rfd22301-rfduino-ble-smt/index.html
 The RFduino libraries contained here are custom builds for OpenBCI specifically. You must use these libraries to modify or update the Host/Device firmware.
 
-## FOR BEST RESULTS, WE RECOMMEND USING ARDUINO IDE VERSION 1.5.8
+## WE RECOMMEND USING ARDUINO IDE VERSION 1.5.8
 
 After downloading the files in this repo, open the OpenBCI_RFduino_Library file and move the RFduino folder to the following location:
 
