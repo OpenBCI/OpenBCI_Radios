@@ -1,0 +1,24 @@
+16:43:24 **** Incremental Build of configuration Debug for project OpenBCI_Radio_Tests ****
+make all 
+Building file: ../test/OpenBCI_Radio_ClassTest.cpp
+Invoking: GCC C++ Compiler
+g++ -I"/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/external" -I"/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/src" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"test/OpenBCI_Radio_ClassTest.d" -MT"test/OpenBCI_Radio_ClassTest.o" -o "test/OpenBCI_Radio_ClassTest.o" "../test/OpenBCI_Radio_ClassTest.cpp"
+In file included from ../test/OpenBCI_Radio_ClassTest.cpp:2:
+/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/src/OpenBCI_Radio.h:31:3: error: unknown type name 'boolean'
+  boolean begin(uint8_t mode = OPENBCI_MODE_DEVICE,int8_t channelNumber);
+  ^
+/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/src/OpenBCI_Radio.h:41:17: warning: in-class initialization of non-static data member is a C++11 extension [-Wc++11-extensions]
+  int8_t PGCpin = 5; // This is not used
+                ^
+/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/src/OpenBCI_Radio.h:31:32: error: use of undeclared identifier 'OPENBCI_MODE_DEVICE'
+  boolean begin(uint8_t mode = OPENBCI_MODE_DEVICE,int8_t channelNumber);
+                               ^
+/Users/ajk/BCI/OpenBCI_Radios/OpenBCI_Radio/OpenBCI_Radio_Tests/src/OpenBCI_Radio.h:43:2: error: expected ';' after class
+}
+ ^
+ ;
+1 warning and 3 errors generated.
+make: *** [test/OpenBCI_Radio_ClassTest.o] Error 1
+
+16:43:24 Build Finished (took 486ms)
+

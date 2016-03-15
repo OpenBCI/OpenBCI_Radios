@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;OpenBCI_Radio_Tests/test/main&apos; to &apos;main.cpp&apos;" description="Rename resource &apos;main&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="test/main" name="main.cpp" stamp="1458070742545" updateReferences="true"/>
+</session>
