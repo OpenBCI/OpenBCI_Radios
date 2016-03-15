@@ -1,0 +1,25 @@
+#######################################
+# Syntax Coloring Map SD
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+OpenBCI_Radio	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+begin		KEYWORD2
+readRadio	KEYWORD2
+readSerial	KEYWORD2
+writeRadio	KEYWORD2
+writeSerial	KEYWORD2	
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+OPENBCI_MODE_DEVICE	LITERAL1
+OPENBCI_MODE_HOST	LITERAL1
+OPENBCI_MODE_PASS_THRU	LITERAL1
