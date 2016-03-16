@@ -38,34 +38,40 @@ private:
   } PacketBuffer;
 
   typedef struct {
-    PacketBuffer buffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
-    int   numberOfPackets;
+    int           numberOfPacketsToSend;
+    int           numberOfPacketsSent;
+    PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
   } Buffer;
 
   // METHODS
+  void bufferCleanChar(char *buffer, int bufferLength);
+  void bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+  void bufferCleanBuffer(Buffer *buffer);
+  void bufferCleanRadio(void);
+  void bufferCleanSerial(void);
   void configure(uint8_t mode,int8_t channelNumber);
   void configureDevice(void);
   void configureHost(void);
   void configurePassThru(void);
-  void bufferClean(char *buffer, int bufferLength);
-  // void bufferCleanRadio(void);
-  // void bufferCleanSerial(void);
-  void bufferCleanPacketBuffer(PacketBuffer *buffer, int numberOfBuffers);
   boolean readSerialDevice(void);
   boolean readSerialHost(void);
   void writeSerialDevice(void);
   void writeSerialHost(void);
 
   // VARIABLES
-  // char bufferRadio[OPENBCI_BUFFER_LENGTH];
-  // char bufferSerial[OPENBCI_BUFFER_LENGTH];
-  // int bufferPositionReadRadio;
-  // int bufferPositionReadSerial;
-  // int bufferPositionWriteRadio;
-  // int bufferPositionWriteSerial;
-  Buffer bufferRadio;
+  char bufferRadio[OPENBCI_BUFFER_LENGTH];
+  int bufferPacketsReceived;
+  int bufferPacketsToReceive;
+  int bufferPositionReadRadio;
+  int bufferPositionWriteRadio;
+
   Buffer bufferSerial;
+  PacketBuffer *currentPacketBufferSerial;
+
+
   unsigned long timeOfLastPoll;
+  unsigned long timeOfLastSerialRead;
+
   uint8_t radioMode;
 
 

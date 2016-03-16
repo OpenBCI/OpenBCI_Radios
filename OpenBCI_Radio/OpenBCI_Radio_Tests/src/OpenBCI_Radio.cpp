@@ -47,12 +47,20 @@ boolean OpenBCI_Radio::begin(unint8_t mode, int8_t channelNumber) {
 
 /**
 * @description: Check to see if there is data in the bufferRadio. This function
-*                 is intended to be called in the loop()
-* @return: Returns a TRUE if there is data and FALSE if not
+*                 is intended to be called in the loop(). check and see if we
+*                 are ready to send data from the bufferRadio. We should only
+*                 send data when we are sure we got all the packets from
+*                 RFduinoGZLL_onReceive()
+* @return: Returns a TRUE if got all the packets and FALSE if not
 * @author: AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radio::readRadio(void) {
-
+  // Check to see if we got all the packets
+  if (bufferPacketsToReceive == bufferPacketsReceived) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**
@@ -77,7 +85,14 @@ boolean OpenBCI_Radio::readSerial(void) {
 * @author: AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio::writeRadio(void) {
-
+  // How many bytes do we need to send?
+  // Let's just send till we hit the write position
+  while (bufferPositionReadRadio < bufferPositionWriteRadio) {
+    Serial.write(bufferRadio[bufferPositionReadRadio]);
+    bufferPositionReadRadio++;
+  }
+  bufferPositionWriteRadio = 0;
+  bufferPositionReadRadio = 0;
 }
 
 /**
@@ -87,7 +102,16 @@ void OpenBCI_Radio::writeRadio(void) {
 * @author: AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio::writeSerial(void) {
-
+  switch (radioMode) {
+    case OPENBCI_MODE_HOST:
+      writeSerialHost();
+      break;
+    case OPENBCI_MODE_DEVICE:
+      writeSerialDevice():
+      break;
+    default:
+      break;
+  }
 }
 
 /***************************************************/
@@ -108,7 +132,7 @@ void OpenBCI_Radio::bufferCleanChar(char *buffer, int bufferLength) {
 * @description: Private function to clean a PacketBuffer.
 * @author: AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radio::bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets) {
+void OpenBCI_Radio::bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPacketsToSend) {
   for(int i = 0; i < numberOfPackets; i++) {
     packetBuffer[i].positionRead = 0;
     packetBuffer[i].positionWrite = 0;
@@ -122,7 +146,8 @@ void OpenBCI_Radio::bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numbe
 */
 void OpenBCI_Radio::bufferCleanBuffer(Buffer *buffer) {
   bufferCleanPacketBuffer(buffer.packetBuffer,OPENBCI_MAX_NUMBER_OF_BUFFERS);
-  buffer.numberOfPackets = 0;
+  buffer.numberOfPacketsToSend = 0;
+  buffer.numberOfPacketsSent = 0;
 }
 
 /**
@@ -130,7 +155,11 @@ void OpenBCI_Radio::bufferCleanBuffer(Buffer *buffer) {
 * @author: AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio::bufferCleanRadio(void) {
-  bufferCleanBuffer(bufferRadio);
+  bufferCleanChar(bufferRadio,OPENBCI_BUFFER_LENGTH);
+  bufferPacketsReceived = 0;
+  bufferPacketsToReceive = 0;
+  bufferPositionReadRadio = 0;
+  bufferPositionWriteRadio = 0;
 }
 
 /**
@@ -238,7 +267,9 @@ boolean OpenBCI_Radio::readSerialHost(void) {
 
 /**
 * @description: Private function to read data from serial port and write into
-*                 the bufferSerial
+*                 the bufferSerial. The important thing to note here is that
+*                 this function stores the incoming data into groups of 32 for
+*                 O(1) time to send data over the radio
 * @author: AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio::writeSerialHost(void) {
@@ -246,16 +277,19 @@ void OpenBCI_Radio::writeSerialHost(void) {
   //  Serial.available() every loop
   int numberOfBytesToRead = Serial.available();
 
+  // Set the number of packets to 1 initally, it will only grow
+  bufferSerial.numberOfPacketsToSend = 1;
+
   // We are going to call Serial.read() as many times as there are bytes on the
   //  buffer, on each call we are going to insert into
   while (numberOfBytesToRead > 0) {
 
-    // If bufferPositionWriteSerial >= OPENBCI_BUFFER_LENGTH need to wrap around
-    if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
+    // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
+    if (currentPacketBufferSerial.positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
       // Go to the next packet
-      bufferSerial->numberOfPackets++;
+      bufferSerial.numberOfPacketsToSend++;
       // Did we run out of buffers?
-      if (bufferSerial->numberOfPackets >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+      if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
         // this is bad, so something, throw error, explode... idk yet...
         //  for now set currentPacketBufferSerial to NULL
         currentPacketBufferSerial = NULL;
@@ -265,13 +299,75 @@ void OpenBCI_Radio::writeSerialHost(void) {
       }
     }
 
-    // Store the byte to current buffer at write postition 
-    currentPacketBufferSerial.data[currentPacketBufferSerial->positionWrite] = Serial.read();
+    // We are only going to mess with the current packet if it's not null
+    if (currentPacketBufferSerial) {
+      // Store the byte to current buffer at write postition
+      currentPacketBufferSerial.data[currentPacketBufferSerial.positionWrite] = Serial.read();
 
-    // Increment currentPacketBufferSerial write postion
-    currentPacketBufferSerial->positionWrite++;
+      // Increment currentPacketBufferSerial write postion
+      currentPacketBufferSerial.positionWrite++;
+    }
 
     // Decrement the number of Bytes to read
     numberOfBytesToRead--;
+  }
+
+  // Save the time this finished execution
+  timeOfLastSerialRead = millis();
+}
+
+
+
+/***************************************************/
+/** RFDUINOGZLL DELEGATE ***************************/
+/***************************************************/
+void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+
+  // Is this the first packet we are receiving?
+  if (bufferPacketsToReceive == 0) {
+    bufferPacketsToReceive = data[i];
+  }
+
+  // Increment the packets recieved, because every time this function gets
+  //  called, we are getting a packet.
+  bufferPacketsReceived++;
+
+  // Write *data to bufferRadio right away
+  for (int i = 0; i < len; i++) {
+    // Check to see if we reached the end of the buffer
+    if (bufferPositionWriteRadio >= OPENBCI_BUFFER_LENGTH) {
+      // Eject! Mark this data ready to go and get out of here!
+      bufferPacketsReceived = bufferPacketsToReceive;
+    } else { // There is room!
+      // #SaveThatData
+      bufferRadio[bufferPositionWriteRadio] = data[i];
+      // Increment the write position
+      bufferPositionWriteRadio++;
+    }
+  }
+
+
+  // Is there data in bufferSerial?
+  if (bufferSerial.numberOfPacketsToSend > 0) {
+    // Has enough time passed?
+    if (timeOfLastSerialRead > OPENBCI_MAX_SERIAL_TIMEOUT_MS) {
+      // Do we still have packets to send?
+      if (bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend) {
+        // Grab the packet we want to send
+        PacketBuffer *packetToSend = bufferSerial.packetBuffer[bufferSerial.numberOfPacketsSent];
+
+        if (radioMode == OPENBCI_MODE_HOST) {
+          // Send it to the device
+          RFduinoGZLL.sendToDevice(device,packetToSend.data, packetToSend.positionWrite);
+        } else {
+          // Send it to the device
+          RFduinoGZLL.sendToHost(NULL,0);
+
+        }
+
+        // Increment the number of packets we have sent
+        bufferSerial.numberOfPacketsSent++;
+      }
+    }
   }
 }

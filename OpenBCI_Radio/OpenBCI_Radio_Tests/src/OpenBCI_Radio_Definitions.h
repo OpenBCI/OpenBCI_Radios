@@ -16,9 +16,10 @@
 // These are helpful maximums to reference nad use in the code
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
 #define OPENBCI_MAX_NUMBER_OF_BUFFERS 20
+#define OPENBCI_MAX_SERIAL_TIMEOUT_MS 3
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH 512
+#define OPENBCI_BUFFER_LENGTH 640
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
