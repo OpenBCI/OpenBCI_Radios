@@ -25,24 +25,49 @@ class OpenBCI_Radio {
 public:
   OpenBCI_Radio();
   boolean begin(uint8_t mode = OPENBCI_MODE_DEVICE,int8_t channelNumber);
-  void readSerial(void);
+  boolean readRadio(void);
+  boolean readSerial(void);
+  void writeRadio(void);
+  void writeSerial(void);
 private:
   // STRUCTS
   typedef struct {
-    char data[OPENBCI_MAX_PACKET_SIZE_BYTES];
-    int readPosition;
+    char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
+    int   positionRead;
+    int   positionWrite;
   } PacketBuffer;
 
+  typedef struct {
+    PacketBuffer buffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
+    int   numberOfPackets;
+  } Buffer;
+
   // METHODS
+  void configure(uint8_t mode,int8_t channelNumber);
   void configureDevice(void);
   void configureHost(void);
   void configurePassThru(void);
-  void bufferReset(PacketBuffer *buffer, int numberOfBuffers);
-  void initialize(uint8_t mode,int8_t channelNumber);
+  void bufferClean(char *buffer, int bufferLength);
+  // void bufferCleanRadio(void);
+  // void bufferCleanSerial(void);
+  void bufferCleanPacketBuffer(PacketBuffer *buffer, int numberOfBuffers);
+  boolean readSerialDevice(void);
+  boolean readSerialHost(void);
+  void writeSerialDevice(void);
+  void writeSerialHost(void);
 
   // VARIABLES
-  PacketBuffer bufferArray[OPENBCI_MAX_NUMBER_OF_BUFFERS];
-  unsigned long timerLastPoll;
+  // char bufferRadio[OPENBCI_BUFFER_LENGTH];
+  // char bufferSerial[OPENBCI_BUFFER_LENGTH];
+  // int bufferPositionReadRadio;
+  // int bufferPositionReadSerial;
+  // int bufferPositionWriteRadio;
+  // int bufferPositionWriteSerial;
+  Buffer bufferRadio;
+  Buffer bufferSerial;
+  unsigned long timeOfLastPoll;
+  uint8_t radioMode;
+
 
 }
 #endif // OPENBCI_RADIO_H
