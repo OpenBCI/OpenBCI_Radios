@@ -17,28 +17,73 @@
 #ifndef __OpenBCI_Radio__
 #define __OpenBCI_Radio__
 
-#define PROD_MODE false
-
-#if PROD_MODE
-	#include <WProgram.h>
-	#include <RFduinoGZLL.h>
-#endif
+#include <Arduino.h>
+#include <RFduinoGZLL.h>
+// needed for enum and callback support
+// #include "libRFduinoGZLL.h"
 #include "OpenBCI_Radio_Definitions.h"
 
 class OpenBCI_Radio {
+
 public:
   OpenBCI_Radio();
-  boolean begin(uint8_t mode = OPENBCI_MODE_DEVICE,int8_t channelNumber);
+  boolean begin(uint8_t mode,int8_t channelNumber);
+  boolean readRadio(void);
+  boolean readSerial(void);
+  void writeRadio(void);
+  void writeSerial(void);
+
+
+  void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
+
 private:
+  // STRUCTS
+  typedef struct {
+    char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
+    int   positionRead;
+    int   positionWrite;
+  } PacketBuffer;
+
+  typedef struct {
+    int           numberOfPacketsToSend;
+    int           numberOfPacketsSent;
+    PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
+  } Buffer;
+
   // METHODS
+  // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
+  void bufferCleanChar(char *buffer, int bufferLength);
+  void bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+  void bufferCleanBuffer(Buffer *buffer);
+  void bufferCleanRadio(void);
+  void bufferCleanSerial(void);
+  void bufferSerialFetch(void);
+  void configure(uint8_t mode,int8_t channelNumber);
   void configureDevice(void);
   void configureHost(void);
   void configurePassThru(void);
-  void bufferInit(int *buffer);
-  void initialize(uint8_t mode,int8_t channelNumber);
+  boolean readSerialDevice(void);
+  boolean readSerialHost(void);
+  void writeSerialDevice(void);
+  void writeSerialHost(void);
+
 
   // VARIABLES
-  int8_t PGCpin = 5; // This is not used
-  int *mainBuffer;
-}
+  char bufferRadio[OPENBCI_BUFFER_LENGTH];
+  int bufferPacketsReceived;
+  int bufferPacketsToReceive;
+  int bufferPositionReadRadio;
+  int bufferPositionWriteRadio;
+
+  Buffer bufferSerial;
+  PacketBuffer *currentPacketBufferSerial;
+
+
+  unsigned long timeOfLastPoll;
+  unsigned long timeOfLastSerialRead;
+
+  uint8_t radioMode;
+
+
+};
 #endif // OPENBCI_RADIO_H

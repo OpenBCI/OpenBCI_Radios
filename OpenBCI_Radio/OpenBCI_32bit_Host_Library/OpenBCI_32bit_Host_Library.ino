@@ -1,3 +1,4 @@
+#include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"
 
 OpenBCI_Radio Radio; // use 
@@ -17,4 +18,8 @@ void loop() {
   if (Radio.readRadio()) {
     Radio.writeRadio();
   }
+}
+
+void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+  Radio._RFduinoGZLL_onReceive(device,rssi,data,len);
 }
