@@ -19,71 +19,99 @@
 
 #include <Arduino.h>
 #include <RFduinoGZLL.h>
+
 // needed for enum and callback support
 // #include "libRFduinoGZLL.h"
 #include "OpenBCI_Radio_Definitions.h"
 
-class OpenBCI_Radio {
+class OpenBCI_Radio_Class {
 
 public:
-  OpenBCI_Radio();
-  boolean begin(uint8_t mode,int8_t channelNumber);
-  boolean readRadio(void);
-  boolean readSerial(void);
-  void writeRadio(void);
-  void writeSerial(void);
+    // STRUCTS
+    typedef struct {
+      char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
+      int   positionRead;
+      int   positionWrite;
+    } PacketBuffer;
+
+    typedef struct {
+      int           numberOfPacketsToSend;
+      int           numberOfPacketsSent;
+      PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
+    } Buffer;
+
+    OpenBCI_Radio_Class();
+    boolean begin(uint8_t mode,int8_t channelNumber);
+    char    byteIdGetCheckSum(char byteId);
+    boolean byteIdGetIsStream(char byteId);
+    int     byteIdGetPacketNumber(char byteId);
+    byte    byteIdGetStreamPacketType(char byteId);
+    char    checkSumMake(char *data, int length);
+    byte    outputGetStopByteFromByteId(char byteId);
+    void    pollHost(void);
+    void    pollRefresh(void);
+    void    writeStreamPacket(char *data);
+    void    bufferCleanChar(char *buffer, int bufferLength);
+    void    bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+    void    bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean);
+    void    bufferCleanRadio(void);
+    void    bufferCleanSerial(int numberOfPacketsToClean);
+    void    bufferSerialFetch(void);
+    char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+    byte    byteIdMakeStreamPacketType(void);
+    boolean checkSumsAreEqual(char *data, int len);
+    void    configure(uint8_t mode,int8_t channelNumber);
+    void    configureDevice(void);
+    void    configureHost(void);
+    void    configurePassThru(void);
+    boolean pollNow(void);
 
 
-  void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
+    void    writeBufferToSerial(char *buffer,int length);
 
-private:
-  // STRUCTS
-  typedef struct {
-    char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
-    int   positionRead;
-    int   positionWrite;
-  } PacketBuffer;
+    boolean didPCSendDataToHost(void);
+    boolean didPicSendDeviceSerialData(void);
+    boolean didPicSendDeviceAStreamPacket(void);
+    boolean thereIsDataInSerialBuffer(void);
+    boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
+    void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
+    void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    void    sendTheDevicesFirstPacketToTheHost(void);
+    void    writeTheDevicesRadioBufferToThePic(void);
+    void    writeTheHostsRadioBufferToThePC(void);
 
-  typedef struct {
-    int           numberOfPacketsToSend;
-    int           numberOfPacketsSent;
-    PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
-  } Buffer;
+    // VARIABLES
+    Buffer  bufferSerial;
+    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
+    boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
+    char    bufferRadio[OPENBCI_BUFFER_LENGTH];
+    int     bufferPacketsReceived;
+    int     bufferPacketsToReceive;
+    int     bufferPositionReadRadio;
+    int     bufferPositionWriteRadio;
+    int     previousPacketNumber;
+    PacketBuffer *currentPacketBufferSerial;
+    uint8_t radioMode;
+    boolean isHost;
+    boolean isDevice;
+    unsigned long lastTimeNewSerialDataWasAvailable;
+    unsigned long lastTimeHostHeardFromDevice;
+    char *loremIpsum;
+    boolean verbosePrintouts;
+    boolean debugMode;
 
-  // METHODS
-  // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-  void bufferCleanChar(char *buffer, int bufferLength);
-  void bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-  void bufferCleanBuffer(Buffer *buffer);
-  void bufferCleanRadio(void);
-  void bufferCleanSerial(void);
-  void bufferSerialFetch(void);
-  void configure(uint8_t mode,int8_t channelNumber);
-  void configureDevice(void);
-  void configureHost(void);
-  void configurePassThru(void);
-  boolean readSerialDevice(void);
-  boolean readSerialHost(void);
-  void writeSerialDevice(void);
-  void writeSerialHost(void);
-
-
-  // VARIABLES
-  char bufferRadio[OPENBCI_BUFFER_LENGTH];
-  int bufferPacketsReceived;
-  int bufferPacketsToReceive;
-  int bufferPositionReadRadio;
-  int bufferPositionWriteRadio;
-
-  Buffer bufferSerial;
-  PacketBuffer *currentPacketBufferSerial;
+    // METHODS
+    // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
 
 
-  unsigned long timeOfLastPoll;
-  unsigned long timeOfLastSerialRead;
+    // VARIABLES
+    unsigned long timeOfLastPoll;
 
-  uint8_t radioMode;
-
-
+    int8_t radioChannel;
 };
+
+// Very important, major key to success
+extern OpenBCI_Radio_Class OpenBCI_Radio;
+
 #endif // OPENBCI_RADIO_H
