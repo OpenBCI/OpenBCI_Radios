@@ -23,8 +23,8 @@ MIT license
 // CONSTRUCTOR
 OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     // Set defaults
-    mode = OPENBCI_MODE_DEVICE; // Device mode
-    channelNumber = 18; // Channel 18
+    radioMode = OPENBCI_MODE_DEVICE; // Device mode
+    radioChannel = 18; // Channel 18
 }
 
 /***************************************************/
@@ -42,6 +42,7 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
 boolean OpenBCI_Radio_Class::begin(uint8_t mode, int8_t channelNumber) {
     // Save global radio mode
     radioMode = mode;
+    radioChannel = channelNumber;
 
     // configure radio
     configure(mode,channelNumber);
@@ -288,6 +289,8 @@ char OpenBCI_Radio_Class::checkSumMake(char *data, int length) {
     int count;
     unsigned int sum = 0;
 
+    if (data == NULL) return 0x00;
+
     // initialize count to 0
     count = 0;
 
@@ -383,12 +386,6 @@ void OpenBCI_Radio_Class::configurePassThru(void) {
 
 }
 
-void OpenBCI_Radio_Class::readRadioDevice(void) {
-    if (bufferPositionWriteRadio > bufferPositionReadRadio) {
-        return true;
-    }
-}
-
 /**
 * @description Private function to handle a request to read serial as a device
 * @return Returns TRUE if there is data to read! FALSE if not...
@@ -424,7 +421,7 @@ boolean OpenBCI_Radio_Class::readSerialHost(void) {
 */
 void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
     // Create temp char array
-    char temp[OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES];
+    uint8_t temp[OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES];
 
     // Set start byte
     temp[0] = OPENBCI_STREAM_BYTE_START;
@@ -436,7 +433,7 @@ void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
     temp[OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES - 1] = OPENBCI_STREAM_BYTE_STOP;
 
     // Send it!
-    Serial.write(temp,OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES);
+    Serial.write(&temp,(size_t)OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES);
 }
 
 /**

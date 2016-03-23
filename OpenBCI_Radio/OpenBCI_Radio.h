@@ -26,71 +26,73 @@
 class OpenBCI_Radio_Class {
 
 public:
-  OpenBCI_Radio_Class();
-  boolean begin(uint8_t mode,int8_t channelNumber);
-  boolean readRadio(void);
-  boolean readSerial(void);
-  void writeRadio(void);
-  void writeSerial(void);
+    // STRUCTS
+    typedef struct {
+      char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
+      int   positionRead;
+      int   positionWrite;
+    } PacketBuffer;
+
+    typedef struct {
+      int           numberOfPacketsToSend;
+      int           numberOfPacketsSent;
+      PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
+    } Buffer;
+
+    OpenBCI_Radio_Class();
+    boolean   begin(uint8_t mode,int8_t channelNumber);
+    char      byteIdGetCheckSum(char byteId);
+    char      checkSumMake(char *data, int length);
+    boolean   readRadio(void);
+    boolean   readSerial(void);
+    void      writeRadio(void);
+    void      writeSerial(void);
+    void      writeStreamPacket(char *data);
+
+
+    uint8_t radioMode;
 
 
   // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
 
 private:
-  // STRUCTS
-  typedef struct {
-    char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
-    int   positionRead;
-    int   positionWrite;
-  } PacketBuffer;
 
-  typedef struct {
-    int           numberOfPacketsToSend;
-    int           numberOfPacketsSent;
-    PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
-  } Buffer;
-
-  // METHODS
-  // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-  void      bufferCleanChar(char *buffer, int bufferLength);
-  void      bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-  void      bufferCleanBuffer(Buffer *buffer);
-  void      bufferCleanRadio(void);
-  void      bufferCleanSerial(void);
-  void      bufferSerialFetch(void);
-  int       byteIdGetPacketNumber(char byteId);
-  char      byteIdGetCheckSum(char byteId);
-  char      byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
-  boolean   checkSumIsEqual(char checkSum1, char checkSum2);
-  char      checkSumMake(char *data = 'a', int length = 1);
-  void      configure(uint8_t mode,int8_t channelNumber);
-  void      configureDevice(void);
-  void      configureHost(void);
-  void      configurePassThru(void);
-  boolean   readRadioDevice(void);
-  boolean   readSerialDevice(void);
-  boolean   readSerialHost(void);
-  void      writeSerialDevice(void);
-  void      writeSerialHost(void);
+    // METHODS
+    // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
+    void      bufferCleanChar(char *buffer, int bufferLength);
+    void      bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+    void      bufferCleanBuffer(Buffer *buffer);
+    void      bufferCleanRadio(void);
+    void      bufferCleanSerial(void);
+    void      bufferSerialFetch(void);
+    int       byteIdGetPacketNumber(char byteId);
+    char      byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+    boolean   checkSumIsEqual(char checkSum1, char checkSum2);
+    void      configure(uint8_t mode,int8_t channelNumber);
+    void      configureDevice(void);
+    void      configureHost(void);
+    void      configurePassThru(void);
+    boolean   readSerialDevice(void);
+    boolean   readSerialHost(void);
+    void      writeSerialDevice(void);
+    void      writeSerialHost(void);
 
 
-  // VARIABLES
-  char bufferRadio[OPENBCI_BUFFER_LENGTH];
-  int bufferPacketsReceived;
-  int bufferPacketsToReceive;
-  int bufferPositionReadRadio;
-  int bufferPositionWriteRadio;
+    // VARIABLES
+    char bufferRadio[OPENBCI_BUFFER_LENGTH];
+    int bufferPacketsReceived;
+    int bufferPacketsToReceive;
+    int bufferPositionReadRadio;
+    int bufferPositionWriteRadio;
 
-  Buffer bufferSerial;
-  PacketBuffer *currentPacketBufferSerial;
-
-
-  unsigned long timeOfLastPoll;
-  unsigned long timeOfLastSerialRead;
-
-  uint8_t radioMode;
+    Buffer bufferSerial;
+    PacketBuffer *currentPacketBufferSerial;
 
 
+    unsigned long timeOfLastPoll;
+    unsigned long timeOfLastSerialRead;
+
+    int8_t radioChannel;
 };
 
 // Very important, major key to success

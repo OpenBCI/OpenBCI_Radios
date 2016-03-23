@@ -15,7 +15,7 @@ begin		KEYWORD2
 readRadio	KEYWORD2
 readSerial	KEYWORD2
 writeRadio	KEYWORD2
-writeSerial	KEYWORD2	
+writeSerial	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
