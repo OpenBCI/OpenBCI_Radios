@@ -63,9 +63,11 @@ boolean streamToSend = false;           // send radio data to serial port using 
 unsigned long totalPacketsReceived = 0; // used for verbose
 unsigned long streamingIdleTimer;	// used to escape streamingData mode
 
+int maxPacketsDevice = 0;                 // Teh highest number of packets sent in one page
+int maxPacketsHost = 0;                 // Teh highest number of packets sent in one page
 
 void setup(){
-  RFduinoGZLL.channel = 18;  // use 2 to 25
+  RFduinoGZLL.channel = 4;  // use 2 to 25
   RFduinoGZLL.begin(role);   // start the GZLL stack
   Serial.begin(115200);      // start the serial port
 
@@ -132,6 +134,7 @@ void loop(){
       serialIndex[bufferLevel]++;           // count up the buffer size
       if(serialIndex[bufferLevel] == 32){	  // when the buffer is full,
         bufferLevel++;			  // next buffer please
+        if (bufferLevel > maxPacketsHost) maxPacketsHost = bufferLevel;
       }
     }
     serialTiming = true;      // turn on the serial idle timer
@@ -155,8 +158,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len){
 
   if(len > 0){
     int startIndex = 0;	// get ready to read this packet
+    
     if(packetCount == 0){	// if this is the first packet in transaction
       packetCount = data[0];	// get the number of packets to expect in message
+      if (packetCount > maxPacketsDevice) maxPacketsDevice = packetCount;
       startIndex = 1;	// skip the first byte of the first packet when retrieving radio data
     }
     for(int i = startIndex; i < len; i++){
@@ -184,17 +189,22 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len){
 void testSerialByte(char z){
   switch(z){
     case 'b':  // PC wants to stream data
-    streamingData = true;  // enter streaimingData mode
-    streamingIdleTimer = millis();
-    radioIndex = 0;
-    tail = 0;
-    break;
+      streamingData = true;  // enter streaimingData mode
+      streamingIdleTimer = millis();
+      radioIndex = 0;
+      tail = 0;
+      break;
 
     case 's':  // PC sends 's' to stop streaming data
-    streamingData = false;  // get out of streamingData mode
-    radioIndex = 0;         // reset radioBuffer index
-    break;
-
+      streamingData = false;  // get out of streamingData mode
+      radioIndex = 0;         // reset radioBuffer index
+      break;
+    
+    case ',':
+      Serial.print("Max packets sent "); Serial.print(maxPacketsHost);
+      Serial.print("Max packets received "); Serial.print(maxPacketsDevice);
+      break;
+    
     default:
     break;
   }

@@ -14,9 +14,15 @@
 #define __OpenBCI_Radio_Definitions__
 
 // These are helpful maximums to reference nad use in the code
+#define OPENBCI_MAX_DATA_BYTES_IN_PACKET 31
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
+#define OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES 33
 #define OPENBCI_MAX_NUMBER_OF_BUFFERS 20
 #define OPENBCI_MAX_SERIAL_TIMEOUT_MS 3
+
+// Stream byte stuff
+#define OPENBCI_STREAM_BYTE_START 0xA0
+#define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
 #define OPENBCI_BUFFER_LENGTH 640

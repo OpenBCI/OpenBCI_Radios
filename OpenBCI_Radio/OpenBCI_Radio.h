@@ -23,10 +23,10 @@
 // #include "libRFduinoGZLL.h"
 #include "OpenBCI_Radio_Definitions.h"
 
-class OpenBCI_Radio {
+class OpenBCI_Radio_Class {
 
 public:
-  OpenBCI_Radio();
+  OpenBCI_Radio_Class();
   boolean begin(uint8_t mode,int8_t channelNumber);
   boolean readRadio(void);
   boolean readSerial(void);
@@ -34,7 +34,7 @@ public:
   void writeSerial(void);
 
 
-  void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
+  // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
 
 private:
   // STRUCTS
@@ -52,20 +52,26 @@ private:
 
   // METHODS
   // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-  void bufferCleanChar(char *buffer, int bufferLength);
-  void bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-  void bufferCleanBuffer(Buffer *buffer);
-  void bufferCleanRadio(void);
-  void bufferCleanSerial(void);
-  void bufferSerialFetch(void);
-  void configure(uint8_t mode,int8_t channelNumber);
-  void configureDevice(void);
-  void configureHost(void);
-  void configurePassThru(void);
-  boolean readSerialDevice(void);
-  boolean readSerialHost(void);
-  void writeSerialDevice(void);
-  void writeSerialHost(void);
+  void      bufferCleanChar(char *buffer, int bufferLength);
+  void      bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+  void      bufferCleanBuffer(Buffer *buffer);
+  void      bufferCleanRadio(void);
+  void      bufferCleanSerial(void);
+  void      bufferSerialFetch(void);
+  int       byteIdGetPacketNumber(char byteId);
+  char      byteIdGetCheckSum(char byteId);
+  char      byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+  boolean   checkSumIsEqual(char checkSum1, char checkSum2);
+  char      checkSumMake(char *data = 'a', int length = 1);
+  void      configure(uint8_t mode,int8_t channelNumber);
+  void      configureDevice(void);
+  void      configureHost(void);
+  void      configurePassThru(void);
+  boolean   readRadioDevice(void);
+  boolean   readSerialDevice(void);
+  boolean   readSerialHost(void);
+  void      writeSerialDevice(void);
+  void      writeSerialHost(void);
 
 
   // VARIABLES
@@ -86,4 +92,8 @@ private:
 
 
 };
+
+// Very important, major key to success
+extern OpenBCI_Radio_Class OpenBCI_Radio;
+
 #endif // OPENBCI_RADIO_H
