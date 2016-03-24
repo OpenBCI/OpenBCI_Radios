@@ -11,11 +11,18 @@ OpenBCI_Radio	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-begin		KEYWORD2
-readRadio	KEYWORD2
-readSerial	KEYWORD2
-writeRadio	KEYWORD2
-writeSerial	KEYWORD2
+begin							  	KEYWORD2
+didPCSendDataToHost					  	KEYWORD2
+getSerialDataFromPCAndPutItInHostsSerialBuffer		  	KEYWORD2
+isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice 	KEYWORD2
+writeTheHostsRadioBufferToThePC				  	KEYWORD2
+didPicSendDeviceSerialData				  	KEYWORD2
+getSerialDataFromPicAndPutItInTheDevicesSerialBuffer 		KEYWORD2
+thereIsDataInTheDevicesSerialBufferWaitingToGetSentToTheHost 	KEYWORD2
+theLastTimeNewSerialDataWasAvailableWasLongEnough 		KEYWORD2
+sendTheDevicesSerialBufferToTheHost 				KEYWORD2
+isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost 	KEYWORD2
+writeTheDevicesRadioBufferToThePic 				KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

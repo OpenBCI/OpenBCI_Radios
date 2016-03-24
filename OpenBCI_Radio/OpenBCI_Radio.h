@@ -19,6 +19,7 @@
 
 #include <Arduino.h>
 #include <RFduinoGZLL.h>
+
 // needed for enum and callback support
 // #include "libRFduinoGZLL.h"
 #include "OpenBCI_Radio_Definitions.h"
@@ -40,57 +41,65 @@ public:
     } Buffer;
 
     OpenBCI_Radio_Class();
-    boolean   begin(uint8_t mode,int8_t channelNumber);
-    char      byteIdGetCheckSum(char byteId);
-    char      checkSumMake(char *data, int length);
-    boolean   readRadio(void);
-    boolean   readSerial(void);
-    void      writeRadio(void);
-    void      writeSerial(void);
-    void      writeStreamPacket(char *data);
+    boolean begin(uint8_t mode,int8_t channelNumber);
+    int     byteIdGetPacketNumber(char byteId);
+    char    byteIdGetCheckSum(char byteId);
+    char    checkSumMake(char *data, int length);
+    void    pollHost(void);
+    void    pollRefresh(void);
+    // boolean readRadio(void);
+    // boolean readSerial(void);
+    // void    writeRadio(void);
+    // void    writeSerial(void);
+    void    writeStreamPacket(char *data);
+    void    bufferCleanChar(char *buffer, int bufferLength);
+    void    bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
+    void    bufferCleanBuffer(Buffer *buffer);
+    void    bufferCleanRadio(void);
+    void    bufferCleanSerial(void);
+    void    bufferSerialFetch(void);
+    char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+    boolean checkSumIsEqual(char checkSum1, char checkSum2);
+    void    configure(uint8_t mode,int8_t channelNumber);
+    void    configureDevice(void);
+    void    configureHost(void);
+    void    configurePassThru(void);
+    boolean pollNow(void);
 
 
+    void    writeBufferToSerial(char *buffer,int length);
+
+
+
+    boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice(void);
+    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost(void);
+    boolean thereIsDataInTheDevicesSerialBufferWaitingToGetSentToTheHost(void);
+    boolean didPCSendDataToHost(void);
+    boolean didPicSendDeviceSerialData(void);
+    boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
+    void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    void    sendTheDevicesSerialBufferToTheHost(void);
+    void    writeTheDevicesRadioBufferToThePic(void);
+    void    writeTheHostsRadioBufferToThePC(void);
+
+    // VARIABLES
+    Buffer  bufferSerial;
+    char    bufferRadio[OPENBCI_BUFFER_LENGTH];
+    int     bufferPacketsReceived;
+    int     bufferPacketsToReceive;
+    int     bufferPositionReadRadio;
+    int     bufferPositionWriteRadio;
+    PacketBuffer *currentPacketBufferSerial;
     uint8_t radioMode;
-
-
-  // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-
-private:
+    unsigned long lastTimeNewSerialDataWasAvailable;
 
     // METHODS
     // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-    void      bufferCleanChar(char *buffer, int bufferLength);
-    void      bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-    void      bufferCleanBuffer(Buffer *buffer);
-    void      bufferCleanRadio(void);
-    void      bufferCleanSerial(void);
-    void      bufferSerialFetch(void);
-    int       byteIdGetPacketNumber(char byteId);
-    char      byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
-    boolean   checkSumIsEqual(char checkSum1, char checkSum2);
-    void      configure(uint8_t mode,int8_t channelNumber);
-    void      configureDevice(void);
-    void      configureHost(void);
-    void      configurePassThru(void);
-    boolean   readSerialDevice(void);
-    boolean   readSerialHost(void);
-    void      writeSerialDevice(void);
-    void      writeSerialHost(void);
 
 
     // VARIABLES
-    char bufferRadio[OPENBCI_BUFFER_LENGTH];
-    int bufferPacketsReceived;
-    int bufferPacketsToReceive;
-    int bufferPositionReadRadio;
-    int bufferPositionWriteRadio;
-
-    Buffer bufferSerial;
-    PacketBuffer *currentPacketBufferSerial;
-
-
     unsigned long timeOfLastPoll;
-    unsigned long timeOfLastSerialRead;
 
     int8_t radioChannel;
 };

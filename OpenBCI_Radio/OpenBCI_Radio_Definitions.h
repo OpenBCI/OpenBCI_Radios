@@ -25,7 +25,7 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH 640
+#define OPENBCI_BUFFER_LENGTH 500
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
@@ -41,5 +41,11 @@
 // roles for the RFduinoGZLL
 #define RFDUINOGZLL_ROLE_HOST HOST
 #define RFDUINOGZLL_ROLE_DEVICE DEVICE0
+
+// Byte id stuff
+#define OPENBCI_BYTE_ID_RESEND 0xFF
+
+// Poll time out length for sending null packet from device to host
+#define OPENBCI_POLL_TIME_DURATION_MS 50
 
 #endif
