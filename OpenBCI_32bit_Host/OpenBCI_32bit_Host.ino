@@ -35,7 +35,7 @@ Free to use and share. This code presented for use as-is. wysiwyg.
 
 void setup() {
   // put your setup code here, to run once:
-  OpenBCI_Radio.begin(OPENBCI_MODE_HOST,4);
+  OpenBCI_Radio.begin(OPENBCI_MODE_HOST,10);
 }
 
 void loop() {
