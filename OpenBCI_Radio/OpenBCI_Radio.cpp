@@ -393,7 +393,7 @@ void OpenBCI_Radio_Class::bufferCleanChar(char *buffer, int bufferLength) {
 void OpenBCI_Radio_Class::bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets) {
     for(int i = 0; i < numberOfPackets; i++) {
         packetBuffer[i].positionRead = 0;
-        packetBuffer[i].positionWrite = 0;
+        packetBuffer[i].positionWrite = 1;
         bufferCleanChar(packetBuffer[i].data, OPENBCI_MAX_PACKET_SIZE_BYTES);
     }
 }
@@ -485,7 +485,7 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
 * @returns [int] the packetNumber
 */
 int OpenBCI_Radio_Class::byteIdGetPacketNumber(char byteId) {
-    return (int)byteId & 0x78;
+    return (int)((byteId & 0x78) >> 3);
 }
 
 /**
@@ -608,12 +608,12 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // }
 
     /* DEBUG CODE */
-    if (OpenBCI_Radio.radioMode == OPENBCI_MODE_HOST) {
-        if (len > 0) {
+    if (OpenBCI_Radio.radioMode == OPENBCI_MODE_HOST) { // I'm a host!
+        if (len > 1) {
             Serial.print("Host got ");
             Serial.print(len);
             Serial.println(" bytes.");
-            for (int i = 0; i < len; i++) {
+            for (int i = 1; i < len; i++) { // skip the byteId
                 Serial.print(data[i]);
             }
             Serial.print("\n");
@@ -634,9 +634,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             // }
         }
     } else { // I am a device
-        if (len > 0) {
+        if (len > 1) { // byteId is the first one!
             Serial.println("Device got data");
-            OpenBCI_Radio.writeBufferToSerial(data,len);
+            OpenBCI_Radio.writeBufferToSerial(data+1,len);
         }
     }
 
