@@ -21,7 +21,7 @@ Free to use and share. This code presented as-is. No promises!
 
 void setup() {
   // put your setup code here, to run once:
-  OpenBCI_Radio.begin(OPENBCI_MODE_DEVICE,10);
+  OpenBCI_Radio.begin(OPENBCI_MODE_DEVICE,20);
 }
 
 void loop() {
