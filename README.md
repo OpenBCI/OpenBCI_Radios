@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/OpenBCI/OpenBCI_Radios.png?label=ready&title=Ready)](https://waffle.io/OpenBCI/OpenBCI_Radios)
 # OpenBCI_Radios
 Libraries and firmware for OpenBCI Radio Modules
 
