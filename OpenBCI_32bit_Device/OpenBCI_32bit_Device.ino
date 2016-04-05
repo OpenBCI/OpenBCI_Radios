@@ -37,7 +37,7 @@ void loop() {
     }
   }
   
-  if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost()) {
+  if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
     OpenBCI_Radio.writeTheDevicesRadioBufferToThePic();
   }
 }

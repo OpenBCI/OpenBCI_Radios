@@ -166,25 +166,21 @@ void OpenBCI_Radio_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
     // Get everything from the serial port and store to bufferSerial
     bufferSerialFetch();
 
-
-    Serial.print(currentPacketBufferSerial->positionWrite);
-    Serial.println(" bytes in host's bufferSerial!");
-
-    Serial.print(bufferSerial.numberOfPacketsToSend);
-    Serial.println(" packets to send");
-
     // Save the time this finished execution
     lastTimeNewSerialDataWasAvailable = millis();
+
+    // Serial.print(bufferSerial.numberOfPacketsToSend);
+    // Serial.println(" packets to send");
 }
 
-boolean OpenBCI_Radio_Class::isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice(void) {
-    // Check to see if we got all the packets
-    if (bufferPacketsToReceive == bufferPacketsReceived) {
-        return true;
-    } else {
-        return false;
-    }
-}
+// boolean OpenBCI_Radio_Class::isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice(void) {
+//     // Check to see if we got all the packets
+//     if (bufferPacketsToReceive == bufferPacketsReceived) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// }
 
 /**
 * @description Called when readRadio returns true. We always write the contents
@@ -192,16 +188,11 @@ boolean OpenBCI_Radio_Class::isTheHostsRadioBufferFilledWithAllThePacketsFromThe
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
-    while (bufferPositionReadRadio < bufferPositionWriteRadio) {
-        Serial.print("Host print ");
-        Serial.print(bufferPositionWriteRadio - bufferPositionReadRadio);
-        Serial.println(" bytes");
-        // Serial.write(bufferRadio[bufferPositionReadRadio]);
-        bufferPositionReadRadio++;
+    for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
+        Serial.print(OpenBCI_Radio.bufferRadio[j]);
     }
-    // Reset it too
-    bufferPositionReadRadio = 0;
-    bufferPositionWriteRadio = 0;
+    Serial.println();
+    OpenBCI_Radio.bufferCleanRadio();
 }
 
 /********************************************/
@@ -217,8 +208,8 @@ void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
 */
 boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
     if (Serial.available() > 0) {
-        Serial.print("Pic sent device serial data of length ");
-        Serial.println(Serial.available());
+        // Serial.print("Pic sent device serial data of length ");
+        // Serial.println(Serial.available());
         return true;
     } else {
         if (pollNow()) {
@@ -235,6 +226,12 @@ boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
 void OpenBCI_Radio_Class::getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void) {
     // Get everything from the serial port and store to bufferSerial
     bufferSerialFetch();
+
+    // Save the time this finished execution
+    lastTimeNewSerialDataWasAvailable = millis();
+
+    // Serial.print(bufferSerial.numberOfPacketsToSend);
+    // Serial.println(" packets to send");
 }
 
 /**
@@ -280,20 +277,27 @@ void OpenBCI_Radio_Class::sendTheDevicesSerialBufferToTheHost(void) {
 
                 // Send back some data!
                 RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
-                Serial.print("Device sent ");
-                for (int i = 1; i < (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite; i++) {
-                    Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[i]);
-                }
-                // Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
-                Serial.print(" to host with byteId = ");
-                Serial.print(byteId,HEX);
-                Serial.println();
+                // Serial.print("Device sent ");
+                // for (int i = 1; i < (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite; i++) {
+                //     Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[i]);
+                // }
+                // // Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+                // Serial.print(" to host with byteId = ");
+                // Serial.print(byteId,HEX);
+                // Serial.println();
                 // Increment the number of packets we have sent
                 bufferSerial.numberOfPacketsSent++;
+                Serial.print("Sent ");
+                Serial.print(bufferSerial.numberOfPacketsSent);
+                Serial.println(" packets to host");
             }
 
             // Clean bufferSerial
-            bufferCleanSerial();
+            if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend) {
+                // Serial.print("Cleaning Devices's bufferSerial");
+                // Clear buffer
+                bufferCleanSerial();
+            }
         }
     }
     // Refresh the poll timer
@@ -309,14 +313,14 @@ void OpenBCI_Radio_Class::sendTheDevicesSerialBufferToTheHost(void) {
 * @returns: Returns a TRUE if got all the packets and FALSE if not
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radio_Class::isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost(void) {
-    // Check to see if we got all the packets
-    if (bufferPacketsToReceive == bufferPacketsReceived) {
-        return true;
-    } else {
-        return false;
-    }
-}
+// boolean OpenBCI_Radio_Class::isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost(void) {
+//     // Check to see if we got all the packets
+//     if (bufferPacketsToReceive == bufferPacketsReceived) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// }
 
 /**
 * @description Called when readRadio returns true. We always write the contents
@@ -324,13 +328,11 @@ boolean OpenBCI_Radio_Class::isTheDevicesRadioBufferFilledWithAllThePacketsFromT
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio_Class::writeTheDevicesRadioBufferToThePic(void) {
-    while (bufferPositionReadRadio < bufferPositionWriteRadio) {
-        Serial.write(bufferRadio[bufferPositionReadRadio]);
-        bufferPositionReadRadio++;
+    for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
+        Serial.print(OpenBCI_Radio.bufferRadio[j]);
     }
-    // Reset it too
-    bufferPositionReadRadio = 0;
-    bufferPositionWriteRadio = 0;
+    Serial.println();
+    OpenBCI_Radio.bufferCleanRadio();
 }
 
 /********************************************/
@@ -420,6 +422,8 @@ void OpenBCI_Radio_Class::bufferCleanRadio(void) {
     bufferPacketsToReceive = 0;
     bufferPositionReadRadio = 0;
     bufferPositionWriteRadio = 0;
+    isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = false;
+    isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice = false;
 }
 
 /**
@@ -531,12 +535,16 @@ char OpenBCI_Radio_Class::byteIdMake(boolean isStreamPacket, int packetNumber, c
 
 /**
 * @description Convience method to compare two chars for equality
-* @param checkSum1 [char] The first char to compare
-* @param checkSum2 [char] The second char to compare
+* @param data [char *] The data packet from on_recieve
+* @param len [int] The length of data packet
 * @returns boolean if equal
 */
-boolean OpenBCI_Radio_Class::checkSumIsEqual(char checkSum1, char checkSum2) {
-    return checkSum1 == checkSum2;
+boolean OpenBCI_Radio_Class::checkSumsAreEqual(char *data, int len) {
+    char expectedCheckSum = OpenBCI_Radio.byteIdGetCheckSum(data[0]);
+
+    char calculatedCheckSum = OpenBCI_Radio.checkSumMake(data + 1,len - 1);
+
+    return expectedCheckSum == calculatedCheckSum;
 }
 
 /**
@@ -613,25 +621,39 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     /* DEBUG CODE */
     if (OpenBCI_Radio.radioMode == OPENBCI_MODE_HOST) { // I'm a host!
         if (len > 1) {
-            // the checksum from the byteId
-            char expectedCheckSum = OpenBCI_Radio.byteIdGetCheckSum(data[0]);
-            Serial.print("\n\nExpected check sum: "); Serial.println(expectedCheckSum,HEX);
-
-            char calculatedCheckSum = OpenBCI_Radio.checkSumMake(data + 1,len - 1);
-            Serial.print("Calculated check sum: "); Serial.println(calculatedCheckSum,HEX);
-
-            if (expectedCheckSum == calculatedCheckSum) {
-                Serial.println("Check sums are equal!");
-
-                Serial.print("Host got ");
-                Serial.print(len - 1);
-                Serial.println(" bytes of data.");
-                Serial.print("That data is: ");
+            // Verify the checksums are equal
+            if (OpenBCI_Radio.checkSumsAreEqual(data,len)) {
+                // Put data on radio ring buffer
                 for (int i = 1; i < len; i++) { // skip the byteId
-                    Serial.print(data[i]);
+                    if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
+                        OpenBCI_Radio.bufferRadio[OpenBCI_Radio.bufferPositionWriteRadio] = data[i];
+                        OpenBCI_Radio.bufferPositionWriteRadio++;
+                    }
                 }
+
                 int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
-                Serial.print("\nFun fact, the packet number is "); Serial.println(packetNumber);
+
+                if (packetNumber == 0) {
+                    // flag contents of radio buffer to be printed!
+                    OpenBCI_Radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice = true;
+                    Serial.println("Got all packets from device");
+                } else {
+                    // DEBUG code
+                    Serial.print("Need ");
+                    Serial.print(packetNumber);
+                    Serial.println(" packets from device");
+                }
+                // Serial.println("Check sums are equal!");
+                //
+                // Serial.print("Host got ");
+                // Serial.print(len - 1);
+                // Serial.println(" bytes of data.");
+                // Serial.print("That data is: ");
+                // for (int i = 1; i < len; i++) { // skip the byteId
+                //     Serial.print(data[i]);
+                // }
+                // int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
+                // Serial.print("\nFun fact, the packet number is "); Serial.println(packetNumber);
 
 
             } else {
@@ -653,19 +675,19 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             // Serial.print(" bytes to Device");
             RFduinoGZLL.sendToDevice(device,(OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite);
 
-            Serial.print("Host sent ");
-            for (int i = 1; i < (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite; i++) {
-                Serial.print((OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data[i]);
-            }
+            // Serial.print("Host sent ");
+            // for (int i = 1; i < (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite; i++) {
+            //     Serial.print((OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data[i]);
+            // }
             // Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
-            Serial.print(" to device with byteId = ");
-            Serial.print(byteId,HEX);
-            Serial.println();
+            // Serial.print(" to device with byteId = ");
+            // Serial.print(byteId,HEX);
+            // Serial.println();
 
             OpenBCI_Radio.bufferSerial.numberOfPacketsSent++;
 
             if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend) {
-                Serial.print("Cleaning Host's bufferSerial");
+                // Serial.print("Cleaning Host's bufferSerial");
                 // Clear buffer
                 OpenBCI_Radio.bufferCleanSerial();
             }
@@ -676,27 +698,27 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         }
     } else { // I am a device
         if (len > 1) { // byteId is the first one!
-            // the checksum from the byteId
-            char expectedCheckSum = OpenBCI_Radio.byteIdGetCheckSum(data[0]);
-            Serial.print("\n\nExpected check sum: "); Serial.println(expectedCheckSum,HEX);
+            if (OpenBCI_Radio.checkSumsAreEqual(data,len)) {
 
-            char calculatedCheckSum = OpenBCI_Radio.checkSumMake(data + 1,len - 1);
-            Serial.print("Calculated check sum: "); Serial.println(calculatedCheckSum,HEX);
-
-            if (expectedCheckSum == calculatedCheckSum) {
-                Serial.println("Check sums are equal!");
-
-                Serial.print("Device got ");
-                Serial.print(len - 1);
-                Serial.println(" bytes of data.");
-                Serial.print("That data is: ");
+                // Put data on radio ring buffer
                 for (int i = 1; i < len; i++) { // skip the byteId
-                    Serial.print(data[i]);
+                    if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
+                        OpenBCI_Radio.bufferRadio[OpenBCI_Radio.bufferPositionWriteRadio] = data[i];
+                        OpenBCI_Radio.bufferPositionWriteRadio++;
+                    }
                 }
+
                 int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
-                Serial.print("\nFun fact, the packet number is "); Serial.println(packetNumber);
 
-
+                if (packetNumber == 0) {
+                    // flag contents of radio buffer to be printed!
+                    OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = true;
+                } else {
+                    // DEBUG code
+                    // Serial.print("Need ");
+                    // Serial.print(packetNumber);
+                    // Serial.println(" packets from host");
+                }
             } else {
                 Serial.println("Check sums are not equal :(");
             }

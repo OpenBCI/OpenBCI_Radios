@@ -45,7 +45,7 @@ void loop() {
     OpenBCI_Radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
   }
   
-  if (OpenBCI_Radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice()) {
+  if (OpenBCI_Radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
     OpenBCI_Radio.writeTheHostsRadioBufferToThePC();
   }
 }

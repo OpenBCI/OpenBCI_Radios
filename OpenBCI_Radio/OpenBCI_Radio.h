@@ -59,7 +59,7 @@ public:
     void    bufferCleanSerial(void);
     void    bufferSerialFetch(void);
     char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
-    boolean checkSumIsEqual(char checkSum1, char checkSum2);
+    boolean checkSumsAreEqual(char *data, int len);
     void    configure(uint8_t mode,int8_t channelNumber);
     void    configureDevice(void);
     void    configureHost(void);
@@ -69,10 +69,6 @@ public:
 
     void    writeBufferToSerial(char *buffer,int length);
 
-
-
-    boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice(void);
-    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost(void);
     boolean thereIsDataInTheDevicesSerialBufferWaitingToGetSentToTheHost(void);
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
@@ -85,6 +81,8 @@ public:
 
     // VARIABLES
     Buffer  bufferSerial;
+    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
+    boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
     int     bufferPacketsReceived;
     int     bufferPacketsToReceive;
