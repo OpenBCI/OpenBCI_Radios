@@ -69,13 +69,12 @@ public:
 
     void    writeBufferToSerial(char *buffer,int length);
 
-    boolean thereIsDataInTheDevicesSerialBufferWaitingToGetSentToTheHost(void);
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    void    sendTheDevicesSerialBufferToTheHost(void);
+    void    sendTheDevicesFirstPacketToTheHost(void);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
 
