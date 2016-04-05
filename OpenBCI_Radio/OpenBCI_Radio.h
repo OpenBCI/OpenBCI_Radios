@@ -87,9 +87,11 @@ public:
     int     bufferPacketsToReceive;
     int     bufferPositionReadRadio;
     int     bufferPositionWriteRadio;
+    int     previousPacketNumber;
     PacketBuffer *currentPacketBufferSerial;
     uint8_t radioMode;
     unsigned long lastTimeNewSerialDataWasAvailable;
+    char *loremIpsum;
 
     // METHODS
     // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
