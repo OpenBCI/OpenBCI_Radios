@@ -44,6 +44,7 @@ public:
     boolean begin(uint8_t mode,int8_t channelNumber);
     int     byteIdGetPacketNumber(char byteId);
     char    byteIdGetCheckSum(char byteId);
+    boolean byteIdGetIsStream(char byteId);
     char    checkSumMake(char *data, int length);
     void    pollHost(void);
     void    pollRefresh(void);
@@ -90,6 +91,8 @@ public:
     int     previousPacketNumber;
     PacketBuffer *currentPacketBufferSerial;
     uint8_t radioMode;
+    boolean isHost;
+    boolean isDevice;
     unsigned long lastTimeNewSerialDataWasAvailable;
     char *loremIpsum;
 
