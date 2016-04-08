@@ -29,19 +29,15 @@ void loop() {
     
   if (OpenBCI_Radio.didPicSendDeviceSerialData()) {
     OpenBCI_Radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
-    Serial.println("1");
   }
   
   if (OpenBCI_Radio.thereIsDataInSerialBuffer()) {
-    Serial.println("2");
     if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
-      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();   
-      Serial.println("3");      
+      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();       
     }
   }
   
   if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
     OpenBCI_Radio.writeTheDevicesRadioBufferToThePic();
-    Serial.println("4");
   }
 }

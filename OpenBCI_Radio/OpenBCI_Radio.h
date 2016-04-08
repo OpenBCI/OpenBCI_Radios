@@ -98,6 +98,7 @@ public:
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
     char *loremIpsum;
+    boolean verbosePrintouts;
 
     // METHODS
     // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
