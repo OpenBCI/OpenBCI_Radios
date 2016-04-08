@@ -50,6 +50,6 @@
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
 // Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 100
+#define OPENBCI_POLL_TIME_DURATION_MS 50
 
 #endif
