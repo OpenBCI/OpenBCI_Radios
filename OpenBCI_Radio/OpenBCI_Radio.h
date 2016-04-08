@@ -72,7 +72,9 @@ public:
 
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
+    boolean thereIsDataInSerialBuffer(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
     void    sendTheDevicesFirstPacketToTheHost(void);
@@ -94,6 +96,7 @@ public:
     boolean isHost;
     boolean isDevice;
     unsigned long lastTimeNewSerialDataWasAvailable;
+    unsigned long lastTimeHostHeardFromDevice;
     char *loremIpsum;
 
     // METHODS
