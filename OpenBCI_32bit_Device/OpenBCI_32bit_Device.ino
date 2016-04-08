@@ -31,9 +31,9 @@ void loop() {
     OpenBCI_Radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
   }
   
-  if (OpenBCI_Radio.thereIsDataInTheDevicesSerialBufferWaitingToGetSentToTheHost()) {
-    if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
-      OpenBCI_Radio.sendTheDevicesSerialBufferToTheHost();   
+  if (OpenBCI_Radio.thereIsDataInSerialBuffer()) {
+    if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
+      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();       
     }
   }
   

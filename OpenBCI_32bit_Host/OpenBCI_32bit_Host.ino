@@ -48,4 +48,10 @@ void loop() {
   if (OpenBCI_Radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
     OpenBCI_Radio.writeTheHostsRadioBufferToThePC();
   }
+  
+//  if (OpenBCI_Radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
+//    Serial.print("x:");Serial.print(millis());Serial.print(",");Serial.println(OpenBCI_Radio.lastTimeHostHeardFromDevice);
+//  } else {
+//     Serial.println(".."); 
+//  }
 }

@@ -44,6 +44,7 @@ public:
     boolean begin(uint8_t mode,int8_t channelNumber);
     int     byteIdGetPacketNumber(char byteId);
     char    byteIdGetCheckSum(char byteId);
+    boolean byteIdGetIsStream(char byteId);
     char    checkSumMake(char *data, int length);
     void    pollHost(void);
     void    pollRefresh(void);
@@ -71,7 +72,9 @@ public:
 
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
+    boolean thereIsDataInSerialBuffer(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
     void    sendTheDevicesFirstPacketToTheHost(void);
@@ -87,9 +90,15 @@ public:
     int     bufferPacketsToReceive;
     int     bufferPositionReadRadio;
     int     bufferPositionWriteRadio;
+    int     previousPacketNumber;
     PacketBuffer *currentPacketBufferSerial;
     uint8_t radioMode;
+    boolean isHost;
+    boolean isDevice;
     unsigned long lastTimeNewSerialDataWasAvailable;
+    unsigned long lastTimeHostHeardFromDevice;
+    char *loremIpsum;
+    boolean verbosePrintouts;
 
     // METHODS
     // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
