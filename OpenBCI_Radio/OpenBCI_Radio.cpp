@@ -25,6 +25,9 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     // Set defaults
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 18; // Channel 18
+    verbosePrintouts = false;
+    debugMode = false;
+
 }
 
 /**
@@ -65,9 +68,6 @@ void OpenBCI_Radio_Class::configure(uint8_t mode, int8_t channelNumber) {
         bufferCleanRadio();
         bufferCleanSerial();
 
-        // verbose printouts
-        verbosePrintouts = false;
-
         // Diverge program execution based on Device or Host
         switch (mode) {
             case OPENBCI_MODE_DEVICE:
@@ -90,21 +90,23 @@ void OpenBCI_Radio_Class::configureDevice(void) {
 
     // Configure pins
 
-    // BEGIN: To run host normally
-    // pinMode(OPENBCI_PIN_DEVICE_PCG, INPUT); //feel the state of the PIC with this pin
-    // Start the serial connection. On the device we must specify which pins are
-    //    rx and tx, where:
-    //      rx = GPIO3
-    //      tx = GPIO2
-    // Serial.begin(115200, 3, 2);
-    // END: To run host normally
-
-    // BEGIN: To run host as device
-    pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
-    pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
-    digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
-    Serial.begin(115200);
-    // END: To run host as device
+    if (!debugMode) {
+        // BEGIN: To run host normally
+        pinMode(OPENBCI_PIN_DEVICE_PCG, INPUT); //feel the state of the PIC with this pin
+        // Start the serial connection. On the device we must specify which pins are
+        //    rx and tx, where:
+        //      rx = GPIO3
+        //      tx = GPIO2
+        Serial.begin(115200, 3, 2);
+        // END: To run host normally
+    } else { // Dongle to Dongle debug mode
+        // BEGIN: To run host as device
+        pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
+        pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
+        digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
+        Serial.begin(115200);
+        // END: To run host as device
+    }
 
     isHost = false;
     isDevice = true;
@@ -136,8 +138,9 @@ void OpenBCI_Radio_Class::configureHost(void) {
     isHost = true;
     isDevice = false;
 
-    Serial.println("Host radio up");
-
+    if (verbosePrintouts) {
+        Serial.println("Host radio up");
+    }
 }
 
 /**
@@ -197,10 +200,16 @@ void OpenBCI_Radio_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
-    for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
-        Serial.print(OpenBCI_Radio.bufferRadio[j]);
+    if (debugMode) {
+        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
+            Serial.print(OpenBCI_Radio.bufferRadio[j]);
+        }
+        Serial.println();
+    } else {
+        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
+            Serial.write(OpenBCI_Radio.bufferRadio[j]);
+        }
     }
-    Serial.println();
     OpenBCI_Radio.bufferCleanRadio();
 }
 
@@ -320,10 +329,16 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio_Class::writeTheDevicesRadioBufferToThePic(void) {
-    for (int j = 0; j < bufferPositionWriteRadio; j++) {
-        Serial.print(bufferRadio[j]);
+    if (debugMode) {
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.print(bufferRadio[j]);
+        }
+        Serial.println();
+    } else {
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.write(bufferRadio[j]);
+        }
     }
-    Serial.println();
     bufferCleanRadio();
 }
 
