@@ -41,7 +41,6 @@
 // roles for the RFduinoGZLL
 #define RFDUINOGZLL_ROLE_HOST HOST
 #define RFDUINOGZLL_ROLE_DEVICE DEVICE0
-#define RFDUINOGZLL_PACKET_GOOD 0x01
 #define RFDUINOGZLL_PACKET_BAD_CHECK_SUM 0x02 // Bad check sum
 #define RFDUINOGZLL_PACKET_MISSED 0x04 // Missed a packet
 #define RFDUINOGZLL_PACKET_INIT 0x08 // Init packet
@@ -50,6 +49,6 @@
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
 // Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 50
+#define OPENBCI_POLL_TIME_DURATION_MS 55
 
 #endif

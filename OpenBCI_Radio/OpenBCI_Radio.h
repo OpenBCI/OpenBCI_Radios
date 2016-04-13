@@ -55,9 +55,9 @@ public:
     void    writeStreamPacket(char *data);
     void    bufferCleanChar(char *buffer, int bufferLength);
     void    bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-    void    bufferCleanBuffer(Buffer *buffer);
+    void    bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean);
     void    bufferCleanRadio(void);
-    void    bufferCleanSerial(void);
+    void    bufferCleanSerial(int numberOfPacketsToClean);
     void    bufferSerialFetch(void);
     char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
     boolean checkSumsAreEqual(char *data, int len);

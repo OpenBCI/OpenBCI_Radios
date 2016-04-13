@@ -11,8 +11,7 @@ This code uses excessive buffering of Serial and Radio packets
 2D arrays, and ring buffers are used, I think, when streaming data
 Also uses using timout to find end of serial data package
 
-Made by Joel Murphy, Fall 2014
->>>>   THIS IS TEST CODE TO CHASE DOWN THE CRASHING ISSUES WHEN UPLOADING  >>>>
+Made by AJ Keller, Spring 2016
 Free to use and share. This code presented as-is. No promises!
 
 */
