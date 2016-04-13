@@ -782,9 +782,16 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                     OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = true;
                 }
             }
-            if (OpenBCI_Radio.isDevice) {
-                OpenBCI_Radio.pollHost();
+            if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent < OpenBCI_Radio.bufferSerial.numberOfPacketsToSend) {
+                if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
+                    willSendDataFromBufferSerial = true;
+                }
+            } else {
+                if (OpenBCI_Radio.isDevice) {
+                    OpenBCI_Radio.pollHost();
+                }
             }
+
 
             if (OpenBCI_Radio.verbosePrintouts) {
                 Serial.println("S->N");
