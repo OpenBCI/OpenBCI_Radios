@@ -42,16 +42,14 @@ public:
 
     OpenBCI_Radio_Class();
     boolean begin(uint8_t mode,int8_t channelNumber);
-    int     byteIdGetPacketNumber(char byteId);
     char    byteIdGetCheckSum(char byteId);
     boolean byteIdGetIsStream(char byteId);
+    int     byteIdGetPacketNumber(char byteId);
+    byte    byteIdGetStreamPacketType(char byteId);
     char    checkSumMake(char *data, int length);
+    byte    outputGetStopByteFromByteId(char byteId);
     void    pollHost(void);
     void    pollRefresh(void);
-    // boolean readRadio(void);
-    // boolean readSerial(void);
-    // void    writeRadio(void);
-    // void    writeSerial(void);
     void    writeStreamPacket(char *data);
     void    bufferCleanChar(char *buffer, int bufferLength);
     void    bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);

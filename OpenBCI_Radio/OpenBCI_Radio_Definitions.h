@@ -51,4 +51,10 @@
 // Poll time out length for sending null packet from device to host
 #define OPENBCI_POLL_TIME_DURATION_MS 55
 
+// Raw data packet types/codes
+#define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011
+#define OPENBCI_PACKET_TYPE_STANDARD     = 0; // 0000
+#define OPENBCI_PACKET_TYPE_TIME_SYNCED  = 1; // 0001
+#define OPENBCI_PACKET_TYPE_USER_DEFINED = 2; // 0010
+
 #endif

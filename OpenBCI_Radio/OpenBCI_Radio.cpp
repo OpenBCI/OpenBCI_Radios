@@ -221,6 +221,26 @@ boolean OpenBCI_Radio_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
     }
 }
 
+/**
+* @description Sends a data of length 31 to the board in OpenBCI V3 data format
+* @param data [char *] The 32 byte packet buffer
+* @author AJ Keller (@pushtheworldllc)
+*/
+void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
+
+    // Write the start byte
+    Serial.write(OPENBCI_STREAM_BYTE_START);
+
+    // Write the data
+    int positionToStopReading = OPENBCI_MAX_DATA_BYTES_IN_PACKET + 1; // because byteId
+    for (int i = 1; i < positionToStopReading; i++) {
+        Serial.write(data[i]);
+    }
+
+    // Write the stop byte
+    Serial.write(outputGetStopByteFromByteId(data[0]));
+}
+
 /********************************************/
 /********************************************/
 /***********    DEVICE CODE    **************/
@@ -366,29 +386,6 @@ void OpenBCI_Radio_Class::writeBufferToSerial(char *buffer, int length) {
 }
 
 /**
-* @description Sends a data of length 31 to the board in OpenBCI V3 data format
-* @param data [char *] The 31 byte buffer
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
-    // Create temp char array
-    char temp[OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES];
-
-    // Set start byte
-    temp[0] = (char)OPENBCI_STREAM_BYTE_START;
-
-    // Move the bytes from data to temp
-    memcpy(temp + 1, data, OPENBCI_MAX_DATA_BYTES_IN_PACKET);
-
-    // Set stop byte
-    temp[OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES - 1] = (char)OPENBCI_STREAM_BYTE_STOP;
-
-    char *buf = temp;
-    // Send it!
-    writeBufferToSerial(buf,OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES);
-}
-
-/**
 * @description Private function to clear the given buffer of length
 * @author AJ Keller (@pushtheworldllc)
 */
@@ -512,15 +509,6 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
 }
 
 /**
-* @description Strips and gets the packet number from a byteId
-* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
-* @returns [int] the packetNumber
-*/
-int OpenBCI_Radio_Class::byteIdGetPacketNumber(char byteId) {
-    return (int)((byteId & 0x78) >> 3);
-}
-
-/**
 * @description Strips and gets the check sum from a byteId
 * @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [int] the check sum
@@ -536,6 +524,24 @@ char OpenBCI_Radio_Class::byteIdGetCheckSum(char byteId) {
 */
 boolean OpenBCI_Radio_Class::byteIdGetIsStream(char byteId) {
     return byteId > 0x7F;
+}
+
+/**
+* @description Strips and gets the packet number from a byteId
+* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
+* @returns [int] the packetNumber
+*/
+int OpenBCI_Radio_Class::byteIdGetPacketNumber(char byteId) {
+    return (int)((byteId & 0x78) >> 3);
+}
+
+/**
+* @description Strips and gets the packet number from a byteId
+* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
+* @returns [byte] the packet type
+*/
+byte OpenBCI_Radio_Class::byteIdGetStreamPacketType(char byteId) {
+    return (byte)((byteId & 0x78) >> 3);
 }
 
 /**
@@ -622,7 +628,7 @@ void OpenBCI_Radio_Class::pollHost(void) {
 
 /**
 * @description Has enough time passed since the last poll
-* @returns [boolean]
+* @return [boolean]
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radio_Class::pollNow(void) {
@@ -637,6 +643,17 @@ void OpenBCI_Radio_Class::pollRefresh(void) {
     timeOfLastPoll = millis();
 }
 
+/**
+ * @description Takes a byteId and converts to a Stop Byte for a streaming packet
+ * @param `byteId` - [byte] - A byteId with packet type in bits 6-3
+ * @return - [byte] - A stop byte with 1100 as the MSBs with packet type in the
+ *          four LSBs
+ * @example byteId == 0b10111000 returns 0b11000111
+ */
+byte OpenBCI_Radio_Class::outputGetStopByteFromByteId(char byteId) {
+    return byteIdGetStreamPacketType(byteId) | 0xC0;
+}
+
 OpenBCI_Radio_Class OpenBCI_Radio;
 
 
@@ -646,13 +663,11 @@ OpenBCI_Radio_Class OpenBCI_Radio;
 /********************************************/
 /********************************************/
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-
-
-
     char msg[1]; // the message to ack back
     // will either send above message or data from buffer serial
     boolean goodToAddPacketToRadioBuffer = true;
     boolean willSendDataFromBufferSerial = false;
+    boolean willAskIfAnySerialDataToSend = false;
     boolean immediatelySendStreamPacket = false;
     boolean willSendMsg = false;
 
@@ -696,7 +711,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         /**************************************/
         // CANN SEND DATA HERE
         /**************************************/
-        // is it a stream packet?
         boolean gotLastPacket = false;
 
         int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
@@ -752,8 +766,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         }
 
         if (goodToAddPacketToRadioBuffer) {
+            willAskIfAnySerialDataToSend = true;
             if (OpenBCI_Radio.byteIdGetIsStream(data[0])) {
-                // blah do stream stuff
+                OpenBCI_Radio.writeStreamPacket(data);
             } else {
                 for (int i = 1; i < len; i++) { // skip the byteId
                     if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
@@ -767,9 +782,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                     OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = true;
                 }
             }
-            if (OpenBCI_Radio.isDevice) {
-                OpenBCI_Radio.pollHost();
-            }
+            // if (OpenBCI_Radio.isDevice) {
+            //     OpenBCI_Radio.pollHost();
+            // }
 
             if (OpenBCI_Radio.verbosePrintouts) {
                 Serial.println("S->N");
@@ -782,17 +797,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 RFduinoGZLL.sendToHost(msg,1);
                 OpenBCI_Radio.pollRefresh();
             }
-
         }
     } else { // This is a NULL byte ack
         /**************************************/
-        // CAN SEND DATA HERE ONLY IF FIRST PACKET
+        // CAN SEND DATA HERE *****************/
         /**************************************/
-        // if (OpenBCI_Radio.bufferSerial.numberOfPacketsToSend > 0 && OpenBCI_Radio.bufferSerial.numberOfPacketsSent == 0) {
-        //     if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
-        //         willSendDataFromBufferSerial = true;
-        //     }
-        // }
 
         // More packets to send?
         if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent < OpenBCI_Radio.bufferSerial.numberOfPacketsToSend) {
@@ -810,6 +819,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             }
         }
     }
+
+    // // Are we still not sending data and we should be asking if we should?
+    // if (!willSendDataFromBufferSerial && willAskIfAnySerialDataToSend) {
+    //
+    // }
 
     if (willSendDataFromBufferSerial) {
         // Build byteId

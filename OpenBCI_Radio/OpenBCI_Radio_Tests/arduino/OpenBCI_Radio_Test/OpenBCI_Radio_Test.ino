@@ -153,8 +153,10 @@ boolean testByteIdMake() {
   allPassed = testByteIdMake_PacketNumber1() && allPassed;
   allPassed = testByteIdMake_PacketNumber9() && allPassed;
   allPassed = testByteIdMake_GetPacketNumber() && allPassed;
+  allPassed = testByteIdMake_GetStreamPacketType_Stream() && allPassed;
+  allPassed = testByteIdMake_GetStreamPacketType_TimeSync() && allPassed;
   allPassed = testByteIdMake_GetCheckSum() && allPassed;
-    
+
   return allPassed;
 }
 
@@ -214,8 +216,6 @@ boolean testByteIdMake_PacketNumber9() {
   } 
   
   return result;
-  
-// return assertEqualChar(byteId,0x48,"Packet Number of 9 in byteId");  
 }
 
 boolean testByteIdMake_GetPacketNumber() {
@@ -232,8 +232,36 @@ boolean testByteIdMake_GetPacketNumber() {
   } 
   
   return result;
+}
+
+boolean testByteIdMake_GetStreamPacketType_Stream() {
+  byte expectedStreamPacketType = 0x00;
+  char byteId = 0x80; 
+ 
+  byte actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
+ 
+  boolean result = assertEqualByte(expectedStreamPacketType,actualStreamPacketType);
   
-// return assertEqualInt(actualPacketNumber,expectedPacketNumber,"Extracts packet number from byteId");  
+  if (verbosePrints) {
+     verbosePrintResult(result,"GetStreamPacketType","Stream Packet");
+  } 
+  
+  return result;
+}
+
+boolean testByteIdMake_GetStreamPacketType_TimeSync() {
+  byte expectedStreamPacketType = 0x01;
+  char byteId = 0x88; 
+ 
+  byte actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
+ 
+  boolean result = assertEqualByte(expectedStreamPacketType,actualStreamPacketType);
+  
+  if (verbosePrints) {
+     verbosePrintResult(result,"GetStreamPacketType","Time Sync Packet");
+  } 
+  
+  return result;
 }
 
 boolean testByteIdMake_GetCheckSum() {
@@ -246,8 +274,46 @@ boolean testByteIdMake_GetCheckSum() {
   } 
   
   return result;
+}
+
+boolean testOutput() {
+  boolean allPassed = true;
   
-//  return assertEqualChar(checkSum,0x03),"Extracts check sum from byte id");
+  Serial.println("#output");
+  allPassed = testOutput_GetStopByteFromByteId_Stream() && allPassed;
+  allPassed = testOutput_GetStopByteFromByteId_Custom() && allPassed;
+    
+  return allPassed;
+}
+
+boolean testOutput_GetStopByteFromByteId_Stream() {
+  byte expectedStopByte = 0b11000000;
+  char byteId = 0b10000000; // normal stream packet 
+ 
+  byte actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
+ 
+  boolean result = assertEqualByte(expectedStopByte,actualStopByte);
+  
+  if (verbosePrints) {
+     verbosePrintResult(result,"GetStopByteFromByteId","Stream Packet");
+  } 
+  
+  return result;
+}
+
+boolean testOutput_GetStopByteFromByteId_Custom() {
+  byte expectedStopByte = 0b11000111;
+  char byteId = 0b10111111; // 0b1(0111)111 
+ 
+  byte actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
+ 
+  boolean result = assertEqualByte(expectedStopByte,actualStopByte);
+  
+  if (verbosePrints) {
+     verbosePrintResult(result,"GetStopByteFromByteId","Time Synced Packet");
+  } 
+  
+  return result;
 }
 
 char *testPacket() {
@@ -267,6 +333,10 @@ char *testPacket() {
 }
 
 boolean assertEqualBoolean(boolean a, boolean b) {
+  return a == b;  
+}
+
+boolean assertEqualByte(byte a, byte b) {
   return a == b;  
 }
 
