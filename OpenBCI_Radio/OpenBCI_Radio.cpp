@@ -249,7 +249,7 @@ void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
 
 /**
 * @description Private function to handle a request to read serial as a device
-* @return Returns TRUE if there is data to read! FALSE if not...
+* @return - [boolean] - Returns TRUE if there is data to read! FALSE if not...
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
@@ -263,6 +263,25 @@ boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
         }
         return false;
     }
+}
+
+/**
+ * @description The PIC 32 must send an EOT as the last three bytes of every stream
+ * @return - [boolean] - Returns TRUE if 2 packet writePosition is 4 and contains AJ
+ */
+boolean OpenBCI_Radio_Class::didPicSendDeviceAStreamPacket(void) {
+    if (bufferSerial.numberOfPacketsToSend == 2) {
+        if ((bufferSerial.packetBuffer + 1)->positionWrite == 4) {
+            if ((bufferSerial.packetBuffer + 1)->data[1] == OPENBCI_STREAM_PACKET_EOT_1) {
+                if ((bufferSerial.packetBuffer + 1)->data[2] == OPENBCI_STREAM_PACKET_EOT_2) {
+                    if (((bufferSerial.packetBuffer + 1)->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
 }
 
 /**
@@ -306,15 +325,22 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
     // Is there data in bufferSerial?
     if (bufferSerial.numberOfPacketsToSend > 0 && bufferSerial.numberOfPacketsSent == 0) {
         // Build byteId
-        // char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length) {
-        int packetNumber = bufferSerial.numberOfPacketsToSend - 1;
 
-        // Is this a stream packet? We must read PGC and invert it, in streaming mode
-        //  the PIC will drive the PGC pin logic low
-        boolean isStreamPacket = !digitalRead(OPENBCI_PIN_DEVICE_PGC);
+        // Is this a stream packet? PIC sends Device 34 bytes, 31 are data while
+        //  3 are "AJ" then 0xFt where t is nibble packet type
+        boolean isStreamPacket = didPicSendDeviceAStreamPacket();
+
+        // Get the packet number or type, based on streaming or not
+        int packetNumberOrType;
+        if (isStreamPacket) {
+            packetNumberOrType = byteIdMakeStreamPacketType();
+        } else {
+            packetNumberOrType = bufferSerial.numberOfPacketsToSend - 1;
+        }
 
         // Build the byteId
-        char byteId = byteIdMake(isStreamPacket,packetNumber,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
+        //  char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length)
+        char byteId = byteIdMake(isStreamPacket,packetNumberOrType,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
 
         // // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
@@ -327,7 +353,7 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
         bufferSerial.numberOfPacketsSent = 1;
 
         if (verbosePrintouts) {
-            Serial.print("Si->"); Serial.print(packetNumber); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
+            Serial.print("Si->"); Serial.print(packetNumberOrType); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
         }
     }
 }
@@ -548,6 +574,15 @@ int OpenBCI_Radio_Class::byteIdGetPacketNumber(char byteId) {
 */
 byte OpenBCI_Radio_Class::byteIdGetStreamPacketType(char byteId) {
     return (byte)((byteId & 0x78) >> 3);
+}
+
+/**
+* @description Strips and gets the packet number from a byteId
+* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
+* @returns [byte] the packet type
+*/
+byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
+    return (byte)(bufferSerial.packetBuffer + 1)->data[3] & OPENBCI_STREAM_PACKET_EOT_3;
 }
 
 /**

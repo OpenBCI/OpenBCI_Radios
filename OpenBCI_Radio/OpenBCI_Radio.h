@@ -46,6 +46,7 @@ public:
     boolean byteIdGetIsStream(char byteId);
     int     byteIdGetPacketNumber(char byteId);
     byte    byteIdGetStreamPacketType(char byteId);
+    byte    byteIdMakeStreamPacketType(void);
     char    checkSumMake(char *data, int length);
     byte    outputGetStopByteFromByteId(char byteId);
     void    pollHost(void);
@@ -70,6 +71,7 @@ public:
 
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
+    boolean didPicSendDeviceAStreamPacket(void);
     boolean thereIsDataInSerialBuffer(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
