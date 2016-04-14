@@ -33,7 +33,7 @@
 #define OPENBCI_MODE_PASS_THRU 2
 
 // Pins used by the Device
-#define OPENBCI_PIN_DEVICE_PCG 5
+#define OPENBCI_PIN_DEVICE_PGC 5
 // Pins used by the Host
 #define OPENBCI_PIN_HOST_LED 2
 #define OPENBCI_PIN_HOST_RESET 6
