@@ -33,7 +33,7 @@
 #define OPENBCI_MODE_PASS_THRU 2
 
 // Pins used by the Device
-#define OPENBCI_PIN_DEVICE_PGC 5
+#define OPENBCI_PIN_DEVICE_PCG 5
 // Pins used by the Host
 #define OPENBCI_PIN_HOST_LED 2
 #define OPENBCI_PIN_HOST_RESET 6
@@ -49,17 +49,17 @@
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
 // Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 55
-
-// Raw data packet types/codes
-#define OPENBCI_PACKET_TYPE_RAW_AUX      3 // 0011
-#define OPENBCI_PACKET_TYPE_STANDARD     0 // 0000
-#define OPENBCI_PACKET_TYPE_TIME_SYNCED  1 // 0001
-#define OPENBCI_PACKET_TYPE_USER_DEFINED 2 // 0010
+#define OPENBCI_POLL_TIME_DURATION_MS 60
 
 // Stream packet EOTs
 #define OPENBCI_STREAM_PACKET_EOT_1 'A'
 #define OPENBCI_STREAM_PACKET_EOT_2 'J'
 #define OPENBCI_STREAM_PACKET_EOT_3 0xF0
+
+// Raw data packet types/codes
+#define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011
+#define OPENBCI_PACKET_TYPE_STANDARD     = 0; // 0000
+#define OPENBCI_PACKET_TYPE_TIME_SYNCED  = 1; // 0001
+#define OPENBCI_PACKET_TYPE_USER_DEFINED = 2; // 0010
 
 #endif

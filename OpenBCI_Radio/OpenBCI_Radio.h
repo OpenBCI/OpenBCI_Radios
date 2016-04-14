@@ -46,7 +46,6 @@ public:
     boolean byteIdGetIsStream(char byteId);
     int     byteIdGetPacketNumber(char byteId);
     byte    byteIdGetStreamPacketType(char byteId);
-    byte    byteIdMakeStreamPacketType(void);
     char    checkSumMake(char *data, int length);
     byte    outputGetStopByteFromByteId(char byteId);
     void    pollHost(void);
@@ -59,6 +58,7 @@ public:
     void    bufferCleanSerial(int numberOfPacketsToClean);
     void    bufferSerialFetch(void);
     char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+    byte    byteIdMakeStreamPacketType(void);
     boolean checkSumsAreEqual(char *data, int len);
     void    configure(uint8_t mode,int8_t channelNumber);
     void    configureDevice(void);

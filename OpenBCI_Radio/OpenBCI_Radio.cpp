@@ -89,7 +89,7 @@ void OpenBCI_Radio_Class::configureDevice(void) {
 
     // Configure pins
 
-    if (!debugMode) { // Dongle to Dongle debug mode
+    if (debugMode) { // Dongle to Dongle debug mode
         // BEGIN: To run host as device
         pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
         pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
@@ -98,7 +98,7 @@ void OpenBCI_Radio_Class::configureDevice(void) {
         // END: To run host as device
     } else {
         // BEGIN: To run host normally
-        pinMode(OPENBCI_PIN_DEVICE_PGC, INPUT); // Bootloader/Streaming Pin
+        pinMode(OPENBCI_PIN_DEVICE_PCG, INPUT); //feel the state of the PIC with this pin
         // Start the serial connection. On the device we must specify which pins are
         //    rx and tx, where:
         //      rx = GPIO3
@@ -249,7 +249,7 @@ void OpenBCI_Radio_Class::writeStreamPacket(char *data) {
 
 /**
 * @description Private function to handle a request to read serial as a device
-* @return - [boolean] - Returns TRUE if there is data to read! FALSE if not...
+* @return Returns TRUE if there is data to read! FALSE if not...
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
@@ -325,7 +325,6 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
     // Is there data in bufferSerial?
     if (bufferSerial.numberOfPacketsToSend > 0 && bufferSerial.numberOfPacketsSent == 0) {
         // Build byteId
-
         // Is this a stream packet? PIC sends Device 34 bytes, 31 are data while
         //  3 are "AJ" then 0xFt where t is nibble packet type
         boolean isStreamPacket = didPicSendDeviceAStreamPacket();
@@ -338,19 +337,22 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
             packetNumberOrType = bufferSerial.numberOfPacketsToSend - 1;
         }
 
-        // Build the byteId
-        //  char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length)
         char byteId = byteIdMake(isStreamPacket,packetNumberOrType,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
-
+        //
         // // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
 
         // Send back some data
         RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
-        pollRefresh();
 
         // We know we just sent the first packet
         bufferSerial.numberOfPacketsSent = 1;
+
+        
+        if (isStreamPacket) {
+            bufferCleanSerial(2);
+        }
+        pollRefresh();
 
         if (verbosePrintouts) {
             Serial.print("Si->"); Serial.print(packetNumberOrType); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
@@ -577,15 +579,6 @@ byte OpenBCI_Radio_Class::byteIdGetStreamPacketType(char byteId) {
 }
 
 /**
-* @description Strips and gets the packet number from a byteId
-* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
-* @returns [byte] the packet type
-*/
-byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
-    return (byte)(bufferSerial.packetBuffer + 1)->data[3] & OPENBCI_STREAM_PACKET_EOT_3;
-}
-
-/**
 * @description Creates a byteId for sending data over the RFduinoGZLL
 * @param isStreamPacket [boolean] Set true if this is a streaming packet
 * @param packetNumber [int] What number packet are you trying to send?
@@ -613,6 +606,15 @@ char OpenBCI_Radio_Class::byteIdMake(boolean isStreamPacket, int packetNumber, c
     output = output | checkSumMake(data,length);
 
     return output;
+}
+
+/**
+* @description Strips and gets the packet number from a byteId
+* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
+* @returns [byte] the packet type
+*/
+byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
+    return (byte)(bufferSerial.packetBuffer + 1)->data[3] & OPENBCI_STREAM_PACKET_EOT_3;
 }
 
 /**
