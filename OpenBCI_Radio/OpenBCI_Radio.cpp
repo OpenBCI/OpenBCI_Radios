@@ -89,22 +89,22 @@ void OpenBCI_Radio_Class::configureDevice(void) {
 
     // Configure pins
 
-    if (!debugMode) {
-        // BEGIN: To run host normally
-        pinMode(OPENBCI_PIN_DEVICE_PCG, INPUT); //feel the state of the PIC with this pin
-        // Start the serial connection. On the device we must specify which pins are
-        //    rx and tx, where:
-        //      rx = GPIO3
-        //      tx = GPIO2
-        Serial.begin(115200, 3, 2);
-        // END: To run host normally
-    } else { // Dongle to Dongle debug mode
+    if (!debugMode) { // Dongle to Dongle debug mode
         // BEGIN: To run host as device
         pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
         pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
         digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
         Serial.begin(115200);
         // END: To run host as device
+    } else {
+        // BEGIN: To run host normally
+        pinMode(OPENBCI_PIN_DEVICE_PGC, INPUT); // Bootloader/Streaming Pin
+        // Start the serial connection. On the device we must specify which pins are
+        //    rx and tx, where:
+        //      rx = GPIO3
+        //      tx = GPIO2
+        Serial.begin(115200, 3, 2);
+        // END: To run host normally
     }
 
     isHost = false;
@@ -308,8 +308,14 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
         // Build byteId
         // char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length) {
         int packetNumber = bufferSerial.numberOfPacketsToSend - 1;
-        char byteId = byteIdMake(false,packetNumber,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
-        //
+
+        // Is this a stream packet? We must read PGC and invert it, in streaming mode
+        //  the PIC will drive the PGC pin logic low
+        boolean isStreamPacket = !digitalRead(OPENBCI_PIN_DEVICE_PGC);
+
+        // Build the byteId
+        char byteId = byteIdMake(isStreamPacket,packetNumber,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
+
         // // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
 
