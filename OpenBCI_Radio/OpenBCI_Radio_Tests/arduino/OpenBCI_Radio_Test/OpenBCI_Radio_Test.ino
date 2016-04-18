@@ -28,6 +28,7 @@ void go() {
     testOutput();
     testBufferCleanChar();
     testBufferCleanPacketBuffer();
+    testDidPicSendDeviceAStreamPacket();
 
     test.end();
 }
@@ -159,9 +160,41 @@ void testBufferCleanPacketBuffer() {
 
     OpenBCI_Radio.bufferCleanPacketBuffer(OpenBCI_Radio.bufferSerial.packetBuffer,numberOfPackets);
 
+    char testMessage1[] = "buf at index 0 positionRead reset";
+    char testMessage2[] = "buf at index 0 positionWrite reset";
     for (int j = 0; j < numberOfPackets; j++) {
-        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionRead, 0x00);
-        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionWrite, 0x01);
+        testMessage1[13] = (char)j + '0';
+        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionRead, 0x00, testMessage1);
+        testMessage2[13] = (char)j + '0';
+        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionWrite, 0x01, testMessage2);
     }
+}
+
+void testDidPicSendDeviceAStreamPacket() {
+    test.describe("didPicSendDeviceAStreamPacket");
+    
+    OpenBCI_Radio.verbosePrintouts = true;
+
+    // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = i + '0';
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
+    
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects stream packet");
+    
+    // change just the last 4 bits to make sure we still pass the code
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF1;
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects time sync packet");
+    
+    // Not a stream packet
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xC1;
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), false, "Not a time sync packet");
+
 }
 
