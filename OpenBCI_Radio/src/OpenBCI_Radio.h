@@ -77,7 +77,7 @@ public:
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    void    sendTheDevicesFirstPacketToTheHost(void);
+    boolean sendTheDevicesFirstPacketToTheHost(void);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
 

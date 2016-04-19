@@ -29,6 +29,7 @@ void go() {
     testBufferCleanChar();
     testBufferCleanPacketBuffer();
     testDidPicSendDeviceAStreamPacket();
+    testSendTheDevicesFirstPacketToTheHost();
 
     test.end();
 }
@@ -65,10 +66,11 @@ void testCheckSum() {
 }
 
 void testByteIdMake() {
+    char byteId;
 
     test.describe("byteIdMake");
     // Streaming
-    char byteId = OpenBCI_Radio.byteIdMake(true,0,NULL,0);
+    byteId = OpenBCI_Radio.byteIdMake(true,0,NULL,0);
     test.assertGreaterThan(byteId,0x7f,"Streaming byteId has 1 in MSB");
 
     // Not streaming
@@ -80,6 +82,22 @@ void testByteIdMake() {
 
     byteId = OpenBCI_Radio.byteIdMake(false,9,NULL,0);
     test.assertEqual(byteId,0x48,"Can set packet number of 9 in byteId");
+    
+    OpenBCI_Radio.bufferCleanSerial(12);
+
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
+
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+    
+    byteId = OpenBCI_Radio.byteIdMake(true,0,OpenBCI_Radio.bufferSerial.packetBuffer->data + 1,OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite - 1);
+    test.assertEqual(byteId,0x80,"byteId for empty data packet is 0x80");
 }
 
 void testByteIdGetPacketNumber() {
@@ -172,29 +190,65 @@ void testBufferCleanPacketBuffer() {
 
 void testDidPicSendDeviceAStreamPacket() {
     test.describe("didPicSendDeviceAStreamPacket");
-    
+
     OpenBCI_Radio.verbosePrintouts = true;
+    
+    OpenBCI_Radio.bufferCleanSerial(12);
 
     // Store some data
     for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
         OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = i + '0';
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
     }
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
-    
+
     OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
 
     test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects stream packet");
-    
+
     // change just the last 4 bits to make sure we still pass the code
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF1;
     test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects time sync packet");
-    
+
     // Not a stream packet
     (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xC1;
     test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), false, "Not a time sync packet");
-
 }
 
+void testSendTheDevicesFirstPacketToTheHost() {
+    test.describe("sendTheDevicesFirstPacketToTheHost");
+
+//    OpenBCI_Radio.verbosePrintouts = true;
+    OpenBCI_Radio.bufferCleanSerial(12);
+
+    // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
+
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+
+    // A stream packet
+    test.assertEqual(OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost(), true, "Sends stream packet");
+
+    // Not a stream packet
+        // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xC1;
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+    test.assertEqual(OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost(), false, "Does not send a stream packet");
+}
