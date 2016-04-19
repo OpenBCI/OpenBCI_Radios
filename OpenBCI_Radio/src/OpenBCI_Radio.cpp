@@ -25,8 +25,8 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     // Set defaults
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 18; // Channel 18
-    verbosePrintouts = true;
-    debugMode = true; // Set true if doing dongle-dongle sim
+    verbosePrintouts = false;
+    debugMode = false; // Set true if doing dongle-dongle sim
 }
 
 /**
@@ -324,26 +324,14 @@ boolean OpenBCI_Radio_Class::theLastTimeNewSerialDataWasAvailableWasLongEnough(v
 *                 to the HOST
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
+void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
 
     // Is there data in bufferSerial?
     if (bufferSerial.numberOfPacketsToSend > 0 && bufferSerial.numberOfPacketsSent == 0) {
-        // Build byteId
-        //  Is this a stream packet? PIC sends Device 34 bytes, 31 are data while
-        //  3 are "AJ" then 0xFt where t is nibble packet type
-        boolean isStreamPacket = didPicSendDeviceAStreamPacket();
-
         // Get the packet number or type, based on streaming or not
-        int packetNumberOrType;
-        if (isStreamPacket) {
-            packetNumberOrType = byteIdMakeStreamPacketType();
-        } else {
-            packetNumberOrType = bufferSerial.numberOfPacketsToSend - 1;
-        }
+        int packetNumber = bufferSerial.numberOfPacketsToSend - 1;
 
-        char byteId = byteIdMake(isStreamPacket,packetNumberOrType,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
-        
-        // Serial.print("byteId: "); Serial.println(byteId, HEX);
+        char byteId = byteIdMake(false,packetNumber,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
 
         // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
@@ -351,33 +339,36 @@ boolean OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
         // Send back some data
         RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
-        // DEBUG code
-        // Serial.println("Sent to host: ");
-        // for (int i = 0; i < bufferSerial.packetBuffer->positionWrite; i++) {
-        //     Serial.println(bufferSerial.packetBuffer->data[i],BIN);
-        // }
-        // Serial.println();
-
         // We know we just sent the first packet
         bufferSerial.numberOfPacketsSent = 1;
 
-
-        if (isStreamPacket) {
-            bufferCleanSerial(2);
-        }
         pollRefresh();
 
-        // if (verbosePrintouts) {
-        //     Serial.print("Si->"); Serial.print(packetNumberOrType); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
-        // }
-        if (isStreamPacket) {
-            return true;
-        } else {
-            return false;
+        if (verbosePrintouts) {
+            Serial.print("Si->"); Serial.print(packetNumber); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
         }
-    } else  {
-        return false;
-    }
+    } 
+}
+
+/**
+* @description Sends the contents of the first packet in `bufferSerial` to host
+*                 to the HOST, sends as stream
+* @author AJ Keller (@pushtheworldllc)
+*/
+void OpenBCI_Radio_Class::sendAStreamPacketToTheHost(void) {
+
+    int packetType = byteIdMakeStreamPacketType();
+
+    char byteId = byteIdMake(true,packetType,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
+
+    // Add the byteId to the packet
+    bufferSerial.packetBuffer->data[0] = byteId;
+
+    RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
+
+    bufferCleanSerial(2);
+        
+    pollRefresh();
 }
 
 /**
@@ -542,9 +533,16 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
             // Store the byte to current buffer at write postition
             currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = Serial.read();
 
-            // Serial.print(currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite]);
             // Increment currentPacketBufferSerial write postion
             currentPacketBufferSerial->positionWrite++;
+
+            // This is where we check to see if the input it a stream packet
+            if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
+                if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
+                    sendAStreamPacketToTheHost();
+                }
+            }
+
         } else {
             if (verbosePrintouts) {
                 Serial.print("BO:"); Serial.println(Serial.read());
@@ -832,6 +830,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         if (goodToAddPacketToRadioBuffer) {
             willAskIfAnySerialDataToSend = true;
             if (OpenBCI_Radio.byteIdGetIsStream(data[0])) {
+                // Serial.println("Got stream packet!");
                 OpenBCI_Radio.writeStreamPacket(data);
             } else {
                 for (int i = 1; i < len; i++) { // skip the byteId
