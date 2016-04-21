@@ -66,7 +66,6 @@ public:
     void    configurePassThru(void);
     boolean pollNow(void);
 
-
     void    writeBufferToSerial(char *buffer,int length);
 
     boolean didPCSendDataToHost(void);
@@ -84,29 +83,31 @@ public:
 
     // VARIABLES
     Buffer  bufferSerial;
+
+    boolean debugMode;
+    boolean isDevice;
+    boolean isHost;
     boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
     boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
+    boolean streaming;
+    boolean verbosePrintouts;
+
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
+
     int     bufferPacketsReceived;
     int     bufferPacketsToReceive;
     int     bufferPositionReadRadio;
     int     bufferPositionWriteRadio;
     int     previousPacketNumber;
+
     PacketBuffer *currentPacketBufferSerial;
+
     uint8_t radioMode;
-    boolean isHost;
-    boolean isDevice;
+
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
     char *loremIpsum;
-    boolean verbosePrintouts;
-    boolean debugMode;
 
-    // METHODS
-    // void _RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len);
-
-
-    // VARIABLES
     unsigned long timeOfLastPoll;
 
     int8_t radioChannel;

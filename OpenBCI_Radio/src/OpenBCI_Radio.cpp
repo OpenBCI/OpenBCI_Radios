@@ -27,6 +27,7 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     radioChannel = 18; // Channel 18
     verbosePrintouts = false;
     debugMode = false; // Set true if doing dongle-dongle sim
+    streaming = false;
 }
 
 /**
@@ -347,7 +348,7 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
         if (verbosePrintouts) {
             Serial.print("Si->"); Serial.print(packetNumber); Serial.print(":"); Serial.println(bufferSerial.packetBuffer->positionWrite);
         }
-    } 
+    }
 }
 
 /**
@@ -366,8 +367,8 @@ void OpenBCI_Radio_Class::sendAStreamPacketToTheHost(void) {
 
     RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
-    bufferCleanSerial(2);
-        
+    bufferCleanSerial(1);
+
     pollRefresh();
 }
 
@@ -537,11 +538,16 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
             currentPacketBufferSerial->positionWrite++;
 
             // This is where we check to see if the input it a stream packet
-            if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
-                if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
+            if (streaming) {
+                if (currentPacketBufferSerial->positionWrite == OPENBCI_MAX_PACKET_SIZE_BYTES) {
                     sendAStreamPacketToTheHost();
                 }
             }
+            // if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
+            //     if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
+            //         sendAStreamPacketToTheHost();
+            //     }
+            // }
 
         } else {
             if (verbosePrintouts) {
@@ -837,6 +843,22 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                     if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
                         OpenBCI_Radio.bufferRadio[OpenBCI_Radio.bufferPositionWriteRadio] = data[i];
                         OpenBCI_Radio.bufferPositionWriteRadio++;
+
+                        if (OpenBCI_Radio.isDevice && len == 2) {
+                            // Start streaming mode
+                            if (data[i] == 'b') {
+                                OpenBCI_Radio.streaming = true;
+                                if (OpenBCI_Radio.verbosePrintouts) {
+                                    Serial.println("Streaming TRUE");
+                                }
+                            // Stop streaming mode
+                            } else if (data[i] == 's' || data[i] == 'v') {
+                                OpenBCI_Radio.streaming = false;
+                                if (OpenBCI_Radio.verbosePrintouts) {
+                                    Serial.println("Streaming FALSE");
+                                }
+                            }
+                        }
                     }
                 }
                 if (gotLastPacket) {
