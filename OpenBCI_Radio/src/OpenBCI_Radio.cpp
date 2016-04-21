@@ -765,16 +765,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 Serial.println("R<-M");
             }
         }
-        // TODO: Implement init handshaking
-        // else if (byte == (char)RFDUINOGZLL_PACKET_INIT) {
-        //     if (OpenBCI_Radio.isHost) {
-        //         msg[0] = RFDUINOGZLL_PACKET_INIT & 0xFF;
-        //         RFduinoGZLL.sendToDevice(device,msg, 1);
-        //     }
-        //     if (OpenBCI_Radio.verbosePrintouts) {
-        //         Serial.println("R<-I");
-        //     }
-        // }
     } else if (len > 1) {
         /**************************************/
         // CANN SEND DATA HERE

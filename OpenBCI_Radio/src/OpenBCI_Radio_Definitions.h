@@ -49,7 +49,7 @@
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
 // Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 65
+#define OPENBCI_POLL_TIME_DURATION_MS 63
 
 // Stream packet EOTs
 #define OPENBCI_STREAM_PACKET_EOT_1 'A'

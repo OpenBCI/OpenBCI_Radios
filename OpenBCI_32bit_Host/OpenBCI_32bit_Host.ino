@@ -29,7 +29,7 @@ Free to use and share. This code presented for use as-is. wysiwyg.
 * To begin streaming data, send '+b+'
 * This software is provided as-is with no promise of workability
 * Use at your own risk, wysiwyg.
-*/
+*/  
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"
 
