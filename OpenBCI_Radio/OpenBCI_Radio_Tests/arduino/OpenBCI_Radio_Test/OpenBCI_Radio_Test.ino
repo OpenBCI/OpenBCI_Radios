@@ -1,371 +1,254 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"
-
-boolean verbosePrints = true;
+#include "PTW-Arduino-Assert.h"
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200); 
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    test.setSerial(Serial);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  if (Serial.available()) {
-    Serial.read();
-    test(); 
-  }
+    // put your main code here, to run repeatedly:
+    if (Serial.available()) {
+        Serial.read();
+        go();
+    }
 }
 
-void test() {
-  boolean allTestsPassed = true;
-  Serial.println("\nTests Begin\n");
-  
-  allTestsPassed = testCheckSum() && allTestsPassed;
-  allTestsPassed = testByteIdMake() && allTestsPassed;
-  
-  if (allTestsPassed) {
-    Serial.println("\nAll tests passed!");
-  }
-  
-  Serial.println("\nTests End\n");
+void go() {
+    // Start the test
+    test.begin();
+
+    testCheckSum();
+    testByteIdMake();
+    testByteIdGetPacketNumber();
+    testByteIdGetStreamPacketType();
+    testByteIdGetCheckSum();
+    testOutput();
+    testBufferCleanChar();
+    testBufferCleanPacketBuffer();
+    testDidPicSendDeviceAStreamPacket();
+    testSendTheDevicesFirstPacketToTheHost();
+
+    test.end();
 }
 
-boolean testCheckSum() {
-  boolean allPassed = true;
-  
-  Serial.println("#checkSum");
-  allPassed = testCheckSumMake() && allPassed;
-  allPassed = testCheckSumMake_FundamentalOperation1() && allPassed;
-  allPassed = testCheckSumMake_FundamentalOperation2() && allPassed;
-  allPassed = testCheckSumsAreEqual_True() && allPassed;
-  allPassed = testCheckSumsAreEqual_False() && allPassed;
+void testCheckSum() {
+    test.describe("checkSum");
+
+    char temp1[3];
+    temp1[1] = 'a';
+    temp1[2] = 'j';
+
+    char temp2[3];
+    temp2[1] = 'a';
+    temp2[2] = 'k';
+
+
+    char checkSum1 = OpenBCI_Radio.checkSumMake(temp1 + 1,2);
+    char checkSum2 = OpenBCI_Radio.checkSumMake(temp2 + 1,2);
+
+    test.assertEqual(checkSum1,0x05,"Get's correct check sum for given char *");
+    test.assertGreaterThan(checkSum1,checkSum2,"Data with one byte of 1 less than other has smaller check sum");
+    test.assertEqual(checkSum1 - checkSum2,1,"Check sums of two different packets changed by 1 bit shall be one 1 less");
+
+    // Get byteId for this packet
+    char byteId = OpenBCI_Radio.byteIdMake(false, 0, temp1 + 1, 2);
+    // Set byteId for this packet
+    temp1[0] = byteId;
+    test.assertEqual(OpenBCI_Radio.checkSumsAreEqual(temp1,3),true,"Check sums verification works in good condition");
+
+    // Mess it up on purpose
+    temp1[0] = byteId & 0x00;
+    test.assertEqual(OpenBCI_Radio.checkSumsAreEqual(temp1,3),false,"Check sums verification works in bad condition");
+
+}
+
+void testByteIdMake() {
+    char byteId;
+
+    test.describe("byteIdMake");
+    // Streaming
+    byteId = OpenBCI_Radio.byteIdMake(true,0,NULL,0);
+    test.assertGreaterThan(byteId,0x7f,"Streaming byteId has 1 in MSB");
+
+    // Not streaming
+    byteId = OpenBCI_Radio.byteIdMake(false,0,NULL,0);
+    test.assertLessThan(byteId,0x80,"Non streaming byteId has 0 in MSB");
+
+    byteId = OpenBCI_Radio.byteIdMake(false,1,NULL,0);
+    test.assertEqual(byteId,0x08,"Can set packet number of 1 in byteId");
+
+    byteId = OpenBCI_Radio.byteIdMake(false,9,NULL,0);
+    test.assertEqual(byteId,0x48,"Can set packet number of 9 in byteId");
     
-  return allPassed;
-}
+    OpenBCI_Radio.bufferCleanSerial(12);
 
-boolean testCheckSumMake() {
-  // Generate test packet
-  char temp[3];
-  temp[1] = 'a';
-  temp[2] = 'j';
-  
-  char checkSum = OpenBCI_Radio.checkSumMake(temp + 1,2);
-  
-  boolean result = assertEqualChar(checkSum,5);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"CheckSumMake","Get's correct check sum for given char *");
-  } 
-  
-  return result;
-}
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
 
-boolean testCheckSumMake_FundamentalOperation1() {
-  // Generate test packet
-  char temp1[3];
-  temp1[1] = 'a';
-  temp1[2] = 'j';
-  
-  char temp2[3];
-  temp2[1] = 'a';
-  temp2[2] = 'k';
-  
-  char checkSum1 = OpenBCI_Radio.checkSumMake(temp1 + 1,2);
-  char checkSum2 = OpenBCI_Radio.checkSumMake(temp2 + 1,2);
-  
-  boolean result = assertGreaterThanChar(checkSum1,checkSum2);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"FundamentalOperation1","Data with one byte of 1 less than other has smaller check sum");
-  } 
-  
-  return result;
-}
-
-boolean testCheckSumMake_FundamentalOperation2() {
-  // Generate test packet
-  char temp1[3];
-  temp1[1] = 'a';
-  temp1[2] = 'j';
-  
-  char temp2[3];
-  temp2[1] = 'a';
-  temp2[2] = 'k';
-  
-  char checkSum1 = OpenBCI_Radio.checkSumMake(temp1 + 1,2);
-  char checkSum2 = OpenBCI_Radio.checkSumMake(temp2 + 1,2);
-  
-  boolean result = assertEqualInt((int)(checkSum1 - checkSum2),1);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"FundamentalOperation2","Check sums of two different packets changed by 1 bit shall be one 1 less");
-  } 
-  
-  return result;
-}
-
-boolean testCheckSumsAreEqual_True() {
-  // Generate test packet
-  char temp[3];
-  temp[1] = 'a';
-  temp[2] = 'j';
-  
-  // Get byteId for this packet
-  char byteId = OpenBCI_Radio.byteIdMake(false, 0, temp + 1, 2);
-  // Set byteId for this packet
-  temp[0] = byteId;
-  
-  boolean result = assertEqualBoolean(OpenBCI_Radio.checkSumsAreEqual(temp,3),true);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"CheckSumsAreEqual_True","Check sums verification works in good condition");
-  } 
-  
-  return result;
-}
-
-boolean testCheckSumsAreEqual_False() {
-  // Generate test packet
-  char temp[3];
-  temp[1] = 'a';
-  temp[2] = 'j';
-  
-  // Get byteId for this packet
-  char byteId = OpenBCI_Radio.byteIdMake(false, 0, temp + 1, 2);
-  // Set byteId for this packet
-  temp[0] = byteId & 0x00;
-  
-  boolean result = assertEqualBoolean(OpenBCI_Radio.checkSumsAreEqual(temp,3),false);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"CheckSumsAreEqual_False","Check sums verification works in bad condition");
-  } 
-  
-  return result;
-}
-
-boolean testByteIdMake() {
-  boolean allPassed = true;
-  
-  Serial.println("#byteId");
-  allPassed = testByteIdMake_IsStreamPacket() && allPassed;
-  allPassed = testByteIdMake_NotStreamPacket() && allPassed;
-  allPassed = testByteIdMake_PacketNumber1() && allPassed;
-  allPassed = testByteIdMake_PacketNumber9() && allPassed;
-  allPassed = testByteIdMake_GetPacketNumber() && allPassed;
-  allPassed = testByteIdMake_GetStreamPacketType_Stream() && allPassed;
-  allPassed = testByteIdMake_GetStreamPacketType_TimeSync() && allPassed;
-  allPassed = testByteIdMake_GetCheckSum() && allPassed;
-
-  return allPassed;
-}
-
-boolean testByteIdMake_IsStreamPacket() {
-  
-  char byteId = OpenBCI_Radio.byteIdMake(true,0,NULL,0);
- 
-  boolean result = assertGreaterThanChar(byteId,0x7F);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"IsStreamPacket","Streaming byteId has 1 in MSB");
-  } 
-  
-  return result;
-  
-// return assertGreaterThan(byteId,0x7F,"Streaming byteId has 1 in MSB");  
-}
-
-boolean testByteIdMake_NotStreamPacket() {
-  
-  char byteId = OpenBCI_Radio.byteIdMake(false,0,NULL,0);
- 
-  boolean result = assertLessThanChar(byteId,0x80);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"NotStreamPacket","Non streaming byteId has 0 in MSB");
-  } 
-  
-  return result;
-  
-//  return assertLessThan(byteId,0x80,"Non streaming byteId has 0 in MSB");  
-}
-
-boolean testByteIdMake_PacketNumber1() {
-  
-  char byteId = OpenBCI_Radio.byteIdMake(false,1,NULL,0);
- 
-  boolean result = assertEqualChar(byteId,0x08);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"PacketNumber1","Can set packet number of 1 in byteId");
-  } 
-  
-  return result;
-  
-// return assertEqualChar(byteId,0x08,"Packet Number of 1 in byteId");  
-}
-
-boolean testByteIdMake_PacketNumber9() {
-  
-  char byteId = OpenBCI_Radio.byteIdMake(false,9,NULL,0);
-  
-  boolean result = assertEqualChar(byteId,0x48);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"PacketNumber9","Can set packet number of 9 in byteId");
-  } 
-  
-  return result;
-}
-
-boolean testByteIdMake_GetPacketNumber() {
-  
-  int expectedPacketNumber = 10;
-  char byteId = 0x50; 
- 
-  int actualPacketNumber = OpenBCI_Radio.byteIdGetPacketNumber(byteId);
- 
-  boolean result = assertEqualInt(actualPacketNumber,expectedPacketNumber);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetPacketNumber","Extracts packet number from byteId");
-  } 
-  
-  return result;
-}
-
-boolean testByteIdMake_GetStreamPacketType_Stream() {
-  byte expectedStreamPacketType = 0x00;
-  char byteId = 0x80; 
- 
-  byte actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
- 
-  boolean result = assertEqualByte(expectedStreamPacketType,actualStreamPacketType);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetStreamPacketType","Stream Packet");
-  } 
-  
-  return result;
-}
-
-boolean testByteIdMake_GetStreamPacketType_TimeSync() {
-  byte expectedStreamPacketType = 0x01;
-  char byteId = 0x88; 
- 
-  byte actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
- 
-  boolean result = assertEqualByte(expectedStreamPacketType,actualStreamPacketType);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetStreamPacketType","Time Sync Packet");
-  } 
-  
-  return result;
-}
-
-boolean testByteIdMake_GetCheckSum() {
-  char checkSum = OpenBCI_Radio.byteIdGetCheckSum(0x1B);
-  
-  boolean result = assertEqualChar(checkSum,0x03);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetCheckSum","Extracts check sum from byte id");
-  } 
-  
-  return result;
-}
-
-boolean testOutput() {
-  boolean allPassed = true;
-  
-  Serial.println("#output");
-  allPassed = testOutput_GetStopByteFromByteId_Stream() && allPassed;
-  allPassed = testOutput_GetStopByteFromByteId_Custom() && allPassed;
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
     
-  return allPassed;
+    byteId = OpenBCI_Radio.byteIdMake(true,0,OpenBCI_Radio.bufferSerial.packetBuffer->data + 1,OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite - 1);
+    test.assertEqual(byteId,0x80,"byteId for empty data packet is 0x80");
 }
 
-boolean testOutput_GetStopByteFromByteId_Stream() {
-  byte expectedStopByte = 0b11000000;
-  char byteId = 0b10000000; // normal stream packet 
- 
-  byte actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
- 
-  boolean result = assertEqualByte(expectedStopByte,actualStopByte);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetStopByteFromByteId","Stream Packet");
-  } 
-  
-  return result;
+void testByteIdGetPacketNumber() {
+    test.describe("byteIdGetPacketNumber");
+
+    int expectedPacketNumber = 10; // Expected packet number
+    char byteId = 0x50;
+    int actualPacketNumber = OpenBCI_Radio.byteIdGetPacketNumber(byteId);
+    test.assertEqual(actualPacketNumber,expectedPacketNumber,"Extracts packet number from byteId");
 }
 
-boolean testOutput_GetStopByteFromByteId_Custom() {
-  byte expectedStopByte = 0b11000111;
-  char byteId = 0b10111111; // 0b1(0111)111 
- 
-  byte actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
- 
-  boolean result = assertEqualByte(expectedStopByte,actualStopByte);
-  
-  if (verbosePrints) {
-     verbosePrintResult(result,"GetStopByteFromByteId","Time Synced Packet");
-  } 
-  
-  return result;
+void testByteIdGetStreamPacketType() {
+    test.describe("byteIdGetStreamPacketType");
+
+    byte expectedStreamPacketType = 0x00;
+    char byteId = 0x80;
+    byte actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
+
+    test.assertEqual(expectedStreamPacketType,actualStreamPacketType,"Stream Packet");
+
+    expectedStreamPacketType = 0x01;
+    byteId = 0x88;
+    actualStreamPacketType = OpenBCI_Radio.byteIdGetStreamPacketType(byteId);
+
+    test.assertEqual(expectedStreamPacketType,actualStreamPacketType,"Time Sync Packet");
+
 }
 
-char *testPacket() {
-  
- boolean streamPacket = false;
- int packetNumber = 0; 
- char data[3];
- data[1] = 'a';
- data[2] = 'k';
- 
- Serial.print("Data in testPacket creation: ");
- for (int i = 1; i < 3; i++) {
-    Serial.println(data[i], HEX);
- }
-  
- return data;
+void testByteIdGetCheckSum() {
+    test.describe("byteIdGetCheckSum");
+
+    char checkSum = OpenBCI_Radio.byteIdGetCheckSum(0x1B);
+
+    test.assertEqual(checkSum,0x03,"Extracts check sum from byte id");
 }
 
-boolean assertEqualBoolean(boolean a, boolean b) {
-  return a == b;  
+void testOutput() {
+    test.describe("outputGetStopByteFromByteId");
+
+    // Stream
+    byte expectedStopByte = 0b11000000;
+    char byteId = 0b10000000; // normal stream packet
+    byte actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
+    test.assertEqual(expectedStopByte,actualStopByte,"Gets a Stream Packet");
+
+    // Time sync packet
+    expectedStopByte = 0b11000111;
+    byteId = 0b10111111; // 0b1(0111)111
+
+    actualStopByte = OpenBCI_Radio.outputGetStopByteFromByteId(byteId);
+    test.assertEqual(expectedStopByte,actualStopByte,"Time sync packet");
+
 }
 
-boolean assertEqualByte(byte a, byte b) {
-  return a == b;  
+void testBufferCleanChar() {
+    test.describe("bufferCleanChar");
+
+    char buffer[] = "AJ";
+    char testMessage[] = "buf at index 0 cleared to 0x00";
+
+    OpenBCI_Radio.bufferCleanChar(buffer, sizeof(buffer));
+
+    for (int i = 0; i < sizeof(buffer); i++) {
+        testMessage[13] = (char)i + '0';
+        test.assertEqual(buffer[i],0x00, testMessage);
+    }
 }
 
-boolean assertEqualChar(char a, char b) {
-  return a == b;  
+void testBufferCleanPacketBuffer() {
+    test.describe("bufferCleanPacketBuffer");
+
+    int numberOfPackets = 10;
+
+    for (int i = 0; i < numberOfPackets; i++) {
+        (OpenBCI_Radio.bufferSerial.packetBuffer + i)->positionRead = 5 + i;
+        (OpenBCI_Radio.bufferSerial.packetBuffer + i)->positionWrite = 6 + i;
+    }
+
+    OpenBCI_Radio.bufferCleanPacketBuffer(OpenBCI_Radio.bufferSerial.packetBuffer,numberOfPackets);
+
+    char testMessage1[] = "buf at index 0 positionRead reset";
+    char testMessage2[] = "buf at index 0 positionWrite reset";
+    for (int j = 0; j < numberOfPackets; j++) {
+        testMessage1[13] = (char)j + '0';
+        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionRead, 0x00, testMessage1);
+        testMessage2[13] = (char)j + '0';
+        test.assertEqual((OpenBCI_Radio.bufferSerial.packetBuffer + j)->positionWrite, 0x01, testMessage2);
+    }
 }
 
-boolean assertGreaterThanChar(char a, char b) {
-  return a > b; 
+void testDidPicSendDeviceAStreamPacket() {
+    test.describe("didPicSendDeviceAStreamPacket");
+
+    OpenBCI_Radio.verbosePrintouts = true;
+    
+    OpenBCI_Radio.bufferCleanSerial(12);
+
+    // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = i + '0';
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
+
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects stream packet");
+
+    // change just the last 4 bits to make sure we still pass the code
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF1;
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), true, "Detects time sync packet");
+
+    // Not a stream packet
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xC1;
+    test.assertEqual(OpenBCI_Radio.didPicSendDeviceAStreamPacket(), false, "Not a time sync packet");
 }
 
-boolean assertLessThanChar(char a, char b) {
-  return a < b; 
-}
+void testSendTheDevicesFirstPacketToTheHost() {
+    test.describe("sendTheDevicesFirstPacketToTheHost");
 
-boolean assertEqualInt(int a, int b) {
-  return a == b;  
-}
+//    OpenBCI_Radio.verbosePrintouts = true;
+    OpenBCI_Radio.bufferCleanSerial(12);
 
-void verbosePrintResult(boolean testPassed, char *testName, char *msg) {
-   if (testPassed) {
-     Serial.print("  Passed - "); 
-     Serial.print(testName);
-     Serial.print(" - ");
-     Serial.println(msg);
-   } else  {
-     Serial.print("  ****Failed - ");
-     Serial.print(testName);
-     Serial.print(" - ");
-     Serial.println(msg);  
-   } 
+    // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xF0;
+
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+
+    // A stream packet
+    test.assertEqual(OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost(), true, "Sends stream packet");
+
+    // Not a stream packet
+        // Store some data
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        OpenBCI_Radio.bufferSerial.packetBuffer->data[i] = 0;
+        OpenBCI_Radio.bufferSerial.packetBuffer->positionWrite++;
+    }
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[1] = 'A';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[2] = 'J';
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->data[3] = 0xC1;
+    OpenBCI_Radio.bufferSerial.numberOfPacketsToSend = 2;
+    (OpenBCI_Radio.bufferSerial.packetBuffer + 1)->positionWrite = 4;
+    test.assertEqual(OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost(), false, "Does not send a stream packet");
 }
