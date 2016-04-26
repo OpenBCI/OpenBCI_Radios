@@ -51,11 +51,15 @@ public:
     void    pollHost(void);
     void    pollRefresh(void);
     void    writeStreamPacket(char *data);
+    void    bufferAddStreamPacket(char *data, int length);
     void    bufferCleanChar(char *buffer, int bufferLength);
+    void    bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean);
+    void    bufferCleanCompletePacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets);
     void    bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
     void    bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean);
     void    bufferCleanRadio(void);
     void    bufferCleanSerial(int numberOfPacketsToClean);
+    void    bufferCleanStreamPackets(int numberOfPacketsToClean);
     void    bufferSerialFetch(void);
     char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
     byte    byteIdMakeStreamPacketType(void);
@@ -71,6 +75,7 @@ public:
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
     boolean didPicSendDeviceAStreamPacket(void);
+    boolean doesTheHostHaveAStreamPacketToSendToPC(void)
     boolean thereIsDataInSerialBuffer(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
@@ -80,9 +85,11 @@ public:
     void    sendAStreamPacketToTheHost(void);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
+    void    writeTheHostsStreamPacketBufferToThePC(void)
 
     // VARIABLES
     Buffer  bufferSerial;
+    Buffer  bufferStreamPackets;
 
     boolean debugMode;
     boolean isDevice;
@@ -101,6 +108,7 @@ public:
     int     previousPacketNumber;
 
     PacketBuffer *currentPacketBufferSerial;
+    PacketBuffer *currentPacketBufferStreamPacket;
 
     uint8_t radioMode;
 
