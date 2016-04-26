@@ -75,7 +75,7 @@ public:
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
     boolean didPicSendDeviceAStreamPacket(void);
-    boolean doesTheHostHaveAStreamPacketToSendToPC(void)
+    boolean doesTheHostHaveAStreamPacketToSendToPC(void);
     boolean thereIsDataInSerialBuffer(void);
     boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
@@ -85,7 +85,7 @@ public:
     void    sendAStreamPacketToTheHost(void);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
-    void    writeTheHostsStreamPacketBufferToThePC(void)
+    void    writeTheHostsStreamPacketBufferToThePC(void);
 
     // VARIABLES
     Buffer  bufferSerial;

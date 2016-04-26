@@ -405,9 +405,11 @@ void OpenBCI_Radio_Class::sendAStreamPacketToTheHost(void) {
 
     RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
-    bufferCleanSerial(1);
+    bufferCleanSerial(2);
 
     pollRefresh();
+
+
 }
 
 /**
@@ -607,16 +609,16 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
             currentPacketBufferSerial->positionWrite++;
 
             // This is where we check to see if the input it a stream packet
-            if (streaming) {
-                if (currentPacketBufferSerial->positionWrite == OPENBCI_MAX_PACKET_SIZE_BYTES) {
-                    sendAStreamPacketToTheHost();
-                }
-            }
-            // if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
-            //     if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
+            // if (streaming) {
+            //     if (currentPacketBufferSerial->positionWrite == OPENBCI_MAX_PACKET_SIZE_BYTES) {
             //         sendAStreamPacketToTheHost();
             //     }
             // }
+            if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
+                if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
+                    sendAStreamPacketToTheHost();
+                }
+            }
 
         } else {
             if (verbosePrintouts) {
