@@ -25,18 +25,24 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-    
+
   if (OpenBCI_Radio.didPicSendDeviceSerialData()) {
     OpenBCI_Radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
   }
-  
+
   if (OpenBCI_Radio.thereIsDataInSerialBuffer()) {
     if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
-      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();       
-    }
+      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();
   }
-  
+  }
+
   if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
     OpenBCI_Radio.writeTheDevicesRadioBufferToThePic();
+  }
+
+  if (OpenBCI_Radio.isAStreamPacketWaitingForLaunch()) {
+    if (OpenBCI_Radio.hasEnoughTimePassedToLaunchStreamPacket()) {
+      OpenBCI_Radio.sendStreamPacketToTheHost();
+    }
   }
 }

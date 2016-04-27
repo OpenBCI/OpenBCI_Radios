@@ -75,13 +75,12 @@ public:
     void    configurePassThru(void);
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
-    boolean didPicSendDeviceAStreamPacket(void);
     boolean doesTheHostHaveAStreamPacketToSendToPC(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    void    hasEnoughTimePassedToLaunchStreamPacket(void)
+    boolean hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
-    void    isAStreamPacketWaitingForLaunch(void)
+    boolean isAStreamPacketWaitingForLaunch(void);
     byte    outputGetStopByteFromByteId(char byteId);
     void    pollHost(void);
     boolean pollNow(void);

@@ -26,7 +26,7 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 18; // Channel 18
     verbosePrintouts = false;
-    debugMode = false; // Set true if doing dongle-dongle sim
+    debugMode = true; // Set true if doing dongle-dongle sim
     streaming = false;
     isHost = false;
     isDevice = false;
@@ -306,29 +306,6 @@ boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
 }
 
 /**
- * @description The PIC 32 must send an EOT as the last three bytes of every stream
- * @return - [boolean] - Returns TRUE if 2 packet writePosition is 4 and contains AJ
- */
-boolean OpenBCI_Radio_Class::didPicSendDeviceAStreamPacket() {
-    // Do a couple quick checks to make sure this is eligiable to be a stream packetBuffer
-    // Do we have a total of 2 packets to send?
-    if (bufferSerial.numberOfPacketsToSend != 2) {
-        return false;
-    }
-    PacketBuffer *verifyPacket = bufferSerial.packetBuffer + 1;
-    // Did we write 3 bytes
-    if (verifyPacket->positionWrite != 4) {
-        return false;
-    }
-    if ((verifyPacket->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (verifyPacket->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((verifyPacket->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
-        return true;
-    } else {
-        return false;
-
-    }
-}
-
-/**
 * @description Moves data from the Pic to the devices Serial buffer (bufferSerial)
 * @author AJ Keller (@pushtheworldllc)
 */
@@ -395,15 +372,15 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
  *  waiting to be sent out
  * @return {bool} if we have a packet waiting
  */
-void OpenBCI_Radio_Class::isAStreamPacketWaitingForLaunch(void) {
-    return streamPacketBuffer->readyForLaunch;
+boolean OpenBCI_Radio_Class::isAStreamPacketWaitingForLaunch(void) {
+    return streamPacketBuffer.readyForLaunch;
 }
 
 /**
  * @description This checks to see if 100uS has passed since the time we got a
  *  tail packet.
  */
-void OpenBCI_Radio_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
+boolean OpenBCI_Radio_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
     return micros() > (timeWeGot0xFXFromPic +  OPENBCI_SERIAL_TIMEOUT_uS);
 }
 
@@ -417,15 +394,15 @@ void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
 
     int packetType = byteIdMakeStreamPacketType();
 
-    char byteId = byteIdMake(true,packetType,streamPacketBuffer->data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
+    char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
 
     // Add the byteId to the packet
-    streamPacketBuffer->data[0] = byteId;
+    streamPacketBuffer.data[0] = byteId;
 
-    RFduinoGZLL.sendToHost(streamPacketBuffer->data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
+    RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
 
-    // Clean the serial buffer
-    bufferCleanSerial(bufferSerial->numberOfPacketsToSend);
+    // Clean the serial buffer (because these bytes got added to it too)
+    bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
 
     // Clean the stream packet buffer
     bufferResetStreamPacketBuffer();
@@ -441,30 +418,30 @@ void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
 void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
     // A stream packet comes in as 'A'|data|0xFX where X can be 0-15
     // Are we currently looking for 0xF0
-    if (streamPacketBuffer->readyForLaunch) {
+    if (streamPacketBuffer.readyForLaunch) {
         // We just got another char and we were ready for launch... well abort
         //  because this is an OTA program or something.. something else
         bufferResetStreamPacketBuffer();
-    } else if (streamPacketBuffer->gotHead) {
+    } else if (streamPacketBuffer.gotHead) {
         // Store in the special stream buffer
-        streamPacketBuffer->data[bytesIn] = newChar;
+        streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
 
         // Increment the number of bytes in for this possible stream packet
-        streamPacketBuffer->bytesIn++;
+        streamPacketBuffer.bytesIn++;
 
         // Have we read in the number of data bytes in a stream packet?
-        if (streamPacketBuffer->bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES) {
+        if (streamPacketBuffer.bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES) {
             // Check to see if this character is a type, 0xFx where x is 0-15
             if ((newChar & OPENBCI_STREAM_PACKET_TYPE) == OPENBCI_STREAM_PACKET_TYPE) {
                 // Save this char as the type, will come in handy in the
                 //  next step of sending a packet
-                streamPacketBuffer->typeByte = newChar;
+                streamPacketBuffer.typeByte = newChar;
 
                 // Mark this as the time we got a serial buffer
                 timeWeGot0xFXFromPic = micros();
 
                 // mark ready for launch
-                streamPacketBuffer->readyForLaunch = true;
+                streamPacketBuffer.readyForLaunch = true;
             } else {
                 // Ok so something very CRITICAL is about to happen
                 //  brace yourself
@@ -488,10 +465,10 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
                 //  should we take this oppertunity to see if this byte is A
                 if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
                     // Reset the stream packet byte counter
-                    streamPacketBuffer->bytesIn = 1;
+                    streamPacketBuffer.bytesIn = 1;
                     // gotHead is already true
                 } else {
-                    streamPacketBuffer->gotHead = false;
+                    streamPacketBuffer.gotHead = false;
                 }
             }
         }
@@ -499,10 +476,10 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
         // is this byte a HEAD? 'A'?
         if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
             // Reset the stream packet byte counter
-            streamPacketBuffer->bytesIn = 1;
+            streamPacketBuffer.bytesIn = 1;
 
             // Set flag to tell system that we could have a stream packet on our hands
-            streamPacketBuffer->gotHead = true;
+            streamPacketBuffer.gotHead = true;
         }
     }
 }
@@ -606,7 +583,6 @@ void OpenBCI_Radio_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPacketsT
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
-    buffer->numberOfBytesReadIn = 0;
 }
 
 /**
@@ -664,9 +640,9 @@ void OpenBCI_Radio_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) {
  * @description Resets the stream packet buffer to default settings
  */
 void OpenBCI_Radio_Class::bufferResetStreamPacketBuffer(void) {
-    streamPacketBuffer->gotHead = false;
-    streamPacketBuffer->bytesIn = 0;
-    streamPacketBuffer->readyForLaunch = false;
+    streamPacketBuffer.gotHead = false;
+    streamPacketBuffer.bytesIn = 0;
+    streamPacketBuffer.readyForLaunch = false;
 }
 
 /**
@@ -849,7 +825,7 @@ char OpenBCI_Radio_Class::byteIdMake(boolean isStreamPacket, int packetNumber, c
 * @returns [byte] the packet type
 */
 byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
-    return (byte)(streamPacketBuffer->typeByte & OPENBCI_STREAM_PACKET_EOT_3;
+    return (byte)(streamPacketBuffer.typeByte & OPENBCI_STREAM_PACKET_TYPE);
 }
 
 /**
