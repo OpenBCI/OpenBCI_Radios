@@ -26,7 +26,7 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 18; // Channel 18
     verbosePrintouts = false;
-    debugMode = true; // Set true if doing dongle-dongle sim
+    debugMode = false; // Set true if doing dongle-dongle sim
     streaming = false;
     isHost = false;
     isDevice = false;
@@ -1063,6 +1063,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
                     willSendDataFromBufferSerial = true;
                 }
+            } else if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
+                // Serial.println("Cleaning Hosts's bufferSerial");
+                // Clear buffer
+                OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
             } else {
                 if (OpenBCI_Radio.isDevice) {
                     OpenBCI_Radio.pollHost();
@@ -1098,7 +1102,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
                 // Serial.println("Cleaning Hosts's bufferSerial");
                 // Clear buffer
-                if (OpenBCI_Radio.verbosePrintouts) Serial.print("C");
                 OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
             }
         }
