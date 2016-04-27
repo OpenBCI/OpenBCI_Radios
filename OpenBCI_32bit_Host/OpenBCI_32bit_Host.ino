@@ -44,9 +44,9 @@ void loop() {
     OpenBCI_Radio.writeTheHostsRadioBufferToThePC();
   }
   
-  if (OpenBCI_Radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
-     // Oh boy, we have not heard from the device in a long time
-     // self destruct!
-     Serial.println("Host lost connection to device$$$");
-  }
+//  if (OpenBCI_Radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
+//     // Oh boy, we have not heard from the device in a long time
+//     // self destruct!
+//     Serial.println("Host lost connection to device$$$");
+//  }
 }

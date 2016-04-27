@@ -13,7 +13,7 @@ Also uses using timout to find end of serial data package
 
 Made by AJ Keller, Spring 2016
 Free to use and share. This code presented as-is. No promises!
-
+o
 */
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"

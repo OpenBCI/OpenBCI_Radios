@@ -35,10 +35,18 @@ public:
     } PacketBuffer;
 
     typedef struct {
-      int           numberOfPacketsToSend;
-      int           numberOfPacketsSent;
-      PacketBuffer  packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
+        int             numberOfPacketsToSend;
+        int             numberOfPacketsSent;
+        PacketBuffer    packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
     } Buffer;
+
+    typedef struct {
+        boolean     gotHead;
+        boolean     gotTail;
+        char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
+        char        typeByte;
+        int         bytesIn;
+    } StreamPacketBuffer;
 
     OpenBCI_Radio_Class();
     boolean begin(uint8_t mode,int8_t channelNumber);
@@ -60,6 +68,7 @@ public:
     void    bufferCleanRadio(void);
     void    bufferCleanSerial(int numberOfPacketsToClean);
     void    bufferCleanStreamPackets(int numberOfPacketsToClean);
+    void    bufferResetStreamPacketBuffer(void);
     void    bufferSerialFetch(void);
     char    byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
     byte    byteIdMakeStreamPacketType(void);
@@ -81,8 +90,9 @@ public:
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    void    processCharForStreamPacket(char newChar);
     void    sendTheDevicesFirstPacketToTheHost(void);
-    void    sendAStreamPacketToTheHost(void);
+    void    sendStreamPacketToTheHost(void);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
     void    writeTheHostsStreamPacketBufferToThePC(void);
@@ -90,6 +100,8 @@ public:
     // VARIABLES
     Buffer  bufferSerial;
     Buffer  bufferStreamPackets;
+
+    StreamPacketBuffer streamPacketBuffer;
 
     boolean debugMode;
     boolean isDevice;
