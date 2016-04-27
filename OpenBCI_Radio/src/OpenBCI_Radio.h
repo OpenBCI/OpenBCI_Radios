@@ -41,8 +41,8 @@ public:
     } Buffer;
 
     typedef struct {
+        boolean     readyForLaunch;
         boolean     gotHead;
-        boolean     gotTail;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         char        typeByte;
         int         bytesIn;
@@ -55,10 +55,6 @@ public:
     int     byteIdGetPacketNumber(char byteId);
     byte    byteIdGetStreamPacketType(char byteId);
     char    checkSumMake(char *data, int length);
-    byte    outputGetStopByteFromByteId(char byteId);
-    void    pollHost(void);
-    void    pollRefresh(void);
-    void    writeStreamPacket(char *data);
     void    bufferAddStreamPacket(char *data, int length);
     void    bufferCleanChar(char *buffer, int bufferLength);
     void    bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean);
@@ -77,25 +73,29 @@ public:
     void    configureDevice(void);
     void    configureHost(void);
     void    configurePassThru(void);
-    boolean pollNow(void);
-
-    void    writeBufferToSerial(char *buffer,int length);
-
     boolean didPCSendDataToHost(void);
     boolean didPicSendDeviceSerialData(void);
     boolean didPicSendDeviceAStreamPacket(void);
     boolean doesTheHostHaveAStreamPacketToSendToPC(void);
-    boolean thereIsDataInSerialBuffer(void);
-    boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
-    boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     void    getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     void    getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    void    hasEnoughTimePassedToLaunchStreamPacket(void)
+    boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
+    void    isAStreamPacketWaitingForLaunch(void)
+    byte    outputGetStopByteFromByteId(char byteId);
+    void    pollHost(void);
+    boolean pollNow(void);
+    void    pollRefresh(void);
     void    processCharForStreamPacket(char newChar);
     void    sendTheDevicesFirstPacketToTheHost(void);
     void    sendStreamPacketToTheHost(void);
+    boolean thereIsDataInSerialBuffer(void);
+    boolean theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    void    writeBufferToSerial(char *buffer,int length);
     void    writeTheDevicesRadioBufferToThePic(void);
     void    writeTheHostsRadioBufferToThePC(void);
     void    writeTheHostsStreamPacketBufferToThePC(void);
+    void    writeStreamPacket(char *data);
 
     // VARIABLES
     Buffer  bufferSerial;
@@ -126,8 +126,7 @@ public:
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
-    char *loremIpsum;
-
+    unsigned long timeWeGot0xFXFromPic;
     unsigned long timeOfLastPoll;
 
     int8_t radioChannel;

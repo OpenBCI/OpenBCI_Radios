@@ -18,8 +18,11 @@ didPicSendDeviceAStreamPacket								KEYWORD2
 doesTheHostHaveAStreamPacketToSendToPC						KEYWORD2
 getSerialDataFromPCAndPutItInHostsSerialBuffer		  		KEYWORD2
 getSerialDataFromPicAndPutItInTheDevicesSerialBuffer 		KEYWORD2
+hasEnoughTimePassedToLaunchStreamPacket                     KEYWORD2
+isAStreamPacketWaitingForLaunch                             KEYWORD2
 isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost 	KEYWORD2
 isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice 	KEYWORD2
+sendStreamPacketToTheHost                                   KEYWORD2
 sendTheDevicesFirstPacketToTheHost 							KEYWORD2
 theLastTimeNewSerialDataWasAvailableWasLongEnough 			KEYWORD2
 writeTheDevicesRadioBufferToThePic 							KEYWORD2

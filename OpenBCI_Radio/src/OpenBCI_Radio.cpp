@@ -391,6 +391,23 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
 }
 
 /**
+ * @description Checks to see if we have a packet waiting in the streamPacketBuffer
+ *  waiting to be sent out
+ * @return {bool} if we have a packet waiting
+ */
+void OpenBCI_Radio_Class::isAStreamPacketWaitingForLaunch(void) {
+    return streamPacketBuffer->readyForLaunch;
+}
+
+/**
+ * @description This checks to see if 100uS has passed since the time we got a
+ *  tail packet.
+ */
+void OpenBCI_Radio_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
+    return micros() > (timeWeGot0xFXFromPic +  OPENBCI_SERIAL_TIMEOUT_uS);
+}
+
+/**
  * @description Sends the contents of the `streamPacketBuffer`
  *                 to the HOST, sends as stream
  *
@@ -422,23 +439,12 @@ void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
  * @description Called ever time there is a new byte read in on a device
  */
 void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
-    // A stream packet comes in as 'A'|data|'J'|0xFX where X can be 0-15
-    // Are we currently looking for trails J or 0xF0
-    if (streamPacketBuffer->gotTail) {
-        // At this point in time we have gotten a head ('A'), followed by
-        //  31 bytes of data, and then a tail ('J'), and now are looking for
-        //  0xFX, where X could be 0-15
-        if ((newChar & OPENBCI_STREAM_PACKET_TYPE) == OPENBCI_STREAM_PACKET_TYPE) {
-            // this is a stream packet! no doubt now! send this shit!
-
-            // Save this char as the type, will come in handy in the
-            //  next step of sending a packet
-            streamPacketBuffer->typeByte = newChar;
-
-            // Send a stream buffer
-            sendStreamPacketToTheHost();
-
-        }
+    // A stream packet comes in as 'A'|data|0xFX where X can be 0-15
+    // Are we currently looking for 0xF0
+    if (streamPacketBuffer->readyForLaunch) {
+        // We just got another char and we were ready for launch... well abort
+        //  because this is an OTA program or something.. something else
+        bufferResetStreamPacketBuffer();
     } else if (streamPacketBuffer->gotHead) {
         // Store in the special stream buffer
         streamPacketBuffer->data[bytesIn] = newChar;
@@ -448,16 +454,24 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
 
         // Have we read in the number of data bytes in a stream packet?
         if (streamPacketBuffer->bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES) {
-            // Check to see if this character is a tail, a 'J'
-            if (newChar == OPENBCI_STREAM_PACKET_TAIL) {
-                streamPacketBuffer->gotTail = true;
+            // Check to see if this character is a type, 0xFx where x is 0-15
+            if ((newChar & OPENBCI_STREAM_PACKET_TYPE) == OPENBCI_STREAM_PACKET_TYPE) {
+                // Save this char as the type, will come in handy in the
+                //  next step of sending a packet
+                streamPacketBuffer->typeByte = newChar;
+
+                // Mark this as the time we got a serial buffer
+                timeWeGot0xFXFromPic = micros();
+
+                // mark ready for launch
+                streamPacketBuffer->readyForLaunch = true;
             } else {
                 // Ok so something very CRITICAL is about to happen
                 //  brace yourself
                 //  ...
                 //  Ok so at this point in time we read a stream packet
                 //  head byte, counted 31 bytes, and now our 33 byte
-                //  turns out to not be the TAIL byte ('J') that we
+                //  turns out to not be the 0xFX (X:0-15) that we
                 //  were expecting! My god! What does this mean? Well
                 //  it could mean:
                 //      1) that this is not a stream packet and we just
@@ -603,7 +617,6 @@ void OpenBCI_Radio_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberOf
     bufferCleanCompletePacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
-    buffer->numberOfBytesReadIn = 0;
 }
 
 /**
@@ -652,8 +665,8 @@ void OpenBCI_Radio_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) {
  */
 void OpenBCI_Radio_Class::bufferResetStreamPacketBuffer(void) {
     streamPacketBuffer->gotHead = false;
-    streamPacketBuffer->gotTail = false;
     streamPacketBuffer->bytesIn = 0;
+    streamPacketBuffer->readyForLaunch = false;
 }
 
 /**
