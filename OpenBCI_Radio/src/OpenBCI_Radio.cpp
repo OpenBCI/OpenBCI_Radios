@@ -419,6 +419,7 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
     // A stream packet comes in as 'A'|data|0xFX where X can be 0-15
     // Are we currently looking for 0xF0
     if (streamPacketBuffer.readyForLaunch) {
+        // Serial.println("ABORT!");
         // We just got another char and we were ready for launch... well abort
         //  because this is an OTA program or something.. something else
         bufferResetStreamPacketBuffer();
@@ -429,10 +430,12 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
         // Increment the number of bytes in for this possible stream packet
         streamPacketBuffer.bytesIn++;
 
+        // Serial.print("NRML: "); Serial.print(streamPacketBuffer.bytesIn); Serial.println(newChar);
         // Have we read in the number of data bytes in a stream packet?
-        if (streamPacketBuffer.bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES) {
+        if (streamPacketBuffer.bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES + 1) {
             // Check to see if this character is a type, 0xFx where x is 0-15
-            if ((newChar & OPENBCI_STREAM_PACKET_TYPE) == OPENBCI_STREAM_PACKET_TYPE) {
+            if ((newChar & 0xF0) == 0xF0) {
+                // Serial.println("Tail test pass!");
                 // Save this char as the type, will come in handy in the
                 //  next step of sending a packet
                 streamPacketBuffer.typeByte = newChar;
@@ -443,6 +446,7 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
                 // mark ready for launch
                 streamPacketBuffer.readyForLaunch = true;
             } else {
+                // Serial.println("Tail test fail");
                 // Ok so something very CRITICAL is about to happen
                 //  brace yourself
                 //  ...
@@ -467,6 +471,7 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
                     // Reset the stream packet byte counter
                     streamPacketBuffer.bytesIn = 1;
                     // gotHead is already true
+                    // Serial.println("HEAD: 1");
                 } else {
                     streamPacketBuffer.gotHead = false;
                 }
@@ -474,12 +479,15 @@ void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
         }
     } else {
         // is this byte a HEAD? 'A'?
-        if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
+        if (newChar == 'A') {
+            // Serial.println("HEAD: 1");
             // Reset the stream packet byte counter
             streamPacketBuffer.bytesIn = 1;
 
             // Set flag to tell system that we could have a stream packet on our hands
             streamPacketBuffer.gotHead = true;
+        } else {
+            // Serial.print("head test fail: "); Serial.println(newChar);
         }
     }
 }
@@ -685,8 +693,9 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
 
         // We are only going to mess with the current packet if it's not null
         if (currentPacketBufferSerial) {
+            char newChar = Serial.read();
             // Store the byte to current buffer at write postition
-            currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = Serial.read();;
+            currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
 
             // Increment currentPacketBufferSerial write postion
             currentPacketBufferSerial->positionWrite++;
@@ -695,7 +704,7 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
             //  this only appliest to the device, so let's ask that question first
             if (isDevice) {
                 // follow the write rabbit!
-                processCharForStreamPacket(currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite]);
+                processCharForStreamPacket(newChar);
             }
 
         } else {

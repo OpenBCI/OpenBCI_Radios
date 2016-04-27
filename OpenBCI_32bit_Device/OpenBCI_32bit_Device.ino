@@ -41,6 +41,7 @@ void loop() {
   }
 
   if (OpenBCI_Radio.isAStreamPacketWaitingForLaunch()) {
+    Serial.println("Ready for launch");
     if (OpenBCI_Radio.hasEnoughTimePassedToLaunchStreamPacket()) {
       OpenBCI_Radio.sendStreamPacketToTheHost();
     }
