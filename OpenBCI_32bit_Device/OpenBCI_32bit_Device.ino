@@ -13,7 +13,7 @@ Also uses using timout to find end of serial data package
 
 Made by AJ Keller, Spring 2016
 Free to use and share. This code presented as-is. No promises!
-
+o
 */
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"
@@ -25,18 +25,24 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-    
+
   if (OpenBCI_Radio.didPicSendDeviceSerialData()) {
     OpenBCI_Radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
   }
-  
+
   if (OpenBCI_Radio.thereIsDataInSerialBuffer()) {
     if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
-      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();       
-    }
+      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();
   }
-  
+  }
+
   if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
     OpenBCI_Radio.writeTheDevicesRadioBufferToThePic();
+  }
+
+  if (OpenBCI_Radio.isAStreamPacketWaitingForLaunch()) {
+    if (OpenBCI_Radio.hasEnoughTimePassedToLaunchStreamPacket()) {
+      OpenBCI_Radio.sendStreamPacketToTheHost();
+    }
   }
 }
