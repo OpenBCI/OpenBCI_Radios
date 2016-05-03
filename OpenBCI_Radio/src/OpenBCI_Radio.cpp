@@ -918,6 +918,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
         // Send back some data!
         if (OpenBCI_Radio.isHost) {
+            // Check if this is a time sync packet to ack back to driver
+            if (OpenBCI_Radio.bufferSerial.numberOfPacketsToSend == 1 && packetNumber == 0 && (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data[1] == '<') {
+                Serial.write(','); // ack back to driver
+            }
             RFduinoGZLL.sendToDevice(device,(OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite);
         } else { //isDevice
             RFduinoGZLL.sendToHost((OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite);
