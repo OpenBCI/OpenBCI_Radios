@@ -51,10 +51,11 @@
 // Poll time out length for sending null packet from device to host
 #define OPENBCI_POLL_TIME_DURATION_MS 63
 
+#define OPENBCI_SERIAL_TIMEOUT_uS 100
+
 // Stream packet EOTs
-#define OPENBCI_STREAM_PACKET_EOT_1 'A'
-#define OPENBCI_STREAM_PACKET_EOT_2 'J'
-#define OPENBCI_STREAM_PACKET_EOT_3 0xF0
+#define OPENBCI_STREAM_PACKET_HEAD 'A'
+#define OPENBCI_STREAM_PACKET_TYPE 0xF0
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011

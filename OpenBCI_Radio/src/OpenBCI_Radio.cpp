@@ -28,6 +28,8 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     verbosePrintouts = false;
     debugMode = false; // Set true if doing dongle-dongle sim
     streaming = false;
+    isHost = false;
+    isDevice = false;
 }
 
 /**
@@ -108,8 +110,11 @@ void OpenBCI_Radio_Class::configureDevice(void) {
         // END: To run host normally
     }
 
-    isHost = false;
+    // Configure booleans
     isDevice = true;
+
+    bufferResetStreamPacketBuffer();
+
     // TODO: Implement init hand shaking
     // char msg[1];
     // msg[0] = RFDUINOGZLL_PACKET_INIT & 0xFF;
@@ -137,7 +142,8 @@ void OpenBCI_Radio_Class::configureHost(void) {
     Serial.begin(115200);
 
     isHost = true;
-    isDevice = false;
+
+    bufferCleanStreamPackets(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
     if (verbosePrintouts) {
         Serial.println("Host radio up");
@@ -214,12 +220,45 @@ void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
     OpenBCI_Radio.bufferCleanRadio();
 }
 
+/**
+ * @description The first line of defense against a system that has lost it's device
+ */
 boolean OpenBCI_Radio_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
     if (millis() > lastTimeHostHeardFromDevice + (OPENBCI_POLL_TIME_DURATION_MS * 2)) {
         return true;
     } else {
         return false;
     }
+}
+
+/**
+ * @description If the Host received a stream packet, then this will have data in it
+ *      and number of packets to send will be greater than 0
+ * @return {boolean} - If there are packets to send
+ */
+boolean OpenBCI_Radio_Class::doesTheHostHaveAStreamPacketToSendToPC(void) {
+    return bufferStreamPackets.numberOfPacketsToSend > 0;
+}
+
+/**
+ * @description We now write out the stream packet buffer to the PC. It's important we place
+ *      this into a buffer, and not try to write to the serial port in on_recieve because
+ *      that will only lead to problems.
+ */
+void OpenBCI_Radio_Class::writeTheHostsStreamPacketBufferToThePC(void) {
+    // Write packets until we have sent them all
+    while (bufferStreamPackets.numberOfPacketsToSend > bufferStreamPackets.numberOfPacketsSent) {
+
+        // Send first buffer out... first call would be 0th packet then 1st, and so on
+        writeStreamPacket(bufferStreamPackets.packetBuffer->data + bufferStreamPackets.numberOfPacketsSent);
+
+
+        // Increment the number of packets we wrote out the serial port
+        bufferStreamPackets.numberOfPacketsSent++;
+    }
+
+    // Clean the bufferStreamPackets
+    bufferCleanStreamPackets(bufferStreamPackets.numberOfPacketsToSend);
 }
 
 /**
@@ -263,29 +302,6 @@ boolean OpenBCI_Radio_Class::didPicSendDeviceSerialData(void) {
             pollHost();
         }
         return false;
-    }
-}
-
-/**
- * @description The PIC 32 must send an EOT as the last three bytes of every stream
- * @return - [boolean] - Returns TRUE if 2 packet writePosition is 4 and contains AJ
- */
-boolean OpenBCI_Radio_Class::didPicSendDeviceAStreamPacket() {
-    // Do a couple quick checks to make sure this is eligiable to be a stream packetBuffer
-    // Do we have a total of 2 packets to send?
-    if (bufferSerial.numberOfPacketsToSend != 2) {
-        return false;
-    }
-    PacketBuffer *verifyPacket = bufferSerial.packetBuffer + 1;
-    // Did we write 3 bytes
-    if (verifyPacket->positionWrite != 4) {
-        return false;
-    }
-    if ((verifyPacket->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (verifyPacket->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((verifyPacket->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
-        return true;
-    } else {
-        return false;
-
     }
 }
 
@@ -352,24 +368,128 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
 }
 
 /**
-* @description Sends the contents of the first packet in `bufferSerial` to host
-*                 to the HOST, sends as stream
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radio_Class::sendAStreamPacketToTheHost(void) {
+ * @description Checks to see if we have a packet waiting in the streamPacketBuffer
+ *  waiting to be sent out
+ * @return {bool} if we have a packet waiting
+ */
+boolean OpenBCI_Radio_Class::isAStreamPacketWaitingForLaunch(void) {
+    return streamPacketBuffer.readyForLaunch;
+}
+
+/**
+ * @description This checks to see if 100uS has passed since the time we got a
+ *  tail packet.
+ */
+boolean OpenBCI_Radio_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
+    return micros() > (timeWeGot0xFXFromPic +  OPENBCI_SERIAL_TIMEOUT_uS);
+}
+
+/**
+ * @description Sends the contents of the `streamPacketBuffer`
+ *                 to the HOST, sends as stream
+ *
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
 
     int packetType = byteIdMakeStreamPacketType();
 
-    char byteId = byteIdMake(true,packetType,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
+    char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
 
     // Add the byteId to the packet
-    bufferSerial.packetBuffer->data[0] = byteId;
+    streamPacketBuffer.data[0] = byteId;
 
-    RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
+    RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
 
-    bufferCleanSerial(1);
+    // Clean the serial buffer (because these bytes got added to it too)
+    bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
 
+    // Clean the stream packet buffer
+    bufferResetStreamPacketBuffer();
+
+    // Refresh the poll timeout timer because we just polled the Host by sending
+    //  that last packet
     pollRefresh();
+}
+
+/**
+ * @description Called ever time there is a new byte read in on a device
+ */
+void OpenBCI_Radio_Class::processCharForStreamPacket(char newChar) {
+    // A stream packet comes in as 'A'|data|0xFX where X can be 0-15
+    // Are we currently looking for 0xF0
+    if (streamPacketBuffer.readyForLaunch) {
+        // Serial.println("ABORT!");
+        // We just got another char and we were ready for launch... well abort
+        //  because this is an OTA program or something.. something else
+        bufferResetStreamPacketBuffer();
+    } else if (streamPacketBuffer.gotHead) {
+        // Store in the special stream buffer
+        streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
+
+        // Increment the number of bytes in for this possible stream packet
+        streamPacketBuffer.bytesIn++;
+
+        // Serial.print("NRML: "); Serial.print(streamPacketBuffer.bytesIn); Serial.println(newChar);
+        // Have we read in the number of data bytes in a stream packet?
+        if (streamPacketBuffer.bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES + 1) {
+            // Check to see if this character is a type, 0xFx where x is 0-15
+            if ((newChar & 0xF0) == 0xF0) {
+                // Serial.println("Tail test pass!");
+                // Save this char as the type, will come in handy in the
+                //  next step of sending a packet
+                streamPacketBuffer.typeByte = newChar;
+
+                // Mark this as the time we got a serial buffer
+                timeWeGot0xFXFromPic = micros();
+
+                // mark ready for launch
+                streamPacketBuffer.readyForLaunch = true;
+            } else {
+                // Serial.println("Tail test fail");
+                // Ok so something very CRITICAL is about to happen
+                //  brace yourself
+                //  ...
+                //  Ok so at this point in time we read a stream packet
+                //  head byte, counted 31 bytes, and now our 33 byte
+                //  turns out to not be the 0xFX (X:0-15) that we
+                //  were expecting! My god! What does this mean? Well
+                //  it could mean:
+                //      1) that this is not a stream packet and we just
+                //          an ASCII 'A' and we were looking for it
+                //          a scenario where this could happen is OTA
+                //          programming
+                //      2) That this WAS a STREAM packet and some how
+                //          that packet got fucked up on its way to
+                //          RFduino and now we need to chalk this up
+                //          as a loss and prepare ourselves for a new
+                //          stream packet
+                //
+                // For now, let's just say, hey look for another stream packet
+                //  should we take this oppertunity to see if this byte is A
+                if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
+                    // Reset the stream packet byte counter
+                    streamPacketBuffer.bytesIn = 1;
+                    // gotHead is already true
+                    // Serial.println("HEAD: 1");
+                } else {
+                    streamPacketBuffer.gotHead = false;
+                }
+            }
+        }
+    } else {
+        // is this byte a HEAD? 'A'?
+        if (newChar == 'A') {
+            // Serial.println("HEAD: 1");
+            // Reset the stream packet byte counter
+            streamPacketBuffer.bytesIn = 1;
+
+            // Set flag to tell system that we could have a stream packet on our hands
+            streamPacketBuffer.gotHead = true;
+        } else {
+            // Serial.print("head test fail: "); Serial.println(newChar);
+        }
+    }
 }
 
 /**
@@ -449,9 +569,17 @@ void OpenBCI_Radio_Class::bufferCleanPacketBuffer(PacketBuffer *packetBuffer, in
     for(int i = 0; i < numberOfPackets; i++) {
         packetBuffer[i].positionRead = 0;
         packetBuffer[i].positionWrite = 1;
-        // TODO: Determine if this is really even important... since we are
-        //  resetting the read and write positions, i think over writing is ok
-        // bufferCleanChar(packetBuffer[i].data, OPENBCI_MAX_PACKET_SIZE_BYTES);
+    }
+}
+
+/**
+* @description Private function to clean a PacketBuffer.
+* @author AJ Keller (@pushtheworldllc)
+*/
+void OpenBCI_Radio_Class::bufferCleanCompletePacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets) {
+    for(int i = 0; i < numberOfPackets; i++) {
+        packetBuffer[i].positionRead = 0;
+        packetBuffer[i].positionWrite = 0;
     }
 }
 
@@ -461,6 +589,16 @@ void OpenBCI_Radio_Class::bufferCleanPacketBuffer(PacketBuffer *packetBuffer, in
 */
 void OpenBCI_Radio_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean) {
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
+    buffer->numberOfPacketsToSend = 0;
+    buffer->numberOfPacketsSent = 0;
+}
+
+/**
+* @description Private function to clean (clear/reset) a Buffer.
+* @author AJ Keller (@pushtheworldllc)
+*/
+void OpenBCI_Radio_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean) {
+    bufferCleanCompletePacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
 }
@@ -494,6 +632,28 @@ void OpenBCI_Radio_Class::bufferCleanSerial(int numberOfPacketsToClean) {
 }
 
 /**
+ * @description Function to clean (clear/reset) the bufferStreamPackets.
+ * @param - `numberOfPacketsToClean` - [int] - The number of packets you want to
+ *      clean, for example, on init, we would clean all packets, but on cleaning
+ *      from the RFduinoGZLL_onReceive() we would only clean the number of
+ *      packets acutally used.
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radio_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) {
+    bufferCleanCompleteBuffer(&bufferStreamPackets, numberOfPacketsToClean);
+    currentPacketBufferStreamPacket = bufferStreamPackets.packetBuffer;
+}
+
+/**
+ * @description Resets the stream packet buffer to default settings
+ */
+void OpenBCI_Radio_Class::bufferResetStreamPacketBuffer(void) {
+    streamPacketBuffer.gotHead = false;
+    streamPacketBuffer.bytesIn = 0;
+    streamPacketBuffer.readyForLaunch = false;
+}
+
+/**
 * @description Moves bytes on serial port into bufferSerial
 * @author AJ Keller (@pushtheworldllc)
 */
@@ -523,6 +683,8 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
                 // this is bad, so something, throw error, explode... idk yet...
                 //  for now set currentPacketBufferSerial to NULL
                 currentPacketBufferSerial = NULL;
+                // Clear out buffers... start again!
+                bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
             } else {
                 // move the pointer 1 struct
                 currentPacketBufferSerial++;
@@ -531,23 +693,19 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
 
         // We are only going to mess with the current packet if it's not null
         if (currentPacketBufferSerial) {
+            char newChar = Serial.read();
             // Store the byte to current buffer at write postition
-            currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = Serial.read();
+            currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
 
             // Increment currentPacketBufferSerial write postion
             currentPacketBufferSerial->positionWrite++;
 
-            // This is where we check to see if the input it a stream packet
-            if (streaming) {
-                if (currentPacketBufferSerial->positionWrite == OPENBCI_MAX_PACKET_SIZE_BYTES) {
-                    sendAStreamPacketToTheHost();
-                }
+            // We need to do some checking for a stream packet
+            //  this only appliest to the device, so let's ask that question first
+            if (isDevice) {
+                // follow the write rabbit!
+                processCharForStreamPacket(newChar);
             }
-            // if (isDevice && bufferSerial.numberOfPacketsToSend == 2 && currentPacketBufferSerial->positionWrite == 4) {
-            //     if ((currentPacketBufferSerial->data[1] == OPENBCI_STREAM_PACKET_EOT_1) && (currentPacketBufferSerial->data[2] == OPENBCI_STREAM_PACKET_EOT_2) && ((currentPacketBufferSerial->data[3] & OPENBCI_STREAM_PACKET_EOT_3) == OPENBCI_STREAM_PACKET_EOT_3)) {
-            //         sendAStreamPacketToTheHost();
-            //     }
-            // }
 
         } else {
             if (verbosePrintouts) {
@@ -563,6 +721,45 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
 
         // Save time of last serial read...
         lastTimeNewSerialDataWasAvailable = millis();
+    }
+}
+
+/**
+* @description Moves bytes into bufferStreamPackets from on_recieve
+* @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
+* @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
+* @author AJ Keller (@pushtheworldllc)
+*/
+void OpenBCI_Radio_Class::bufferAddStreamPacket(char *data, int length) {
+
+    // Set the number of packets to 1 initally, it will only grow
+    if (bufferStreamPackets.numberOfPacketsToSend == 0) {
+        bufferStreamPackets.numberOfPacketsToSend = 1;
+    }
+
+    for (int i = 0; i < length; i++) {
+        // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
+        if (currentPacketBufferStreamPacket->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
+            // Go to the next packet
+            bufferStreamPackets.numberOfPacketsToSend++;
+            // Did we run out of buffers?
+            if (bufferStreamPackets.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+                // this is bad, so something, throw error, explode... idk yet...
+                //  for now set currentPacketBufferSerial to NULL
+                currentPacketBufferStreamPacket = NULL;
+            } else {
+                // move the pointer 1 struct
+                currentPacketBufferStreamPacket++;
+            }
+        }
+        // We are only going to mess with the current packet if it's not null
+        if (currentPacketBufferStreamPacket) {
+            // Store the byte to current buffer at write postition
+            currentPacketBufferStreamPacket->data[currentPacketBufferStreamPacket->positionWrite] = data[i];
+
+            // Increment currentPacketBufferSerial write postion
+            currentPacketBufferStreamPacket->positionWrite++;
+        }
     }
 }
 
@@ -629,17 +826,15 @@ char OpenBCI_Radio_Class::byteIdMake(boolean isStreamPacket, int packetNumber, c
     // Set the check sum bits Bits[2:0]
     output = output | checkSumMake(data,length);
 
-
     return output;
 }
 
 /**
 * @description Strips and gets the packet number from a byteId
-* @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [byte] the packet type
 */
 byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
-    return (byte)(bufferSerial.packetBuffer + 1)->data[3] & OPENBCI_STREAM_PACKET_EOT_3;
+    return (byte)(streamPacketBuffer.typeByte & OPENBCI_STREAM_PACKET_TYPE);
 }
 
 /**
@@ -735,8 +930,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // will either send above message or data from buffer serial
     boolean goodToAddPacketToRadioBuffer = true;
     boolean willSendDataFromBufferSerial = false;
-    boolean willAskIfAnySerialDataToSend = false;
-    boolean immediatelySendStreamPacket = false;
     boolean willSendMsg = false;
 
     if (OpenBCI_Radio.isHost) {
@@ -769,12 +962,21 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         /**************************************/
         // CANN SEND DATA HERE
         /**************************************/
+
+        // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
+
+        // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
+
         boolean gotLastPacket = false;
 
+        // The packetNumber is embedded in the first byte, the byteId
         int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
+
+        // When in debug mode, state which packetNumber we just recieved
         if (OpenBCI_Radio.verbosePrintouts) {
             Serial.print("R<-");Serial.println(packetNumber);
         }
+
         // Verify the checksums are equal
         if (OpenBCI_Radio.checkSumsAreEqual(data,len)) {
             // This first statment asks if this is a last packet and the previous packet was 0 too
@@ -824,10 +1026,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         }
 
         if (goodToAddPacketToRadioBuffer) {
-            willAskIfAnySerialDataToSend = true;
+            // We are going to stop
             if (OpenBCI_Radio.byteIdGetIsStream(data[0])) {
                 // Serial.println("Got stream packet!");
-                OpenBCI_Radio.writeStreamPacket(data);
+                OpenBCI_Radio.bufferAddStreamPacket(data,len);
             } else {
                 for (int i = 1; i < len; i++) { // skip the byteId
                     if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
@@ -861,6 +1063,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
                     willSendDataFromBufferSerial = true;
                 }
+            } else if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
+                // Serial.println("Cleaning Hosts's bufferSerial");
+                // Clear buffer
+                OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
             } else {
                 if (OpenBCI_Radio.isDevice) {
                     OpenBCI_Radio.pollHost();
@@ -896,16 +1102,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
                 // Serial.println("Cleaning Hosts's bufferSerial");
                 // Clear buffer
-                if (OpenBCI_Radio.verbosePrintouts) Serial.print("C");
                 OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
             }
         }
     }
 
-    // // Are we still not sending data and we should be asking if we should?
-    // if (!willSendDataFromBufferSerial && willAskIfAnySerialDataToSend) {
-    //
-    // }
 
     if (willSendDataFromBufferSerial) {
         // Build byteId
