@@ -107,7 +107,6 @@ public:
     boolean isHost;
     boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
     boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
-    boolean streaming;
     boolean verbosePrintouts;
 
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
