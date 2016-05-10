@@ -49,6 +49,7 @@ public:
     } StreamPacketBuffer;
 
     OpenBCI_Radio_Class();
+    boolean begin(uint8_t mode);
     boolean begin(uint8_t mode,int8_t channelNumber);
     char    byteIdGetCheckSum(char byteId);
     boolean byteIdGetIsStream(char byteId);
@@ -81,6 +82,7 @@ public:
     boolean hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean hasItBeenTooLongSinceHostHeardFromDevice(void);
     boolean isAStreamPacketWaitingForLaunch(void);
+    void    ledFeedBackForPassThru(void);
     byte    outputGetStopByteFromByteId(char byteId);
     void    pollHost(void);
     boolean pollNow(void);

@@ -34,6 +34,20 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
 /**
 * @description The function that the radio will call in setup()
 * @param: mode [unint8_t] - The mode the radio shall operate in
+* @author AJ Keller (@pushtheworldllc)
+*/
+boolean OpenBCI_Radio_Class::begin(uint8_t mode) {
+    // Save global radio mode
+    radioMode = mode;
+
+    // configure radio
+    configure(mode,radioChannel);
+
+}
+
+/**
+* @description The function that the radio will call in setup()
+* @param: mode [unint8_t] - The mode the radio shall operate in
 * @param: channelNumber [int8_t] - The channelNumber the RFduinoGZLL will
 *           use to communicate with the other RFduinoGZLL.
 *           NOTE: Must be from 2 - 25
@@ -154,7 +168,13 @@ void OpenBCI_Radio_Class::configureHost(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radio_Class::configurePassThru(void) {
+    // Configure the pins
+    pinMode(0,OUTPUT_D0H1);  // output is highZ when logic 0, HIGH when logic 1
+    pinMode(1,OUTPUT_D0H1);
+    pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
 
+    digitalWrite(0,LOW);
+    digitalWrite(1,LOW);
 }
 
 /********************************************/
@@ -1121,4 +1141,21 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         OpenBCI_Radio.bufferSerial.numberOfPacketsSent++;
     }
 
+}
+
+/********************************************/
+/********************************************/
+/**********    PASS THRU CODE    ************/
+/********************************************/
+/********************************************/
+
+/**
+ * @description Used to flash the LED to give feedback to the user that the Dongle is in pass thru mode
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radio_Class::ledFeedBackForPassThru(void) {
+    digitalWrite(LED,HIGH);
+    delay(600);
+    digitalWrite(LED,LOW);
+    delay(200);
 }
