@@ -6,7 +6,7 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-OpenBCI_Radio	KEYWORD1
+radio	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

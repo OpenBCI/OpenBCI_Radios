@@ -41,9 +41,23 @@
 // roles for the RFduinoGZLL
 #define RFDUINOGZLL_ROLE_HOST HOST
 #define RFDUINOGZLL_ROLE_DEVICE DEVICE0
-#define RFDUINOGZLL_PACKET_BAD_CHECK_SUM 0x02 // Bad check sum
-#define RFDUINOGZLL_PACKET_MISSED 0x04 // Missed a packet
-#define RFDUINOGZLL_PACKET_INIT 0x08 // Init packet
+
+// Channel limits
+#define RFDUINOGZLL_CHANNEL_LIMIT_LOWER 0
+#define RFDUINOGZLL_CHANNEL_LIMIT_UPPER 25
+
+// flash memory address for RFdunioGZLL
+#define RFDUINOGZLL_FLASH_MEM_ADDR 251
+
+// Private Radio communications
+//  ORPM --> "OpenBCI Radio Private Message"
+#define ORPM_INVALID_CODE_RECEIVED 0x00 // The other radio sent a 1 byte message that does not match any
+#define ORPM_PACKET_BAD_CHECK_SUM 0x01 // Bad check sum
+#define ORPM_PACKET_MISSED 0x02 // Missed a packet
+#define ORPM_PACKET_INIT 0x03 // Init packet
+#define ORPM_DEVICE_SERIAL_OVERFLOW 0x04 // The Device is being overflowed by Pic
+#define ORPM_CHANGE_CHANNEL_HOST_REQUEST 0x05 // CCHR
+#define ORPM_CHANGE_CHANNEL_DEVICE_READY 0x06 //
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
@@ -56,6 +70,14 @@
 // Stream packet EOTs
 #define OPENBCI_STREAM_PACKET_HEAD 'A'
 #define OPENBCI_STREAM_PACKET_TYPE 0xF0
+
+// Special host codes
+#define OPENBCI_HOST_TIME_SYNC '<'
+#define OPENBCI_HOST_TIME_SYNC_ACK ','
+#define OPENBCI_HOST_CHANNEL_QUERY 0x00
+#define OPENBCI_HOST_CHANNEL_CHANGE 0x01
+#define OPENBCI_HOST_CHANNEL_CHANGE_INVALID 0x02
+#define OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS 0x03
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011

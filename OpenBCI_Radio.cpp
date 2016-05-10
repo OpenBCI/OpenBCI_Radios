@@ -24,8 +24,8 @@ MIT license
 OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     // Set defaults
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
-    radioChannel = 18; // Channel 18
-    verbosePrintouts = false;
+    radioChannel = 25; // Channel 18
+    verbosePrintouts = true;
     debugMode = true; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
@@ -50,13 +50,16 @@ boolean OpenBCI_Radio_Class::begin(uint8_t mode) {
 * @param: mode [unint8_t] - The mode the radio shall operate in
 * @param: channelNumber [int8_t] - The channelNumber the RFduinoGZLL will
 *           use to communicate with the other RFduinoGZLL.
-*           NOTE: Must be from 2 - 25
+*           NOTE: Must be from 0 - 25
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radio_Class::begin(uint8_t mode, int8_t channelNumber) {
+boolean OpenBCI_Radio_Class::begin(uint8_t mode, uint32_t channelNumber) {
     // Save global radio mode
     radioMode = mode;
-    radioChannel = channelNumber;
+    // Restrict the channel to 0-25 inclusively
+    if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER || channelNumber < RFDUINOGZLL_CHANNEL_LIMIT_LOWER) {
+        channelNumber = RFDUINOGZLL_CHANNEL_LIMIT_LOWER;
+    }
 
     // configure radio
     configure(mode,channelNumber);
@@ -70,14 +73,24 @@ boolean OpenBCI_Radio_Class::begin(uint8_t mode, int8_t channelNumber) {
 *           use to communicate with the other RFduinoGZLL
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radio_Class::configure(uint8_t mode, int8_t channelNumber) {
+void OpenBCI_Radio_Class::configure(uint8_t mode, uint32_t channelNumber) {
     // Quickly check to see if in pass through mode, if so, call and dip out of func
     if (mode == OPENBCI_MODE_PASS_THRU) {
         configurePassThru();
     } else { // we are either dealing with a Host or a Device
         // We give the oppertunity to call any 'universal' code, rather code, that
         //    gets set up the same on both Host and Device
-        RFduinoGZLL.channel = channelNumber;
+
+        // Check to see if we need to set the channel number
+        //  this is only the case on the first run of the program
+        if (needToSetChannelNumber()) {
+            setChannelNumber(channelNumber);
+        }
+        RFduinoGZLL.channel = getChannelNumber();
+        if (isHost) {
+            Serial.print("Channel: "); Serial.write(RFduinoGZLL.channel); Serial.println();
+        }
+        radioChannel = getChannelNumber();
 
         // get the buffers ready
         bufferCleanRadio();
@@ -130,7 +143,7 @@ void OpenBCI_Radio_Class::configureDevice(void) {
 
     // TODO: Implement init hand shaking
     // char msg[1];
-    // msg[0] = RFDUINOGZLL_PACKET_INIT & 0xFF;
+    // msg[0] = ORPM_PACKET_INIT & 0xFF;
     // RFduinoGZLL.sendToHost(msg,1);
     pollRefresh();
 
@@ -176,6 +189,60 @@ void OpenBCI_Radio_Class::configurePassThru(void) {
     digitalWrite(0,LOW);
     digitalWrite(1,LOW);
 }
+
+/**
+ * @description Returns the channel number from non-volitile flash memory
+ */
+uint32_t OpenBCI_Radio_Class::getChannelNumber(void) {
+    return *ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
+}
+
+/**
+ * @description Returns the channel number from non-volitile flash memory
+ */
+boolean OpenBCI_Radio_Class::needToSetChannelNumber(void) {
+    return getChannelNumber() == 0xFFFFFFFF;
+}
+
+void OpenBCI_Radio_Class::revertToPreviousChannelNumber(void) {
+    RFduinoGZLL.channel = previousRadioChannel;
+}
+
+boolean OpenBCI_Radio_Class::setChannelNumber(uint32_t channelNumber) {
+    uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
+
+    int rc = flashPageErase(PAGE_FROM_ADDRESS(p));
+    if (rc == 1) {
+        if (isHost) {
+            Serial.println("Error - the flash page is reserved$$$");
+        }
+        return false;
+    } else if (rc == 2) {
+        if (isHost) {
+            Serial.println("Error - the flash page is used by the sketch$$$");
+        }
+        return false;
+    }
+
+
+    rc = flashWrite(p, channelNumber);
+    if (rc == 0) {
+        Serial.println("Channel Number Set$$$");
+        return true;
+    } else if (rc == 1) {
+        if (isHost) {
+            Serial.println("Error - the flash page is reserved$$$");
+        }
+        return false;
+    } else if (rc == 2) {
+        if (isHost) {
+            Serial.println("Error - the flash page is used by the sketch$$$");
+        }
+        return false;
+    }
+}
+
+
 
 /********************************************/
 /********************************************/
@@ -227,16 +294,16 @@ void OpenBCI_Radio_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
 */
 void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
     if (debugMode) {
-        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
-            Serial.print(OpenBCI_Radio.bufferRadio[j]);
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.print(bufferRadio[j]);
         }
         Serial.println();
     } else {
-        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
-            Serial.write(OpenBCI_Radio.bufferRadio[j]);
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.write(bufferRadio[j]);
         }
     }
-    OpenBCI_Radio.bufferCleanRadio();
+    bufferCleanRadio();
 }
 
 /**
@@ -372,6 +439,10 @@ void OpenBCI_Radio_Class::sendTheDevicesFirstPacketToTheHost(void) {
         // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
 
+        // TODO: REMOVE THIS SHIT!
+        if (bufferSerial.packetBuffer->data[1] == 0x00) {
+            Serial.write(getChannelNumber());
+        }
         // Send back some data
         RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
@@ -413,7 +484,7 @@ void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
 
     byte packetType = byteIdMakeStreamPacketType();
 
-    Serial.print("Packet type: "); Serial.println(packetType,HEX);
+    //Serial.print("Packet type: "); Serial.println(packetType,HEX);
 
     char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
 
@@ -548,6 +619,22 @@ void OpenBCI_Radio_Class::writeTheDevicesRadioBufferToThePic(void) {
         }
     }
     bufferCleanRadio();
+}
+
+/********************************************/
+/********************************************/
+/*************    PASS THRU    **************/
+/********************************************/
+/********************************************/
+
+/**
+ * @description used to flash the led to indicate to the user the device is in pass through mode.
+ */
+void OpenBCI_Radio_Class::ledFeedBackForPassThru(void) {
+    digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
+    delay(600);
+    digitalWrite(OPENBCI_PIN_HOST_LED,LOW);
+    delay(200);
 }
 
 /********************************************/
@@ -706,6 +793,17 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
                 currentPacketBufferSerial = NULL;
                 // Clear out buffers... start again!
                 bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+
+                // Need an emergency breaking system...
+                if (isDevice) {
+                    char msg[1];
+                    msg[0] = (char)ORPM_DEVICE_SERIAL_OVERFLOW;
+                    RFduinoGZLL.sendToHost(msg,1);
+                    Serial.print('v'); // issue a software reset to the board
+                } else if (isHost){
+                    Serial.print("Input too large!$$$");
+                }
+
             } else {
                 // move the pointer 1 struct
                 currentPacketBufferSerial++;
@@ -865,9 +963,9 @@ byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
 * @returns boolean if equal
 */
 boolean OpenBCI_Radio_Class::checkSumsAreEqual(char *data, int len) {
-    char expectedCheckSum = OpenBCI_Radio.byteIdGetCheckSum(data[0]);
+    char expectedCheckSum = byteIdGetCheckSum(data[0]);
 
-    char calculatedCheckSum = OpenBCI_Radio.checkSumMake(data + 1,len - 1);
+    char calculatedCheckSum = checkSumMake(data + 1,len - 1);
 
     return expectedCheckSum == calculatedCheckSum;
 }
@@ -938,7 +1036,7 @@ byte OpenBCI_Radio_Class::outputGetStopByteFromByteId(char byteId) {
     return byteIdGetStreamPacketType(byteId) | 0xC0;
 }
 
-OpenBCI_Radio_Class OpenBCI_Radio;
+OpenBCI_Radio_Class radio;
 
 
 /********************************************/
@@ -953,35 +1051,97 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     boolean willSendDataFromBufferSerial = false;
     boolean willSendMsg = false;
 
-    if (OpenBCI_Radio.isHost) {
-        OpenBCI_Radio.lastTimeHostHeardFromDevice = millis();
+    if (radio.isHost) {
+        radio.lastTimeHostHeardFromDevice = millis();
     }
 
     if (len == 1) { // this is a radio comm packet
         /**************************************/
         // CAN INITIATE DATA SEND HERE
         /**************************************/
-        char byte = data[0];
-        if (byte == (char)RFDUINOGZLL_PACKET_BAD_CHECK_SUM) {
-            // Resend the last sent packet
-            OpenBCI_Radio.bufferSerial.numberOfPacketsSent--;
-
-            willSendDataFromBufferSerial = true;
-            if (OpenBCI_Radio.verbosePrintouts) {
-                Serial.println("R<-B");
+        char privateRadioCode = data[0];
+        if (radio.isWaitingForNewChannelNumber) {
+            radio.isWaitingForNewChannelNumber = false;
+            // Refresh poll
+            radio.pollRefresh();
+            // Set the new channel number
+            boolean success = radio.setChannelNumber((uint32_t)data[0]);
+            if (success) {
+                // Change Device radio channel
+                RFduinoGZLL.channel = (uint32_t)data[0];
+                // Poll the host, which should have swapped over now...
+                radio.pollHost();
             }
-        } else if (byte == (char)RFDUINOGZLL_PACKET_MISSED) {
-            // Start the page transmission over again
-            OpenBCI_Radio.bufferSerial.numberOfPacketsSent = 0;
+        } else {
+            switch (data[0]) {
+                case ORPM_PACKET_BAD_CHECK_SUM:
+                    // Resend the last sent packet
+                    radio.bufferSerial.numberOfPacketsSent--;
 
-            willSendDataFromBufferSerial = true;
-            if (OpenBCI_Radio.verbosePrintouts) {
-                Serial.println("R<-M");
+                    willSendDataFromBufferSerial = true;
+                    if (radio.verbosePrintouts) {
+                        Serial.println("R<-B");
+                    }
+                    break;
+                case ORPM_PACKET_MISSED:
+                    // Start the page transmission over again
+                    radio.bufferSerial.numberOfPacketsSent = 0;
+
+                    willSendDataFromBufferSerial = true;
+                    if (radio.verbosePrintouts) {
+                        Serial.println("R<-M");
+                    }
+                    break;
+                case ORPM_CHANGE_CHANNEL_HOST_REQUEST:
+                    // The host want to change the channel!
+                    // We need to tell the Host we acknoledge his request and are
+                    // Patiently waiting for the channel he wants to change to
+                    if (radio.verbosePrintouts) {
+                        Serial.println("R<-CCHR");
+                    }
+                    if (radio.isHost) {
+                        msg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
+                        RFduinoGZLL.sendToDevice(device,msg,1);
+                    } else {
+                        // Tell the Host we are ready to change channels
+                        msg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
+                        radio.isWaitingForNewChannelNumber = true;
+                        RFduinoGZLL.sendToHost(msg,1);
+                        radio.pollRefresh();
+                    }
+                    break;
+                case ORPM_CHANGE_CHANNEL_DEVICE_READY:
+                    // We are the Host, and the device is ready to change it's channel number to what every we want
+                    if (radio.verbosePrintouts) {
+                        Serial.println("R<-CCDR");
+                    }
+                    if (radio.isHost) {
+                        // send back the radio channel
+                        msg[0] = (char)radio.radioChannel;
+                        RFduinoGZLL.sendToDevice(device,msg,1);
+                        radio.setChannelNumber(radio.radioChannel);
+                        RFduinoGZLL.channel = radio.radioChannel;
+                    } else {
+                        // Send the channel to change to to the device
+                        msg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
+                        RFduinoGZLL.sendToHost(msg,1);
+                        radio.pollRefresh();
+                    }
+                    break;
+                default:
+                    msg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
+                    if (radio.isHost) {
+                        RFduinoGZLL.sendToDevice(device,msg,1);
+                    } else {
+                        RFduinoGZLL.sendToHost(msg,1);
+                        radio.pollRefresh();
+                    }
+                    break;
             }
         }
     } else if (len > 1) {
         /**************************************/
-        // CANN SEND DATA HERE
+        // CAN SEND DATA HERE
         /**************************************/
 
         // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
@@ -991,30 +1151,32 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         boolean gotLastPacket = false;
 
         // The packetNumber is embedded in the first byte, the byteId
-        int packetNumber = OpenBCI_Radio.byteIdGetPacketNumber(data[0]);
+        int packetNumber = radio.byteIdGetPacketNumber(data[0]);
 
         // When in debug mode, state which packetNumber we just recieved
-        if (OpenBCI_Radio.verbosePrintouts) {
+        if (radio.verbosePrintouts) {
             Serial.print("R<-");Serial.println(packetNumber);
         }
 
         // Verify the checksums are equal
-        if (OpenBCI_Radio.checkSumsAreEqual(data,len)) {
-            // This first statment asks if this is a last packet and the previous packet was 0 too
-            if (packetNumber == 0 && OpenBCI_Radio.previousPacketNumber == 0) {
-                // Serial.println("Got final packet.");
+        if (radio.checkSumsAreEqual(data,len)) {
+            // This first statment asks if this is a last packet and the previous
+            //  packet was 0 too, this is in an effort to get to the point in the
+            //  program where we ask if this packet is a stream packet
+            if (packetNumber == 0 && radio.previousPacketNumber == 0) {
+                // This is a one packet message
                 gotLastPacket = true;
 
             } else {
-                if (packetNumber > 0 && OpenBCI_Radio.previousPacketNumber == 0) {
+                if (packetNumber > 0 && radio.previousPacketNumber == 0) {
                     // This is the first of multiple packets we are recieving
-                    OpenBCI_Radio.previousPacketNumber = packetNumber;
+                    radio.previousPacketNumber = packetNumber;
 
                 } else {
                     // This is not the first packet we are reciving of this page
-                    if (OpenBCI_Radio.previousPacketNumber - packetNumber == 1) { // Normal...
+                    if (radio.previousPacketNumber - packetNumber == 1) { // Normal...
                         // update
-                        OpenBCI_Radio.previousPacketNumber = packetNumber;
+                        radio.previousPacketNumber = packetNumber;
 
                         // Is this the last packet?
                         if (packetNumber == 0) {
@@ -1025,14 +1187,14 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                     } else {
                         goodToAddPacketToRadioBuffer = false;
                         // We missed a packet, send resend message
-                        msg[0] = RFDUINOGZLL_PACKET_MISSED & 0xFF;
+                        msg[0] = ORPM_PACKET_MISSED & 0xFF;
 
                         // reset ring buffer to start
-                        OpenBCI_Radio.bufferPositionWriteRadio = 0;
+                        radio.bufferPositionWriteRadio = 0;
 
                         // Reset the packet state
-                        OpenBCI_Radio.previousPacketNumber = 0;
-                        if (OpenBCI_Radio.verbosePrintouts) {
+                        radio.previousPacketNumber = 0;
+                        if (radio.verbosePrintouts) {
                             Serial.println("S->M");
                         }
                     }
@@ -1040,55 +1202,66 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             }
         } else {
             goodToAddPacketToRadioBuffer = false;
-            msg[0] = RFDUINOGZLL_PACKET_BAD_CHECK_SUM & 0xFF;
-            if (OpenBCI_Radio.verbosePrintouts) {
+            msg[0] = ORPM_PACKET_BAD_CHECK_SUM & 0xFF;
+            if (radio.verbosePrintouts) {
                 Serial.println("S->B");
             }
         }
 
+        // goodToAddPacketToRadioBuffer is true if we have not recieved an error
+        //  message and this packet should be routed to either the Pic (if we're
+        //  the Device) or the Driver (if we are the Host)
         if (goodToAddPacketToRadioBuffer) {
-            // We are going to stop
-            if (OpenBCI_Radio.byteIdGetIsStream(data[0])) {
+            // Check to see if this is a stream packet... This the case then the
+            //  Device has sent a stream packet to the Host
+            if (radio.byteIdGetIsStream(data[0])) {
                 // Serial.println("Got stream packet!");
-                OpenBCI_Radio.bufferAddStreamPacket(data,len);
+                // We don't actually read to serial port yet, we simply move it
+                //  into a buffer in an effort to not write to the Serial port
+                //  from an ISR.
+                radio.bufferAddStreamPacket(data,len);
             } else {
+                // This is not a stream packet and, be default, we will store it
+                //  into a buffer called bufferRadio that is a 1 dimensional array
                 for (int i = 1; i < len; i++) { // skip the byteId
-                    if (OpenBCI_Radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
-                        OpenBCI_Radio.bufferRadio[OpenBCI_Radio.bufferPositionWriteRadio] = data[i];
-                        OpenBCI_Radio.bufferPositionWriteRadio++;
+                    if (radio.bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
+                        radio.bufferRadio[radio.bufferPositionWriteRadio] = data[i];
+                        radio.bufferPositionWriteRadio++;
                     }
                 }
+                // If this is the last packet then we need to set a flag to empty
+                //  the buffer
                 if (gotLastPacket) {
                     // flag contents of radio buffer to be printed!
-                    OpenBCI_Radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice = true;
-                    OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = true;
+                    radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice = true;
+                    radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost = true;
                 }
             }
-            if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent < OpenBCI_Radio.bufferSerial.numberOfPacketsToSend) {
-                if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
+            if (radio.bufferSerial.numberOfPacketsSent < radio.bufferSerial.numberOfPacketsToSend) {
+                if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
                     willSendDataFromBufferSerial = true;
                 }
-            } else if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
+            } else if (radio.bufferSerial.numberOfPacketsSent == radio.bufferSerial.numberOfPacketsToSend && radio.bufferSerial.numberOfPacketsToSend != 0) {
                 // Serial.println("Cleaning Hosts's bufferSerial");
                 // Clear buffer
-                OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
             } else {
-                if (OpenBCI_Radio.isDevice) {
-                    OpenBCI_Radio.pollHost();
+                if (radio.isDevice) {
+                    radio.pollHost();
                 }
             }
 
 
-            if (OpenBCI_Radio.verbosePrintouts) {
+            if (radio.verbosePrintouts) {
                 Serial.println("S->N");
             }
         } else { // We got a problem
 
-            if (OpenBCI_Radio.isHost) {
+            if (radio.isHost) {
                 RFduinoGZLL.sendToDevice(device,msg,1);
             } else {
                 RFduinoGZLL.sendToHost(msg,1);
-                OpenBCI_Radio.pollRefresh();
+                radio.pollRefresh();
             }
         }
     } else { // This is a NULL byte ack
@@ -1097,17 +1270,21 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         /**************************************/
 
         // More packets to send?
-        if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent < OpenBCI_Radio.bufferSerial.numberOfPacketsToSend) {
-            if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
+        if (radio.isWaitingForNewChannelNumberConfirmation) {
+            radio.isWaitingForNewChannelNumberConfirmation = false;
+            Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS);
+
+        } else if (radio.bufferSerial.numberOfPacketsSent < radio.bufferSerial.numberOfPacketsToSend) {
+            if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
                 willSendDataFromBufferSerial = true;
             }
 
         } else { // We are done sending packets
             // Clean bufferSerial
-            if (OpenBCI_Radio.bufferSerial.numberOfPacketsSent == OpenBCI_Radio.bufferSerial.numberOfPacketsToSend && OpenBCI_Radio.bufferSerial.numberOfPacketsToSend != 0) {
+            if (radio.bufferSerial.numberOfPacketsSent == radio.bufferSerial.numberOfPacketsToSend && radio.bufferSerial.numberOfPacketsToSend != 0) {
                 // Serial.println("Cleaning Hosts's bufferSerial");
                 // Clear buffer
-                OpenBCI_Radio.bufferCleanSerial(OpenBCI_Radio.bufferSerial.numberOfPacketsSent);
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
             }
         }
     }
@@ -1116,46 +1293,76 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     if (willSendDataFromBufferSerial) {
         // Build byteId
         // char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length)
-        int packetNumber = OpenBCI_Radio.bufferSerial.numberOfPacketsToSend - OpenBCI_Radio.bufferSerial.numberOfPacketsSent - 1;
-        char byteId = OpenBCI_Radio.byteIdMake(false,packetNumber,(OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data + 1, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite - 1);
+        int packetNumber = radio.bufferSerial.numberOfPacketsToSend - radio.bufferSerial.numberOfPacketsSent - 1;
+        char byteId = radio.byteIdMake(false,packetNumber,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data + 1, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite - 1);
 
         // Add the byteId to the packet
-        (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data[0] = byteId;
+        (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[0] = byteId;
 
         // Send back some data!
-        if (OpenBCI_Radio.isHost) {
-            // Check if this is a time sync packet to ack back to driver
-            // if (OpenBCI_Radio.bufferSerial.numberOfPacketsToSend == 1 && packetNumber == 0 && (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data[1] == '<') {
-            //     Serial.write(','); // ack back to driver
-            // }
-            RFduinoGZLL.sendToDevice(device,(OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+        if (radio.isHost) {
+            // Only parse single packet messages for keys... multi packet can just be sent
+            if (radio.bufferSerial.numberOfPacketsToSend == 1 && packetNumber == 0) {
+                // Single byte codes
+                if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite == 2) {
+                    if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[1] == OPENBCI_HOST_TIME_SYNC) {
+                        // ack back to driver to notify packet being sent.
+                        Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
+                        RFduinoGZLL.sendToDevice(device,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+                    } else if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
+                        Serial.write(radio.getChannelNumber());
+                        radio.bufferCleanSerial(1);
+                    } else {
+                        if (radio.verbosePrintouts) {
+                            Serial.print("S->"); Serial.println(packetNumber);
+                        }
+                        RFduinoGZLL.sendToDevice(device,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+                    }
+                // Multi byte codes
+                } else if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite == 3) {
+                    if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[1] == OPENBCI_HOST_CHANNEL_CHANGE) {
+                        // Need to start the channel change process....
+                        if (data[2] > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+                            // Tell the driver we failed
+                            Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_INVALID);
+                        } else {
+                            msg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
+                            if (radio.verbosePrintouts) {
+                                Serial.print("New channel: "); Serial.println((uint32_t)(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[2]);
+                            }
+                            // Store the old channel number
+                            radio.previousRadioChannel = radio.getChannelNumber();
+                            // Store the new channel number
+                            radio.radioChannel = (uint32_t)(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[2];
+                            RFduinoGZLL.sendToDevice(device,msg,1);
+                        }
+                    } else {
+                        if (radio.verbosePrintouts) {
+                            Serial.print("S->"); Serial.println(packetNumber);
+                        }
+                        RFduinoGZLL.sendToDevice(device,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+                    }
+                } else {
+                    if (radio.verbosePrintouts) {
+                        Serial.print("S->"); Serial.println(packetNumber);
+                    }
+                    RFduinoGZLL.sendToDevice(device,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+                }
+            } else {
+                if (radio.verbosePrintouts) {
+                    Serial.print("S->"); Serial.println(packetNumber);
+                }
+                RFduinoGZLL.sendToDevice(device,(radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+            }
         } else { //isDevice
-            RFduinoGZLL.sendToHost((OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->data, (OpenBCI_Radio.bufferSerial.packetBuffer + OpenBCI_Radio.bufferSerial.numberOfPacketsSent)->positionWrite);
-            OpenBCI_Radio.pollRefresh();
+            if (radio.verbosePrintouts) {
+                Serial.print("S->"); Serial.println(packetNumber);
+            }
+            RFduinoGZLL.sendToHost((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data, (radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->positionWrite);
+            radio.pollRefresh();
         }
 
-        if (OpenBCI_Radio.verbosePrintouts) {
-            Serial.print("S->"); Serial.println(packetNumber);
-        }
-
-        OpenBCI_Radio.bufferSerial.numberOfPacketsSent++;
+        radio.bufferSerial.numberOfPacketsSent++;
     }
 
-}
-
-/********************************************/
-/********************************************/
-/**********    PASS THRU CODE    ************/
-/********************************************/
-/********************************************/
-
-/**
- * @description Used to flash the LED to give feedback to the user that the Dongle is in pass thru mode
- * @author AJ Keller (@pushtheworldllc)
- */
-void OpenBCI_Radio_Class::ledFeedBackForPassThru(void) {
-    digitalWrite(LED,HIGH);
-    delay(600);
-    digitalWrite(LED,LOW);
-    delay(200);
 }

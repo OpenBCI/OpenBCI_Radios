@@ -20,29 +20,29 @@ o
 
 void setup() {
   // put your setup code here, to run once:
-  OpenBCI_Radio.begin(OPENBCI_MODE_DEVICE,20);
+  radio.begin(OPENBCI_MODE_DEVICE,20);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (OpenBCI_Radio.didPicSendDeviceSerialData()) {
-    OpenBCI_Radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
+  if (radio.didPicSendDeviceSerialData()) {
+    radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
   }
 
-  if (OpenBCI_Radio.thereIsDataInSerialBuffer()) {
-    if (OpenBCI_Radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
-      OpenBCI_Radio.sendTheDevicesFirstPacketToTheHost();
+  if (radio.thereIsDataInSerialBuffer()) {
+    if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
+      radio.sendTheDevicesFirstPacketToTheHost();
   }
   }
 
-  if (OpenBCI_Radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
-    OpenBCI_Radio.writeTheDevicesRadioBufferToThePic();
+  if (radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
+    radio.writeTheDevicesRadioBufferToThePic();
   }
 
-  if (OpenBCI_Radio.isAStreamPacketWaitingForLaunch()) {
-    if (OpenBCI_Radio.hasEnoughTimePassedToLaunchStreamPacket()) {
-      OpenBCI_Radio.sendStreamPacketToTheHost();
+  if (radio.isAStreamPacketWaitingForLaunch()) {
+    if (radio.hasEnoughTimePassedToLaunchStreamPacket()) {
+      radio.sendStreamPacketToTheHost();
     }
   }
 }
