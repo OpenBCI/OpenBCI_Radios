@@ -1,3 +1,4 @@
+
 /**
  * OpenBCI Dongle Dummy
  *    This code is used to turn the Dongle into a device that will pass FTDI signals

@@ -43,4 +43,10 @@ void loop() {
   if (radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
     radio.writeTheHostsRadioBufferToThePC();
   }
+
+//  if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
+//     // Oh boy, we have not heard from the device in a long time
+//     // self destruct!
+//     Serial.println("Host lost connection to device$$$");
+//  }
 }

@@ -26,7 +26,7 @@ OpenBCI_Radio_Class::OpenBCI_Radio_Class() {
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 18; // Channel 18
     verbosePrintouts = false;
-    debugMode = true; // Set true if doing dongle-dongle sim
+    debugMode = false; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
 }
@@ -227,16 +227,16 @@ void OpenBCI_Radio_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
 */
 void OpenBCI_Radio_Class::writeTheHostsRadioBufferToThePC(void) {
     if (debugMode) {
-        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
-            Serial.print(OpenBCI_Radio.bufferRadio[j]);
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.print(bufferRadio[j]);
         }
         Serial.println();
     } else {
-        for (int j = 0; j < OpenBCI_Radio.bufferPositionWriteRadio; j++) {
-            Serial.write(OpenBCI_Radio.bufferRadio[j]);
+        for (int j = 0; j < bufferPositionWriteRadio; j++) {
+            Serial.write(bufferRadio[j]);
         }
     }
-    OpenBCI_Radio.bufferCleanRadio();
+    bufferCleanRadio();
 }
 
 /**
@@ -552,6 +552,22 @@ void OpenBCI_Radio_Class::writeTheDevicesRadioBufferToThePic(void) {
 
 /********************************************/
 /********************************************/
+/*************    PASS THRU    **************/
+/********************************************/
+/********************************************/
+
+/**
+ * @description used to flash the led to indicate to the user the device is in pass through mode.
+ */
+void OpenBCI_Radio_Class::ledFeedBackForPassThru(void) {
+    digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
+    delay(600);
+    digitalWrite(OPENBCI_PIN_HOST_LED,LOW);
+    delay(200);
+}
+
+/********************************************/
+/********************************************/
 /********    COMMON MEHTOD CODE    **********/
 /********************************************/
 /********************************************/
@@ -706,6 +722,12 @@ void OpenBCI_Radio_Class::bufferSerialFetch(void) {
                 currentPacketBufferSerial = NULL;
                 // Clear out buffers... start again!
                 bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+
+                if (isDevice) {
+                    RFduinoGZLL.sendToHost("device overflow",16);
+                    Serial.print('v');
+                }
+
             } else {
                 // move the pointer 1 struct
                 currentPacketBufferSerial++;
@@ -865,9 +887,9 @@ byte OpenBCI_Radio_Class::byteIdMakeStreamPacketType(void) {
 * @returns boolean if equal
 */
 boolean OpenBCI_Radio_Class::checkSumsAreEqual(char *data, int len) {
-    char expectedCheckSum = OpenBCI_Radio.byteIdGetCheckSum(data[0]);
+    char expectedCheckSum = byteIdGetCheckSum(data[0]);
 
-    char calculatedCheckSum = OpenBCI_Radio.checkSumMake(data + 1,len - 1);
+    char calculatedCheckSum = checkSumMake(data + 1,len - 1);
 
     return expectedCheckSum == calculatedCheckSum;
 }
