@@ -133,6 +133,6 @@ public:
 };
 
 // Very important, major key to success
-extern OpenBCI_Radio_Class OpenBCI_Radio;
+extern OpenBCI_Radio_Class radio;
 
 #endif // OPENBCI_RADIO_H

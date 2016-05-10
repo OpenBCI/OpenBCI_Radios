@@ -6,11 +6,15 @@
  *    Made by Joel Murphy, Summer 2014
  *    Refactored by AJ Keller (@pushtheworldllc), Spring 2016
  */
+#include <RFduinoGZLL.h>
+#include "OpenBCI_Radio.h"
+
 void setup() {
-  // put your setup code here, to run once:
-  OpenBCI_Radio.begin(OPENBCI_MODE_PASS_THRU);
+  // Initialize the radio in pass thru
+  radio.begin(OPENBCI_MODE_PASS_THRU);
 }
 
 void loop() {
-  OpenBCI_Radio.ledFeedBackForPassThru();
+  // Give LED feedback to the user
+  radio.ledFeedBackForPassThru();
 }
