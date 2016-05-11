@@ -24,6 +24,8 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radio.h"
 
+
+
 void setup() {
   // put your setup code here, to run once:
   radio.begin(OPENBCI_MODE_HOST,20);
@@ -44,9 +46,11 @@ void loop() {
     radio.writeTheHostsRadioBufferToThePC();
   }
 
-//  if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
-//     // Oh boy, we have not heard from the device in a long time
-//     // self destruct!
-//     Serial.println("Host lost connection to device$$$");
-//  }
+ if (radio.hasItBeenTooLongSinceHostHeardFromDevice() && radio.isWaitingForNewChannelNumberConfirmation) {
+    // Oh boy, we have not heard from the device in a long time
+    // self destruct!
+    // RFdunioGZLL.channel = previousRadioChannel;
+
+    Serial.println("Timeout failed to restablish connection.$$$");
+ }
 }
