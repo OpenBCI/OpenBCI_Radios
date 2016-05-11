@@ -90,6 +90,7 @@ public:
     boolean     pollNow(void);
     void        pollRefresh(void);
     void        processCharForStreamPacket(char newChar);
+    void        revertToPreviousChannelNumber(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
     void        sendStreamPacketToTheHost(void);
     boolean     setChannelNumber(uint32_t channelNumber);

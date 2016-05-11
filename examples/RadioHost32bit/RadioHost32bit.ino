@@ -46,11 +46,18 @@ void loop() {
     radio.writeTheHostsRadioBufferToThePC();
   }
 
- if (radio.hasItBeenTooLongSinceHostHeardFromDevice() && radio.isWaitingForNewChannelNumberConfirmation) {
-    // Oh boy, we have not heard from the device in a long time
-    // self destruct!
-    // RFdunioGZLL.channel = previousRadioChannel;
-
-    Serial.println("Timeout failed to restablish connection.$$$");
+ if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
+    if (radio.isWaitingForNewChannelNumberConfirmation) {
+      radio.revertToPreviousChannelNumber();
+      Serial.println("Timeout failed to restablish connection.$$$");
+    } else {
+      if (radio.bufferSerial.numberOfPacketsToSend > 0) {
+        if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
+          Serial.print("Channel Number: "); Serial.print(radio.getChannelNumber()); Serial.println("$$$");
+        }
+        radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
+        Serial.println("Comm timeout, clearing buffer.$$$");
+      }
+    }
  }
 }
