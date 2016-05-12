@@ -14,17 +14,17 @@
 */
 
 
-#ifndef __OpenBCI_Radio__
-#define __OpenBCI_Radio__
+#ifndef __OpenBCI_Radios__
+#define __OpenBCI_Radios__
 
 #include <Arduino.h>
 #include <RFduinoGZLL.h>
 
 // needed for enum and callback support
 // #include "libRFduinoGZLL.h"
-#include "OpenBCI_Radio_Definitions.h"
+#include "OpenBCI_Radios_Definitions.h"
 
-class OpenBCI_Radio_Class {
+class OpenBCI_Radios_Class {
 
 public:
     // STRUCTS
@@ -48,7 +48,7 @@ public:
         int         bytesIn;
     } StreamPacketBuffer;
 
-    OpenBCI_Radio_Class();
+    OpenBCI_Radios_Class();
     boolean     begin(uint8_t mode);
     boolean     begin(uint8_t mode, uint32_t channelNumber);
     char        byteIdGetCheckSum(char byteId);
@@ -140,6 +140,6 @@ public:
 };
 
 // Very important, major key to success
-extern OpenBCI_Radio_Class radio;
+extern OpenBCI_Radios_Class radio;
 
 #endif // OPENBCI_RADIO_H

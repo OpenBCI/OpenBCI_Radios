@@ -209,6 +209,9 @@ void OpenBCI_Radio_Class::revertToPreviousChannelNumber(void) {
 }
 
 boolean OpenBCI_Radio_Class::setChannelNumber(uint32_t channelNumber) {
+    if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+        channelNumber = RFDUINOGZLL_CHANNEL_LIMIT_UPPER;
+    }
     uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
 
     int rc = flashPageErase(PAGE_FROM_ADDRESS(p));
@@ -275,6 +278,8 @@ void OpenBCI_Radio_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
 
     // Get everything from the serial port and store to bufferSerial
     bufferSerialFetch();
+
+    lastTimeHostHeardFromDevice = millis();
 
 }
 
@@ -483,8 +488,6 @@ boolean OpenBCI_Radio_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
 void OpenBCI_Radio_Class::sendStreamPacketToTheHost(void) {
 
     byte packetType = byteIdMakeStreamPacketType();
-
-    //Serial.print("Packet type: "); Serial.println(packetType,HEX);
 
     char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
 

@@ -8,7 +8,7 @@
  *    Refactored by AJ Keller (@pushtheworldllc), Spring 2016
  */
 #include <RFduinoGZLL.h>
-#include "OpenBCI_Radio.h"
+#include "OpenBCI_Radios.h"
 
 void setup() {
   // Initialize the radio in pass thru

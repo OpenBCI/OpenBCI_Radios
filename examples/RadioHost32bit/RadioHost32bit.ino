@@ -32,32 +32,42 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+    // put your main code here, to run repeatedly:
 
-  if (radio.doesTheHostHaveAStreamPacketToSendToPC()) {
-    radio.writeTheHostsStreamPacketBufferToThePC();
-  }
-
-  if (radio.didPCSendDataToHost()) {
-    radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
-  }
-
-  if (radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
-    radio.writeTheHostsRadioBufferToThePC();
-  }
-
- if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
-    if (radio.isWaitingForNewChannelNumberConfirmation) {
-      radio.revertToPreviousChannelNumber();
-      Serial.println("Timeout failed to restablish connection.$$$");
-    } else {
-      if (radio.bufferSerial.numberOfPacketsToSend > 0) {
-        if ((radio.bufferSerial.packetBuffer + radio.bufferSerial.numberOfPacketsSent)->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
-          Serial.print("Channel Number: "); Serial.print(radio.getChannelNumber()); Serial.println("$$$");
-        }
-        radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
-        Serial.println("Comm timeout, clearing buffer.$$$");
-      }
+    if (radio.doesTheHostHaveAStreamPacketToSendToPC()) {
+        radio.writeTheHostsStreamPacketBufferToThePC();
     }
- }
+
+    if (radio.didPCSendDataToHost()) {
+        radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
+    }
+
+    if (radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
+        radio.writeTheHostsRadioBufferToThePC();
+    }
+
+    if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
+        if (radio.isWaitingForNewChannelNumberConfirmation) {
+            radio.revertToPreviousChannelNumber();
+            Serial.println("Timeout failed to restablish connection.$$$");
+        } else {
+            if (radio.bufferSerial.numberOfPacketsToSend == 1) {
+                if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
+                    Serial.print("Host is on channel number: "); Serial.print(radio.getChannelNumber()); Serial.print(" no word from the Device though...");
+                } else if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE) {
+                    // radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
+                    radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
+                    Serial.print("Channel Set To Number: "); Serial.println(radio.getChannelNumber());
+                } else {
+                    Serial.print("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?");
+                }
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
+                Serial.print("$$$");
+            } else if (radio.bufferSerial.numberOfPacketsToSend > 1) {
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
+                Serial.print("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?");
+                Serial.print("$$$");
+            }
+        }
+    }
 }
