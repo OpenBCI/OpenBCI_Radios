@@ -35,6 +35,7 @@ public:
     } PacketBuffer;
 
     typedef struct {
+        boolean         overflowed;
         int             numberOfPacketsToSend;
         int             numberOfPacketsSent;
         PacketBuffer    packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
@@ -79,25 +80,37 @@ public:
     boolean     doesTheHostHaveAStreamPacketToSendToPC(void);
     uint32_t    getChannelNumber(void);
     void        getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
-    void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
+    // void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    // boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean     hasItBeenTooLongSinceHostHeardFromDevice(void);
     boolean     isAStreamPacketWaitingForLaunch(void);
+    boolean     isATailByteChar(char newChar);
     void        ledFeedBackForPassThru(void);
     boolean     needToSetChannelNumber(void);
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
+    boolean     packetToSend(void);
     void        pollRefresh(void);
+    void        pushRadioBuffer(void);
+    char        processChar(char newChar);
     void        processCharForStreamPacket(char newChar);
+    boolean     processRadioChar(device_t device, char newChar);
+    boolean     processDeviceRadioCharData(char *data, int len);
+    void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
-    void        sendTheDevicesFirstPacketToTheHost(void);
+    void        sendPacketToDevice(void);
+    void        sendPacketToHost(void);
+    void        sendPollMessageToHost(void);
+    void        sendRadioMessageToHost(byte msg);
     void        sendStreamPacketToTheHost(void);
+    void        sendTheDevicesFirstPacketToTheHost(void);
+    void        setByteIdForPacketBuffer(int packetNumber);
     boolean     setChannelNumber(uint32_t channelNumber);
+    boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);
-    boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void        writeBufferToSerial(char *buffer,int length);
-    void        writeTheDevicesRadioBufferToThePic(void);
     void        writeTheHostsRadioBufferToThePC(void);
     void        writeTheHostsStreamPacketBufferToThePC(void);
     void        writeStreamPacket(char *data);
@@ -111,13 +124,14 @@ public:
     boolean debugMode;
     boolean isDevice;
     boolean isHost;
-    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
+    boolean gotAllRadioPackets;
     boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
     boolean isWaitingForNewChannelNumber;
     boolean isWaitingForNewChannelNumberConfirmation;
     boolean verbosePrintouts;
 
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
+    char    singleCharMsg[1];
 
     int     bufferPacketsReceived;
     int     bufferPacketsToReceive;
@@ -129,9 +143,11 @@ public:
     PacketBuffer *currentPacketBufferStreamPacket;
 
     uint8_t radioMode;
+    uint8_t newPollTime;
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
+    unsigned long lastTimeSerialRead;
     unsigned long timeWeGot0xFXFromPic;
     unsigned long timeOfLastPoll;
 
