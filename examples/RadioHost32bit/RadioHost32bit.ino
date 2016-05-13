@@ -22,7 +22,7 @@
 * Made by Push The World LLC 2016
 */
 #include <RFduinoGZLL.h>
-#include "OpenBCI_Radio.h"
+#include "OpenBCI_Radios.h"
 
 
 

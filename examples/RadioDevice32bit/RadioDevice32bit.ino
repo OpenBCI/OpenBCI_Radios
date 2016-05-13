@@ -16,7 +16,7 @@ Free to use and share. This code presented as-is. No promises!
 o
 */
 #include <RFduinoGZLL.h>
-#include "OpenBCI_Radio.h"
+#include "OpenBCI_Radios.h"
 
 void setup() {
   // put your setup code here, to run once:
