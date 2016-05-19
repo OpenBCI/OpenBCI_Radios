@@ -21,8 +21,8 @@
 
 
 #define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000
-#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 100
-#define OPENBCI_TIMEOUT_PACKET_POLL_uS 63000 // Poll time out length for sending null packet from device to host
+#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 90
+#define OPENBCI_TIMEOUT_PACKET_POLL_MS 63 // Poll time out length for sending null packet from device to host
 
 // Stream byte stuff
 #define OPENBCI_STREAM_BYTE_START 0xA0
@@ -67,8 +67,8 @@
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
 // Stream packet EOTs
-#define OPENBCI_STREAM_PACKET_HEAD 'A'
-#define OPENBCI_STREAM_PACKET_TYPE 0xF0
+#define OPENBCI_STREAM_PACKET_HEAD 0x41
+#define OPENBCI_STREAM_PACKET_TAIL 0xA0
 
 // Special host codes
 #define OPENBCI_HOST_TIME_SYNC '<'

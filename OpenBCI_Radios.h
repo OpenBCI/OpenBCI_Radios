@@ -79,26 +79,30 @@ public:
     boolean     doesTheHostHaveAStreamPacketToSendToPC(void);
     uint32_t    getChannelNumber(void);
     void        getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
-    void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
+    // void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
     boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean     hasItBeenTooLongSinceHostHeardFromDevice(void);
     boolean     isAStreamPacketWaitingForLaunch(void);
+    boolean     isATailPacketChar(char newChar);
     void        ledFeedBackForPassThru(void);
     boolean     needToSetChannelNumber(void);
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
     void        pollRefresh(void);
+    char        processChar(char newChar);
     void        processCharForStreamPacket(char newChar);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
-    void        sendTheDevicesFirstPacketToTheHost(void);
+    void        sendPollMessageToHost(void);
+    void        sendRadioMessageToHost(byte msg);
     void        sendStreamPacketToTheHost(void);
+    void        sendTheDevicesFirstPacketToTheHost(void);
     boolean     setChannelNumber(uint32_t channelNumber);
     boolean     thereIsDataInSerialBuffer(void);
-    boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
+    // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void        writeBufferToSerial(char *buffer,int length);
-    void        writeTheDevicesRadioBufferToThePic(void);
+    void        pushRadioBuffer(void);
     void        writeTheHostsRadioBufferToThePC(void);
     void        writeTheHostsStreamPacketBufferToThePC(void);
     void        writeStreamPacket(char *data);
@@ -113,7 +117,7 @@ public:
     boolean emergencyStop;
     boolean isDevice;
     boolean isHost;
-    boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;
+    boolean gotAllRadioPackets;
     boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
     boolean isWaitingForNewChannelNumber;
     boolean isWaitingForNewChannelNumberConfirmation;
@@ -134,6 +138,7 @@ public:
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
+    unsigned long lastTimeSerialRead;
     unsigned long timeWeGot0xFXFromPic;
     unsigned long timeOfLastPoll;
 

@@ -37,26 +37,43 @@ void loop() {
         radio.resetPic32();
 
         // Reset the last time we contacted the host to now
-        radio.timeOfLastPoll = micros();
+        radio.pollRefresh();
+
+        // Send emergency message to the host
+        radio.sendRadioMessageToHost(ORPM_DEVICE_SERIAL_OVERFLOW);
+
+        // Reset the emergencyStop flag
+        radio.emergencyStop = false;
+
+    } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+        radio.processChar(Serial.read());
+        // Fetch serial data. This enters a subroutine.
+        radio.bufferSerialFetch();
+
+    } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
+        // Has 90uS passed since the last time we read from the serial port?
+        if (micros() > (lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
+            radio.sendStreamPacketToTheHost();
+        }
+
+    } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
+        // Has 3ms passed since the last time the serial port was read
+        if (micros() > (lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)){
+            // In order to do checksumming we must only send one packet at a time
+            //  this stnads as the first time we are going to send a packet!
+            radio.sendTheDevicesFirstPacketToTheHost();
+        }
+
+    } else if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
+        // push radio buffer to pic
+        radio.pushRadioBuffer();
+        // reset the radio buffer
+        bufferCleanRadio();
+    } else if (millis() > (radio.timeOfLastPoll + OPENBCI_TIMEOUT_PACKET_POLL_MS)) {  // Has more than the poll time passed?
+        // Refresh the timer
+        radio.pollRefresh();
+
+        // Poll the host
+        radio.sendPollMessageToHost();
     }
-
-  if (radio.didPicSendDeviceSerialData()) {
-    radio.getSerialDataFromPicAndPutItInTheDevicesSerialBuffer();
-  }
-
-  if (radio.thereIsDataInSerialBuffer()) {
-    if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()){
-      radio.sendTheDevicesFirstPacketToTheHost();
-  }
-  }
-
-  if (radio.isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost) {
-    radio.writeTheDevicesRadioBufferToThePic();
-  }
-
-  if (radio.isAStreamPacketWaitingForLaunch()) {
-    if (radio.hasEnoughTimePassedToLaunchStreamPacket()) {
-      radio.sendStreamPacketToTheHost();
-    }
-  }
 }
