@@ -80,12 +80,13 @@ public:
     uint32_t    getChannelNumber(void);
     void        getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     // void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
+    // boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean     hasItBeenTooLongSinceHostHeardFromDevice(void);
     boolean     isAStreamPacketWaitingForLaunch(void);
-    boolean     isATailPacketChar(char newChar);
+    boolean     isATailByteChar(char newChar);
     void        ledFeedBackForPassThru(void);
     boolean     needToSetChannelNumber(void);
+    boolean     outOfBufferSpace(void);
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
@@ -99,6 +100,7 @@ public:
     void        sendStreamPacketToTheHost(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
     boolean     setChannelNumber(uint32_t channelNumber);
+    boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);
     // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void        writeBufferToSerial(char *buffer,int length);

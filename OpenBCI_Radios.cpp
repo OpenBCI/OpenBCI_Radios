@@ -315,7 +315,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
-    if (micros() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_uS * 2)) {
+    if (micros() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_MS * 2)) {
         return true;
     } else {
         return false;
@@ -421,9 +421,7 @@ void OpenBCI_Radios_Class::sendPollMessageToHost(void) {
  * @param msg {byte} - A single byte to send to the host
  */
 void OpenBCI_Radios_Class::sendRadioMessageToHost(byte msg) {
-    byte msg[1];
-    msg[0] = msg;
-    RFduinoGZLL.sendToHost(msg,1);
+    RFduinoGZLL.sendToHost((const char*)msg,1);
 }
 
 /**
@@ -478,40 +476,11 @@ boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
 }
 
 /**
- * @description This checks to see if 100uS has passed since the time we got a
- *  tail packet.
+ * @description Used to test to make sure we are not out of buffer space.
+ * @return {boolean} - If we are out of buffer space.
  */
-boolean OpenBCI_Radios_Class::hasEnoughTimePassedToLaunchStreamPacket(void) {
-    return micros() > (timeWeGot0xFXFromPic +  OPENBCI_SERIAL_TIMEOUT_uS);
-}
-
-/**
- * @description Sends the contents of the `streamPacketBuffer`
- *                 to the HOST, sends as stream
- *
- * @author AJ Keller (@pushtheworldllc)
- */
-void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
-
-    byte packetType = byteIdMakeStreamPacketType();
-
-    char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
-
-    // Add the byteId to the packet
-    streamPacketBuffer.data[0] = byteId;
-
-    // Clean the serial buffer (because these bytes got added to it too)
-    bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
-
-    // Clean the stream packet buffer
-    bufferResetStreamPacketBuffer();
-
-    // Refresh the poll timeout timer because we just polled the Host by sending
-    //  that last packet
-    pollRefresh();
-
-    // Send the packet to the host...
-    RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
+boolean OpenBCI_Radios_Class::outOfBufferSpace(void) {
+    return bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS;
 }
 
 /**
@@ -520,7 +489,7 @@ void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
  * @param newChar {char} - A new char to process
  * @param {char} - The char that was read in
  */
-void OpenBCI_Radios_Class::processChar(char newChar) {
+char OpenBCI_Radios_Class::processChar(char newChar) {
     // The number of bytes for a stream packet!
     if (streamPacketBuffer.bytesIn == 32) {
         // Is the current char equal to 0xAX where X is 0-F?
@@ -557,7 +526,7 @@ void OpenBCI_Radios_Class::processChar(char newChar) {
             // Reset bytes in to zero
             streamPacketBuffer.bytesIn = 0;
             // Store the new char into the stream packet buffer
-            streamPacketBuffer.data[bytesIn] = newChar;
+            streamPacketBuffer.data[0] = newChar;
             // Increment the number of bytes read in
             streamPacketBuffer.bytesIn++;
         }
@@ -683,6 +652,35 @@ void OpenBCI_Radios_Class::resetPic32(void) {
 }
 
 /**
+ * @description Sends the contents of the `streamPacketBuffer`
+ *                 to the HOST, sends as stream
+ *
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
+
+    byte packetType = byteIdMakeStreamPacketType();
+
+    char byteId = byteIdMake(true,packetType,streamPacketBuffer.data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
+
+    // Add the byteId to the packet
+    streamPacketBuffer.data[0] = byteId;
+
+    // Clean the serial buffer (because these bytes got added to it too)
+    bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
+
+    // Clean the stream packet buffer
+    bufferResetStreamPacketBuffer();
+
+    // Refresh the poll timeout timer because we just polled the Host by sending
+    //  that last packet
+    pollRefresh();
+
+    // Send the packet to the host...
+    RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
+}
+
+/**
  * @description Stores a char to the serial buffer
  * @param newChar {char} - The new char to store to the buffer
  * @return {boolean} - If the new char was added to the serial buffer
@@ -714,14 +712,6 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
     currentPacketBufferSerial->positionWrite++;
 
     return true;
-}
-
-/**
- * @description Used to test to make sure we are not out of buffer space.
- * @return {boolean} - If we are out of buffer space.
- */
-boolean OpenBCI_Radios_Class::outOfBufferSpace(void) {
-    return bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS;
 }
 
 /********************************************/
@@ -1341,7 +1331,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 }
             }
             if (radio.bufferSerial.numberOfPacketsSent < radio.bufferSerial.numberOfPacketsToSend) {
-                if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
+                if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) {
                     willSendDataFromBufferSerial = true;
                 }
             } else if (radio.bufferSerial.numberOfPacketsSent == radio.bufferSerial.numberOfPacketsToSend && radio.bufferSerial.numberOfPacketsToSend != 0) {
@@ -1378,7 +1368,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS);
 
         } else if (radio.bufferSerial.numberOfPacketsSent < radio.bufferSerial.numberOfPacketsToSend) {
-            if (radio.theLastTimeNewSerialDataWasAvailableWasLongEnough()) {
+            if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) {
                 willSendDataFromBufferSerial = true;
             }
 
