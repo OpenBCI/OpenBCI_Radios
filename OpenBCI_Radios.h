@@ -90,6 +90,7 @@ public:
     boolean     pollNow(void);
     void        pollRefresh(void);
     void        processCharForStreamPacket(char newChar);
+    void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
     void        sendStreamPacketToTheHost(void);
@@ -109,6 +110,7 @@ public:
     StreamPacketBuffer streamPacketBuffer;
 
     boolean debugMode;
+    boolean emergencyStop;
     boolean isDevice;
     boolean isHost;
     boolean isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost;

@@ -25,8 +25,8 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     // Set defaults
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 25; // Channel 18
-    verbosePrintouts = true;
-    debugMode = true; // Set true if doing dongle-dongle sim
+    verbosePrintouts = false;
+    debugMode = false; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
 }
@@ -279,7 +279,7 @@ void OpenBCI_Radios_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) 
     // Get everything from the serial port and store to bufferSerial
     bufferSerialFetch();
 
-    lastTimeHostHeardFromDevice = millis();
+    lastTimeHostHeardFromDevice = micros();
 
 }
 
@@ -315,7 +315,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (OPENBCI_POLL_TIME_DURATION_MS * 2)) {
+    if (micros() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_uS * 2)) {
         return true;
     } else {
         return false;
@@ -420,7 +420,7 @@ boolean OpenBCI_Radios_Class::thereIsDataInSerialBuffer(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::theLastTimeNewSerialDataWasAvailableWasLongEnough(void) {
-    if (millis() > lastTimeNewSerialDataWasAvailable +  OPENBCI_MAX_SERIAL_TIMEOUT_MS) {
+    if (micros() > lastTimeNewSerialDataWasAvailable +  OPENBCI_TIMEOUT_POLL_uS) {
         return true;
     } else {
         return false;
@@ -511,6 +511,13 @@ void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
  * @description Called ever time there is a new byte read in on a device
  */
 void OpenBCI_Radios_Class::processCharForStreamPacket(char newChar) {
+
+    // If we get a new char
+
+    // Could we put everything in a buffer and shift, then if it's a 0xFX where X can be 0-15
+
+    // 32 bytes ago was it 0x41
+
     // A stream packet comes in as 'A'|data|0xFX where X can be 0-15
     // Are we currently looking for 0xF0
     if (streamPacketBuffer.readyForLaunch) {
@@ -604,6 +611,13 @@ void OpenBCI_Radios_Class::processCharForStreamPacket(char newChar) {
 //         return false;
 //     }
 // }
+
+/**
+ * @description Sends a soft reset command to the Pic 32 incase of an emergency.
+ */
+void OpenBCI_Radios_Class::resetPic32(void) {
+    Serial.write('v');
+}
 
 /**
 * @description Called when readRadio returns true. We always write the contents
@@ -842,7 +856,7 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
         }
 
         // Save time of last serial read...
-        lastTimeNewSerialDataWasAvailable = millis();
+        lastTimeNewSerialDataWasAvailable = micros();
     }
 }
 
@@ -1017,7 +1031,7 @@ void OpenBCI_Radios_Class::pollHost(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::pollNow(void) {
-    return millis() - timeOfLastPoll > OPENBCI_POLL_TIME_DURATION_MS;
+    return micros() - timeOfLastPoll > OPENBCI_TIMEOUT_PACKET_POLL_uS;
 }
 
 /**
@@ -1025,7 +1039,7 @@ boolean OpenBCI_Radios_Class::pollNow(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radios_Class::pollRefresh(void) {
-    timeOfLastPoll = millis();
+    timeOfLastPoll = micros();
 }
 
 /**
@@ -1055,7 +1069,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     boolean willSendMsg = false;
 
     if (radio.isHost) {
-        radio.lastTimeHostHeardFromDevice = millis();
+        radio.lastTimeHostHeardFromDevice = micros();
     }
 
     if (len == 1) { // this is a radio comm packet

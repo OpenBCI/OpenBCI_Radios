@@ -18,7 +18,11 @@
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
 #define OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES 33
 #define OPENBCI_MAX_NUMBER_OF_BUFFERS 16
-#define OPENBCI_MAX_SERIAL_TIMEOUT_MS 3
+
+
+#define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000
+#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 100
+#define OPENBCI_TIMEOUT_PACKET_POLL_uS 63000 // Poll time out length for sending null packet from device to host
 
 // Stream byte stuff
 #define OPENBCI_STREAM_BYTE_START 0xA0
@@ -61,11 +65,6 @@
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
-
-// Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 63
-
-#define OPENBCI_SERIAL_TIMEOUT_uS 100
 
 // Stream packet EOTs
 #define OPENBCI_STREAM_PACKET_HEAD 'A'
