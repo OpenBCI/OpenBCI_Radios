@@ -26,7 +26,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 25; // Channel 18
     verbosePrintouts = false;
-    debugMode = false; // Set true if doing dongle-dongle sim
+    debugMode = true; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
 }
@@ -279,7 +279,7 @@ void OpenBCI_Radios_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) 
     // Get everything from the serial port and store to bufferSerial
     bufferSerialFetch();
 
-    lastTimeHostHeardFromDevice = micros();
+    lastTimeHostHeardFromDevice = millis();
 
 }
 
@@ -315,7 +315,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
-    if (micros() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_MS * 2)) {
+    if (millis() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_MS * 2)) {
         return true;
     } else {
         return false;
@@ -496,6 +496,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             // Is the first char in the stream packet buffer equal to 0x41?
             if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
                 streamPacketBuffer.readyForLaunch = true;
+                Serial.print("rl");
             } else {
                 // Store new char to serial buffer
                 storeCharToSerialBuffer(newChar);
@@ -1152,7 +1153,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     boolean willSendMsg = false;
 
     if (radio.isHost) {
-        radio.lastTimeHostHeardFromDevice = micros();
+        radio.lastTimeHostHeardFromDevice = millis();
     }
 
     if (len == 1) { // this is a radio comm packet

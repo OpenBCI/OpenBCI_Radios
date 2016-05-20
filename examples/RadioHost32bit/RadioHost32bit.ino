@@ -27,7 +27,10 @@
 
 
 void setup() {
-  // put your setup code here, to run once:
+  // If you forgot your channel numbers, then force a reset by uncommenting
+  //  the line below. This will force a reflash of the non-volitile memory space.
+  radio.setChannelNumber(20);
+
   radio.begin(OPENBCI_MODE_HOST,20);
 }
 
