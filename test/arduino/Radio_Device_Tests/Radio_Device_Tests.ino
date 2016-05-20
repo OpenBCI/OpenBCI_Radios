@@ -27,7 +27,8 @@ void go() {
 
 void testProcessChar() {
     testIsATailByteChar();
-    testProcessCharStreamPacket();
+    testProcessCharSingleChar();
+    // testProcessCharStreamPacket();
 }
 
 void testIsATailByteChar() {
@@ -41,8 +42,24 @@ void testIsATailByteChar() {
     test.assertEqual((boolean)radio.isATailByteChar((char)0xB0),false,"Not a stream packet type");
 }
 
+void testProcessCharSingleChar() {
+    test.describe("processCharForSingleChar");
+
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
+
+    // try to add a char
+    char input = 'A';
+    radio.processChar(input);
+
+    test.assertEqual(radio.bufferSerial.packetBuffer->data[radio.bufferSerial.packetBuffer.positionWrite - 1],input,"Char stored to serial buffer");
+    test.assertEqual(radio.streamPacketBuffer->data[0],input,"Char stoed to stream packet buffer");
+
+}
+
 void testProcessCharStreamPacket() {
-    test.describe("radio.processChar");
+    test.describe("processCharForStreamPacket");
 
     // Quickly write a bunch of bytes into the buffers
     radio.processChar(0x41); // make the first one a stream one so 0x41
