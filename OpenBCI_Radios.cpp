@@ -501,12 +501,20 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 storeCharToSerialBuffer(newChar);
                 // clear the stream packet buffer
                 streamPacketBuffer.bytesIn = 0;
+                // Store the new char into the stream packet buffer
+                streamPacketBuffer.data[0] = newChar;
+                // Increment the number of bytes read in
+                streamPacketBuffer.bytesIn++;
             }
         } else {
             // Store new char to serial buffer
             storeCharToSerialBuffer(newChar);
             // clear the stream packet buffer
             streamPacketBuffer.bytesIn = 0;
+            // Store the new char into the stream packet buffer
+            streamPacketBuffer.data[0] = newChar;
+            // Increment the number of bytes read in
+            streamPacketBuffer.bytesIn++;
         }
 
     } else if (streamPacketBuffer.bytesIn < 32) {
@@ -516,7 +524,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
         // Increment the number of bytes read in
         streamPacketBuffer.bytesIn++;
-    } else {
+    } else { // Really should not be hitting here
         if (outOfBufferSpace()) { // number of bytes per packet times the number of buffers
             emergencyStop = true;
         } else {
