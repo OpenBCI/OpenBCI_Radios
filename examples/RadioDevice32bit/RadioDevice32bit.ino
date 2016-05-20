@@ -46,9 +46,8 @@ void loop() {
         radio.emergencyStop = false;
 
     } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+        // Get one char and process it 
         radio.processChar(Serial.read());
-        // Fetch serial data. This enters a subroutine.
-        radio.bufferSerialFetch();
 
     } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
         // Has 90uS passed since the last time we read from the serial port?

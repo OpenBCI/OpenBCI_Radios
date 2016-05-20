@@ -387,12 +387,11 @@ boolean OpenBCI_Radios_Class::didPicSendDeviceSerialData(void) {
     return Serial.available() > 0;
 }
 
+/**
+ * @description If there are
+ */
 boolean OpenBCI_Radios_Class::thereIsDataInSerialBuffer(void) {
-    if (bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend) {
-        return true;
-    } else {
-        return false;
-    }
+    return bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend;
 }
 
 /**
@@ -472,7 +471,7 @@ boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
  * @description Test to see if a char follows the stream tail byte format
  */
 boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
-    return (newChar & OPENBCI_STREAM_PACKET_TAIL) == OPENBCI_STREAM_PACKET_TAIL;
+    return (newChar >> 4) == 0xA;
 }
 
 /**
