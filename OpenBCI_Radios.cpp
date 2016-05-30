@@ -520,9 +520,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         // Increment the number of bytes read in
         streamPacketBuffer.bytesIn++;
     } else { // Really should not be hitting here
-        if (bufferSerial.overflowed) {
-            emergencyStop = true;
-        } else {
+        if (bufferSerial.overflowed == false) {
             // Store the new char to the serial buffer
             storeCharToSerialBuffer(newChar);
             // Is there a stream packet ready for launch?
@@ -536,7 +534,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             streamPacketBuffer.data[0] = newChar;
             // Increment the number of bytes read in
             streamPacketBuffer.bytesIn++;
-        }
+        } // else {discard char}
     }
 
     // Set the last time we heard from the Pic to the current time in micros
@@ -1159,7 +1157,25 @@ OpenBCI_Radios_Class radio;
 /*******    RFDUINOGZLL DELEGATE    *********/
 /********************************************/
 /********************************************/
+
+boolean OpenBCI_Radios_Class::processRadioCharData(device_t device, char *data, int len) {
+
+}
+
+boolean OpenBCI_Radios_Class::processRadioChar(device_t device, char newChar) {
+
+}
+
+boolean OpenBCI_Radios_Class::packetToSend(void) {
+    if (bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend) {
+        if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) {
+            return true;
+        }
+    }
+    return false;
+}
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+
     char msg[1]; // the message to ack back
     // will either send above message or data from buffer serial
     boolean goodToAddPacketToRadioBuffer = true;
@@ -1385,6 +1401,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         /**************************************/
 
         // More packets to send?
+        // A host thing
         if (radio.isWaitingForNewChannelNumberConfirmation) {
             radio.isWaitingForNewChannelNumberConfirmation = false;
             Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS);

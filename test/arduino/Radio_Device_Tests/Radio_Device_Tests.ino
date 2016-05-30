@@ -21,10 +21,16 @@ void go() {
     test.begin();
 
     testProcessChar();
+    testProcessRadioChar();
 
     test.end();
 }
 
+/********************************************/
+/********************************************/
+/*********    Process Char Tests    *********/
+/********************************************/
+/********************************************/
 void testProcessChar() {
     testIsATailByteChar();
     testProcessCharSingleChar();
@@ -42,6 +48,9 @@ void testIsATailByteChar() {
     test.assertEqual((boolean)radio.isATailByteChar((char)0xAA),true,"Stream packet type 10");
     test.assertEqual((boolean)radio.isATailByteChar((char)0xAF),true,"Stream packet type 15");
     test.assertEqual((boolean)radio.isATailByteChar((char)0xB0),false,"Not a stream packet type");
+
+    // Remember to clean up after yourself
+    testProcessChar_CleanUp();
 }
 
 void testProcessCharSingleChar() {
@@ -58,8 +67,12 @@ void testProcessCharSingleChar() {
     // Verify serial buffer
     test.assertEqual(radio.bufferSerial.packetBuffer->data[radio.bufferSerial.packetBuffer->positionWrite - 1],input,"Char stored to serial buffer");
     test.assertEqual(radio.bufferSerial.numberOfPacketsToSend,1,"Serial buffer has 1 packets");
+    Serial.print("Packets to send: "); Serial.println(radio.bufferSerial.numberOfPacketsToSend);
     // Verify stream packet buffer
     test.assertEqual(radio.streamPacketBuffer.data[0],input,"Char stored to stream packet buffer");
+
+    // Remember to clean up after yourself
+    testProcessChar_CleanUp();
 
 }
 
@@ -111,6 +124,9 @@ void testProcessCharStreamPacket() {
     enoughTimePassed = micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
     test.assertEqual((boolean)enoughTimePassed,true,"Type 5 ready");
 
+    // Remember to clean up after yourself
+    testProcessChar_CleanUp();
+
 }
 
 // Test conditions that result in a stream packet not being launched
@@ -136,6 +152,9 @@ void testProcessCharNotStreamPacket() {
     // Write a stream packet with a bad end byte
     writeAStreamPacketToProcessChar(0xB5);
     test.assertEqual((boolean)radio.isAStreamPacketWaitingForLaunch(),false,"Bad end byte");
+
+    // Remember to clean up after yourself
+    testProcessChar_CleanUp();
 }
 
 // Put the system in an overflow condition
@@ -164,6 +183,38 @@ void testProcessCharOverflow() {
     radio.processChar(0x00);
     // Verify that the emergency stop flag has been deployed
     test.assertEqual((boolean)radio.bufferSerial.overflowed,true,"Overflow emergency");
+
+    // Remember to clean up after yourself
+    testProcessChar_CleanUp();
+}
+
+void testProcessChar_CleanUp() {
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
+}
+
+/********************************************/
+/********************************************/
+/******    Process Radio Char Tests    ******/
+/********************************************/
+/********************************************/
+void testProcessRadioChar() {
+    testPacketToSend();
+}
+
+// This is used to determine if there is in fact a packet waiting to be sent
+void testPacketToSend() {
+    // Set the buffers up to think there is a packet to be sent
+    //  by triggering a serial read
+    radio.processChar(0x41);
+    // Less than 3ms has passed, veryify we can't send a packet
+    test.assertEqual(radio.packetToSend(),false,"Can't send packet yet");
+    // Wait for 3 ms
+    delay(3);
+    // Re ask if there is something to send
+    test.assertEqual(radio.packetToSend(),true,"Can send packet");
+
 }
 
 void writeAStreamPacketToProcessChar(char endByte) {

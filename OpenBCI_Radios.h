@@ -90,9 +90,13 @@ public:
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
+    boolean     packetToSend(void);
     void        pollRefresh(void);
+    void        pushRadioBuffer(void);
     char        processChar(char newChar);
     void        processCharForStreamPacket(char newChar);
+    boolean     processRadioChar(device_t device, char newChar);
+    boolean     processRadioCharData(device_t device, char *data, int len);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
     void        sendPollMessageToHost(void);
@@ -104,7 +108,6 @@ public:
     boolean     thereIsDataInSerialBuffer(void);
     // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void        writeBufferToSerial(char *buffer,int length);
-    void        pushRadioBuffer(void);
     void        writeTheHostsRadioBufferToThePC(void);
     void        writeTheHostsStreamPacketBufferToThePC(void);
     void        writeStreamPacket(char *data);
@@ -116,7 +119,6 @@ public:
     StreamPacketBuffer streamPacketBuffer;
 
     boolean debugMode;
-    boolean emergencyStop;
     boolean isDevice;
     boolean isHost;
     boolean gotAllRadioPackets;

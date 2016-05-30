@@ -26,7 +26,7 @@ void loop() {
     // First we must ask if an emergency stop flag has been triggered, as a Device
     //  we must frequently ask this question as we are the only one that can
     //  initiaite a communication between back to the Driver.
-    if (radio.emergencyStop) {
+    if (radio.overflowed) {
         // Clear the buffer holding all serial data.
         radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
 
@@ -42,11 +42,11 @@ void loop() {
         // Send emergency message to the host
         radio.sendRadioMessageToHost(ORPM_DEVICE_SERIAL_OVERFLOW);
 
-        // Reset the emergencyStop flag
-        radio.emergencyStop = false;
+
+        radio.overflowed = false;
 
     } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
-        // Get one char and process it 
+        // Get one char and process it
         radio.processChar(Serial.read());
 
     } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
@@ -74,5 +74,31 @@ void loop() {
 
         // Poll the host
         radio.sendPollMessageToHost();
+    }
+}
+
+/**
+ * @description A packet with 1 byte is a private radio message, a packet with
+ *                  more than 1 byte is a standard packet with a checksum. and
+ *                  a packet with no length is a NULL packet that indicates a
+ *                  sucessful message transmision
+ * @param device {device_t} - The host in this case
+ * @param rssi {int} - NOT used
+ * @param data {char *} - The packet of data sent in the packet
+ * @param len {int} - The length of the `data` packet
+ */
+void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+    // Set send data packet flag to false
+    boolean sendDataPacket = false;
+    // Is the length of the packer equal to one?
+    if (len == 1) {
+        // Enter process single char subroutine
+        sendDataPacket = radio.processRadioChar(device,data[0]);
+    // Is the length of the packet greater than one?
+    } else if (len > 1) {
+        // Enter process char data packet subroutine
+        sendDataPacket = radio.processRadioCharData(device,data,len);
+    } else {
+        
     }
 }

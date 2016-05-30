@@ -53,6 +53,11 @@
 // flash memory address for RFdunioGZLL
 #define RFDUINOGZLL_FLASH_MEM_ADDR 251
 
+// radio errors
+#define ERROR_RADIO_NONE 0x00
+#define ERROR_RADIO_RESEND_LAST_PACKET 0x01
+#define ERROR_RADIO_RESEND_LAST_PAGE 0x02
+
 // Private Radio communications
 //  ORPM --> "OpenBCI Radio Private Message"
 #define ORPM_INVALID_CODE_RECEIVED 0x00 // The other radio sent a 1 byte message that does not match any
