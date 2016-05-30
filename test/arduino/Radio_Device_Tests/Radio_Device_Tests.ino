@@ -58,7 +58,7 @@ void testProcessCharSingleChar() {
     test.assertEqual(radio.bufferSerial.packetBuffer->data[radio.bufferSerial.packetBuffer->positionWrite - 1],input,"Char stored to serial buffer");
     test.assertEqual(radio.bufferSerial.numberOfPacketsToSend,1,"Serial buffer has 1 packets");
     // Verify stream packet buffer
-    test.assertEqual(radio.streamPacketBuffer.data[0],input,"Char stoed to stream packet buffer");
+    test.assertEqual(radio.streamPacketBuffer.data[0],input,"Char stored to stream packet buffer");
 
 }
 
@@ -124,11 +124,16 @@ void testProcessCharNotStreamPacket() {
     // Quick! Write another char
     radio.processChar(0xFF);
 
-    test.assertEqual((boolean)radio.isAStreamPacketWaitingForLaunch(),true,"Not ready to launch stream packet");
-
+    test.assertEqual((boolean)radio.isAStreamPacketWaitingForLaunch(),false,"Too many packets in");
     test.assertEqual(radio.streamPacketBuffer.bytesIn,1,"1 byte in");
 
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
 
+    // Write a stream packet with a bad end byte
+    writeAStreamPacketToProcessChar(0xB5);
+    test.assertEqual((boolean)radio.isAStreamPacketWaitingForLaunch(),false,"Bad end byte");
 }
 
 void writeAStreamPacketToProcessChar(char endByte) {

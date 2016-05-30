@@ -495,8 +495,10 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         if (isATailByteChar(newChar)) {
             // Is the first char in the stream packet buffer equal to 0x41?
             if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
+                // Set flag for stream packet ready to launch
                 streamPacketBuffer.readyForLaunch = true;
-                Serial.print("rl");
+                // increment the number of bytes read in
+                streamPacketBuffer.bytesIn++;
             } else {
                 // Store new char to serial buffer
                 storeCharToSerialBuffer(newChar);
@@ -531,6 +533,11 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         } else {
             // Store the new char to the serial buffer
             storeCharToSerialBuffer(newChar);
+            // Is there a stream packet ready for launch?
+            if (streamPacketBuffer.readyForLaunch) {
+                // Set readt to launch flag to false
+                streamPacketBuffer.readyForLaunch = false;
+            }
             // Reset bytes in to zero
             streamPacketBuffer.bytesIn = 0;
             // Store the new char into the stream packet buffer
