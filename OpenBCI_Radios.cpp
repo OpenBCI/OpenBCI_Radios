@@ -475,14 +475,6 @@ boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
 }
 
 /**
- * @description Used to test to make sure we are not out of buffer space.
- * @return {boolean} - If we are out of buffer space.
- */
-boolean OpenBCI_Radios_Class::outOfBufferSpace(void) {
-    return bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS;
-}
-
-/**
  * @description Send one char from the Serial port and this function will implement
  *  the serial read subroutine
  * @param newChar {char} - A new char to process
@@ -528,7 +520,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         // Increment the number of bytes read in
         streamPacketBuffer.bytesIn++;
     } else { // Really should not be hitting here
-        if (outOfBufferSpace()) { // number of bytes per packet times the number of buffers
+        if (bufferSerial.overflowed) {
             emergencyStop = true;
         } else {
             // Store the new char to the serial buffer
@@ -701,32 +693,46 @@ void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
  * @return {boolean} - If the new char was added to the serial buffer
  */
 boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
-    // Set the number of packets to 1 initally, it will only grow
-    if (bufferSerial.numberOfPacketsToSend == 0) {
-        bufferSerial.numberOfPacketsToSend = 1;
-    }
+    // Is the serial buffer overflowed?
+    if (bufferSerial.overflowed) {
+        // End the subroutine
+        return false;
+    } else {
+        // Is the current buffer's write position less than max size of 32?
+        if (currentPacketBufferSerial->positionWrite < OPENBCI_MAX_PACKET_SIZE_BYTES) {
+            // Store the char into the serial buffer at the write position
+            currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
+            // Increment the write position
+            currentPacketBufferSerial->positionWrite++;
+            // Set the number of packets to 1 initally, it will only grow
+            if (bufferSerial.numberOfPacketsToSend == 0) {
+                bufferSerial.numberOfPacketsToSend = 1;
+            }
+            // end successful subroutine read
+            return true;
 
-    // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
-    if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
-        // Go to the next packet
-        bufferSerial.numberOfPacketsToSend++;
-        // Did we run out of buffers?
-        if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
-            // Get out of this function
-            return false;
         } else {
-            // move the pointer 1 struct
-            currentPacketBufferSerial++;
+            // Are we out of serial buffers?
+            if (bufferSerial.numberOfPacketsToSend == OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+                // Set the overflowed flag equal to true
+                bufferSerial.overflowed = true;
+                // End the subroutine with a failure
+                return false;
+
+            } else {
+                // Increment the current buffer pointer to the next one
+                currentPacketBufferSerial++;
+                // Increment the number of packets to send
+                bufferSerial.numberOfPacketsToSend++;
+                // Store the char into the serial buffer at the write position
+                currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
+                // Increment the write position
+                currentPacketBufferSerial->positionWrite++;
+                // End the subroutine with success
+                return true;
+            }
         }
     }
-
-    // Store the byte to current buffer at write postition
-    currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
-
-    // Increment currentPacketBufferSerial write postion
-    currentPacketBufferSerial->positionWrite++;
-
-    return true;
 }
 
 /********************************************/
@@ -817,6 +823,7 @@ void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberO
     bufferCleanCompletePacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
+    buffer->overflowed = false;
 }
 
 /**

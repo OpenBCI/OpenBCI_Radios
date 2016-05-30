@@ -30,6 +30,7 @@ void testProcessChar() {
     testProcessCharSingleChar();
     testProcessCharStreamPacket();
     testProcessCharNotStreamPacket();
+    testProcessCharOverflow();
 }
 
 void testIsATailByteChar() {
@@ -112,6 +113,7 @@ void testProcessCharStreamPacket() {
 
 }
 
+// Test conditions that result in a stream packet not being launched
 void testProcessCharNotStreamPacket() {
     test.describe("processCharForNotStreamPacket");
 
@@ -134,6 +136,34 @@ void testProcessCharNotStreamPacket() {
     // Write a stream packet with a bad end byte
     writeAStreamPacketToProcessChar(0xB5);
     test.assertEqual((boolean)radio.isAStreamPacketWaitingForLaunch(),false,"Bad end byte");
+}
+
+// Put the system in an overflow condition
+void testProcessCharOverflow() {
+    test.describe("testProcessCharOverflow");
+
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
+
+    // Write the max number of bytes in buffers
+    int maxBytes = OPENBCI_MAX_NUMBER_OF_BUFFERS * OPENBCI_MAX_DATA_BYTES_IN_PACKET;
+    // Write max bytes but stop 1 before
+    for (int i = 0; i < maxBytes; i++) {
+        radio.processChar(0x00);
+    }
+
+    // Verify that the emergency stop flag has NOT been deployed
+    test.assertEqual((boolean)radio.bufferSerial.overflowed,false,"Overflow emergency not hit");
+    // Verify that there are 15 buffers filled
+    test.assertEqual(radio.bufferSerial.numberOfPacketsToSend,OPENBCI_MAX_NUMBER_OF_BUFFERS,"15 buffers");
+    // Verify the write position
+    test.assertEqual((radio.bufferSerial.packetBuffer + OPENBCI_MAX_NUMBER_OF_BUFFERS - 1)->positionWrite,OPENBCI_MAX_PACKET_SIZE_BYTES,"32 bytes in buffer");
+
+    // Write one more byte to overflow the buffer
+    radio.processChar(0x00);
+    // Verify that the emergency stop flag has been deployed
+    test.assertEqual((boolean)radio.bufferSerial.overflowed,true,"Overflow emergency");
 }
 
 void writeAStreamPacketToProcessChar(char endByte) {

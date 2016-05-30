@@ -35,6 +35,7 @@ public:
     } PacketBuffer;
 
     typedef struct {
+        boolean         overflowed;
         int             numberOfPacketsToSend;
         int             numberOfPacketsSent;
         PacketBuffer    packetBuffer[OPENBCI_MAX_NUMBER_OF_BUFFERS];
@@ -86,7 +87,6 @@ public:
     boolean     isATailByteChar(char newChar);
     void        ledFeedBackForPassThru(void);
     boolean     needToSetChannelNumber(void);
-    boolean     outOfBufferSpace(void);
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
