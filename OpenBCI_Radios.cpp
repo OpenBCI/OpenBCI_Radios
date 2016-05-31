@@ -811,6 +811,7 @@ void OpenBCI_Radios_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPackets
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
+    buffer->overflowed = false;
 }
 
 /**
