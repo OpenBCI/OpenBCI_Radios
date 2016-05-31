@@ -42,7 +42,6 @@ void loop() {
         // Send emergency message to the host
         radio.sendRadioMessageToHost(ORPM_DEVICE_SERIAL_OVERFLOW);
 
-
         radio.bufferSerial.overflowed = false;
 
     } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
@@ -51,6 +50,7 @@ void loop() {
 
     } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
         // Has 90uS passed since the last time we read from the serial port?
+        Serial.println("...");
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
             radio.sendStreamPacketToTheHost();
         }
@@ -59,8 +59,8 @@ void loop() {
         // Has 3ms passed since the last time the serial port was read
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)){
             // In order to do checksumming we must only send one packet at a time
-            //  this stnads as the first time we are going to send a packet!
-            radio.sendTheDevicesFirstPacketToTheHost();
+            //  this stands as the first time we are going to send a packet!
+            radio.sendPacketToHost();
         }
 
     } else if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
@@ -102,7 +102,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
-        if (sendDataPacket == false) {
+        if (sendDataPacket == false && radio.streamPacketBuffer.bytesIn > 0) {
             radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
             radio.bufferResetStreamPacketBuffer();
         }
