@@ -104,7 +104,7 @@ public:
     void        sendRadioMessageToHost(byte msg);
     void        sendStreamPacketToTheHost(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
-    void        setByteIdForPacketBuffer(void)
+    void        setByteIdForPacketBuffer(int packetNumber);
     boolean     setChannelNumber(uint32_t channelNumber);
     boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);

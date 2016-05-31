@@ -26,7 +26,7 @@ void loop() {
     // First we must ask if an emergency stop flag has been triggered, as a Device
     //  we must frequently ask this question as we are the only one that can
     //  initiaite a communication between back to the Driver.
-    if (radio.overflowed) {
+    if (radio.bufferSerial.overflowed) {
         // Clear the buffer holding all serial data.
         radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
 
@@ -43,7 +43,7 @@ void loop() {
         radio.sendRadioMessageToHost(ORPM_DEVICE_SERIAL_OVERFLOW);
 
 
-        radio.overflowed = false;
+        radio.bufferSerial.overflowed = false;
 
     } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
         // Get one char and process it
@@ -102,6 +102,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
+        if (sendDataPacket == false) {
+            radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+            radio.bufferResetStreamPacketBuffer();
+        }
     }
 
     // Is the send data packet flag set to true
