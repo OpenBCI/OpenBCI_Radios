@@ -97,8 +97,15 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine
-        sendDataPacket = radio.processRadioCharData(device,data,len);
+        sendDataPacket = radio.processDeviceRadioCharData(data,len);
     } else {
-        
+        // Are there packets waiting to be sent and was the Serial port read
+        //  more then 3 ms ago?
+        sendDataPacket = radio.packetToSend();
+    }
+
+    // Is the send data packet flag set to true
+    if (sendDataPacket) {
+        radio.sendPacketToHost();
     }
 }

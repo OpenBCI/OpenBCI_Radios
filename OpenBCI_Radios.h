@@ -96,13 +96,15 @@ public:
     char        processChar(char newChar);
     void        processCharForStreamPacket(char newChar);
     boolean     processRadioChar(device_t device, char newChar);
-    boolean     processRadioCharData(device_t device, char *data, int len);
+    boolean     processDeviceRadioCharData(char *data, int len);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
+    void        sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte msg);
     void        sendStreamPacketToTheHost(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
+    void        setByteIdForPacketBuffer(void)
     boolean     setChannelNumber(uint32_t channelNumber);
     boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);
@@ -128,6 +130,7 @@ public:
     boolean verbosePrintouts;
 
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
+    char    singleCharMsg[1];
 
     int     bufferPacketsReceived;
     int     bufferPacketsToReceive;
