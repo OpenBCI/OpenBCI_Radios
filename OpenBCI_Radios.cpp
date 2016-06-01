@@ -25,7 +25,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     // Set defaults
     radioMode = OPENBCI_MODE_DEVICE; // Device mode
     radioChannel = 25; // Channel 18
-    verbosePrintouts = true;
+    verbosePrintouts = false;
     debugMode = true; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
@@ -470,18 +470,18 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
 
-    if (packetNumber > 0) {
-        Serial.print("ERR P: "); Serial.println(packetNumber);
-        Serial.print("Num pack to send: "); Serial.println(bufferSerial.numberOfPacketsToSend);
-        Serial.print("Num pack sent: "); Serial.println(bufferSerial.numberOfPacketsSent);
-
-    }
+    // if (packetNumber > 0) {
+    //     Serial.print("ERR P: "); Serial.println(packetNumber);
+    //     Serial.print("Num pack to send: "); Serial.println(bufferSerial.numberOfPacketsToSend);
+    //     Serial.print("Num pack sent: "); Serial.println(bufferSerial.numberOfPacketsSent);
+    //
+    // }
 
     setByteIdForPacketBuffer(packetNumber);
 
-    if (radio.verbosePrintouts) {
-        Serial.print("S->"); Serial.println(packetNumber);
-    }
+    // if (radio.verbosePrintouts) {
+    //     Serial.print("S->"); Serial.println(packetNumber);
+    // }
     RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + packetNumber)->data, (bufferSerial.packetBuffer + packetNumber)->positionWrite);
     pollRefresh();
 
@@ -514,19 +514,21 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
     // The number of bytes for a stream packet!
     // Serial.println(newChar);
     if (streamPacketBuffer.bytesIn == 32) {
+        // Serial.println("T");
         // Is the current char equal to 0xAX where X is 0-F?
         if (isATailByteChar(newChar)) {
             // Is the first char in the stream packet buffer equal to 0x41?
             if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
                 // Set flag for stream packet ready to launch
                 streamPacketBuffer.readyForLaunch = true;
-                Serial.println("G");
+                // Serial.println("G");
                 // increment the number of bytes read in
                 streamPacketBuffer.bytesIn++;
 
                 streamPacketBuffer.typeByte = newChar;
                 // Serial.print("got stream packet");
             } else {
+                // Serial.println("B");
                 // Store new char to serial buffer
                 if(!storeCharToSerialBuffer(newChar) && verbosePrintouts) {
                     Serial.println("Failed to store char");
@@ -713,7 +715,7 @@ void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 
     // Clean the serial buffer (because these bytes got added to it too)
     bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
-    Serial.println("#c4");
+    // Serial.println("#c4\n");
 
     // Clean the stream packet buffer
     bufferResetStreamPacketBuffer();
@@ -766,7 +768,7 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
                 currentPacketBufferSerial++;
                 // Increment the number of packets to send
                 bufferSerial.numberOfPacketsToSend++;
-                Serial.print("#p2s1: "); Serial.println(bufferSerial.numberOfPacketsToSend);
+                // Serial.print("#p2s1: "); Serial.println(bufferSerial.numberOfPacketsToSend);
 
                 // Store the char into the serial buffer at the write position
                 currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
@@ -857,7 +859,7 @@ void OpenBCI_Radios_Class::bufferCleanCompletePacketBuffer(PacketBuffer *packetB
 void OpenBCI_Radios_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean) {
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
-    Serial.println("#p2s4:reset");// Serial.println(buffer->numberOfPacketsToSend);
+    // Serial.println("#p2s4:reset");// Serial.println(buffer->numberOfPacketsToSend);
 
     buffer->numberOfPacketsSent = 0;
     buffer->overflowed = false;
@@ -871,7 +873,7 @@ void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberO
     bufferCleanCompletePacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
-    Serial.print("#p2s5: "); Serial.println(buffer->numberOfPacketsToSend);
+    // Serial.print("#p2s5: "); Serial.println(buffer->numberOfPacketsToSend);
 
     buffer->overflowed = false;
 }
@@ -938,7 +940,7 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
     // Set the number of packets to 1 initally, it will only grow
     if (bufferSerial.numberOfPacketsToSend == 0) {
         bufferSerial.numberOfPacketsToSend = 1;
-        Serial.print("#p2s2: "); Serial.println(bufferSerial.numberOfPacketsToSend);
+        // Serial.print("#p2s2: "); Serial.println(bufferSerial.numberOfPacketsToSend);
 
     }
     //
@@ -953,7 +955,7 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
         if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
             // Go to the next packet
             bufferSerial.numberOfPacketsToSend++;
-            Serial.print("#p2s3: "); Serial.println(bufferSerial.numberOfPacketsToSend);
+            // Serial.print("#p2s3: "); Serial.println(bufferSerial.numberOfPacketsToSend);
 
             // Did we run out of buffers?
             if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
@@ -962,7 +964,7 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
                 currentPacketBufferSerial = NULL;
                 // Clear out buffers... start again!
                 bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
-                Serial.println("#c1");
+                // Serial.println("#c1");
 
                 // Need an emergency breaking system...
                 if (isDevice) {
@@ -1404,7 +1406,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
             // Serial.println("Cleaning Hosts's bufferSerial");
             // Clear buffer
             bufferCleanSerial(bufferSerial.numberOfPacketsSent);
-            Serial.println("#c2");
+            // Serial.println("#c2");
             return false;
         } else {
             pollHost();

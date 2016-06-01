@@ -50,7 +50,6 @@ void loop() {
 
     } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
         // Has 90uS passed since the last time we read from the serial port?
-        Serial.println("...");
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
             radio.sendStreamPacketToTheHost();
         }
@@ -60,7 +59,7 @@ void loop() {
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)){
             // In order to do checksumming we must only send one packet at a time
             //  this stands as the first time we are going to send a packet!
-            radio.sendPacketToHost();
+            radio.sendTheDevicesFirstPacketToTheHost();
         }
 
     } else if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
@@ -94,14 +93,23 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     if (len == 1) {
         // Enter process single char subroutine
         sendDataPacket = radio.processRadioChar(device,data[0]);
+        if (sendDataPacket) {
+            Serial.println("s1");
+        }
     // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine
         sendDataPacket = radio.processDeviceRadioCharData(data,len);
+        if (sendDataPacket) {
+            Serial.println("s2");
+        }
     } else {
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
+        if (sendDataPacket) {
+            Serial.println("s3");
+        }
         if (sendDataPacket == false && radio.streamPacketBuffer.bytesIn > 0) {
             radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
             radio.bufferResetStreamPacketBuffer();

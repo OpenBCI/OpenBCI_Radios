@@ -20,8 +20,8 @@
 #define OPENBCI_MAX_NUMBER_OF_BUFFERS 16
 
 
-#define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000
-#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 90
+#define OPENBCI_TIMEOUT_PACKET_NRML_uS 2000
+#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 100
 #define OPENBCI_TIMEOUT_PACKET_POLL_MS 63 // Poll time out length for sending null packet from device to host
 
 // Stream byte stuff
