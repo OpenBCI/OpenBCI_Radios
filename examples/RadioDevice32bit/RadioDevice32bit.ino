@@ -44,15 +44,15 @@ void loop() {
 
         radio.bufferSerial.overflowed = false;
 
-    } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
-        // Get one char and process it
-        radio.processChar(Serial.read());
-
     } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
         // Has 90uS passed since the last time we read from the serial port?
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
             radio.sendStreamPacketToTheHost();
         }
+
+    } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+        // Get one char and process it
+        radio.processChar(Serial.read());
 
     } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
         // Has 3ms passed since the last time the serial port was read
@@ -110,7 +110,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         if (sendDataPacket) {
             Serial.println("s3");
         }
-        if (sendDataPacket == false && radio.streamPacketBuffer.bytesIn > 0) {
+        if (sendDataPacket == false) {
             radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
             radio.bufferResetStreamPacketBuffer();
         }

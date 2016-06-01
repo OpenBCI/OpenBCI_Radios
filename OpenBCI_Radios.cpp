@@ -439,10 +439,10 @@ void OpenBCI_Radios_Class::sendTheDevicesFirstPacketToTheHost(void) {
         // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
 
-        // TODO: REMOVE THIS SHIT!
-        if (bufferSerial.packetBuffer->data[1] == 0x00) {
-            Serial.write(getChannelNumber());
-        }
+        // // TODO: REMOVE THIS SHIT!
+        // if (bufferSerial.packetBuffer->data[1] == 0x00) {
+        //     Serial.write(getChannelNumber());
+        // }
         // Send back some data
         RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
