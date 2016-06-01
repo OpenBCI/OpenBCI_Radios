@@ -80,7 +80,7 @@ void loop() {
  * @description A packet with 1 byte is a private radio message, a packet with
  *                  more than 1 byte is a standard packet with a checksum. and
  *                  a packet with no length is a NULL packet that indicates a
- *                  sucessful message transmision
+ *                  successful message transmission
  * @param device {device_t} - The host in this case
  * @param rssi {int} - NOT used
  * @param data {char *} - The packet of data sent in the packet

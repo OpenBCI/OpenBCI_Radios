@@ -99,6 +99,7 @@ public:
     boolean     processDeviceRadioCharData(char *data, int len);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
+    void        sendPacketToDevice(void);
     void        sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte msg);
