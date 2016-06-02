@@ -358,16 +358,20 @@ boolean OpenBCI_Radios_Class::processOutboundBufferCharSingle(char *buffer) {
             previousRadioChannel = getChannelNumber();
             // Send a channel change request to the host
             singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
-
+            // Send a single char message
+            return true;
         } else {
             // Send back error message to the PC/Driver
             Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_INVALID);
+            // Don't send a single char message
+            return false;
         }
-
-
     // Is the first byte equal to the poll time change request?
     } else if (buffer->data[1] == OPENBCI_HOST_POLL_TIME_CHANGE){
 
+    } else {
+        // Don't send a single char message
+        return false;
     }
 }
 
