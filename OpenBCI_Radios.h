@@ -143,6 +143,7 @@ public:
     PacketBuffer *currentPacketBufferStreamPacket;
 
     uint8_t radioMode;
+    uint8_t newPollTime;
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;

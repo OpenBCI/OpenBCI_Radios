@@ -67,8 +67,13 @@
 #define ORPM_DEVICE_SERIAL_OVERFLOW 0x04 // The Device is being overflowed by Pic
 #define ORPM_CHANGE_CHANNEL_HOST_REQUEST 0x05 // CCHR
 #define ORPM_CHANGE_CHANNEL_DEVICE_READY 0x06 //
-#define ORPM_CHANGE_POLL_TIME_HOST_REQUEST 0x07 // 
+#define ORPM_CHANGE_POLL_TIME_HOST_REQUEST 0x07 //
 #define ORPM_CHANGE_POLL_TIME_DEVICE_READY 0x08 //
+
+// Used to determine what to send after a proccess out bound buffer
+#define ACTION_RADIO_SEND_NONE 0x00
+#define ACTION_RADIO_SEND_NORMAL 0x01
+#define ACTION_RADIO_SEND_SINGLE_CHAR 0x02
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
