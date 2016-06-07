@@ -359,10 +359,10 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuff
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
-
     switch (buffer->data[1]) {
-        // Is the first byte equal to the channle change request?
+        // Is the first byte equal to the channel change request?
         case OPENBCI_HOST_CHANNEL_CHANGE:
+            // Make sure the channel is within bounds (<25)
             if (buffer->data[2] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
                 // Save requested new channel number
                 radioChannel = (uint32_t)buffer->data[2];

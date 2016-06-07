@@ -95,8 +95,11 @@ public:
     void        pushRadioBuffer(void);
     char        processChar(char newChar);
     void        processCharForStreamPacket(char newChar);
-    boolean     processRadioChar(device_t device, char newChar);
     boolean     processDeviceRadioCharData(char *data, int len);
+    byte        processOutboundBuffer(PacketBuffer *currentPacketBuffer);
+    byte        processOutboundBufferCharDouble(char *buffer);
+    byte        processOutboundBufferCharSingle(char aChar);
+    boolean     processRadioChar(device_t device, char newChar);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
     void        sendPacketToDevice(void);
