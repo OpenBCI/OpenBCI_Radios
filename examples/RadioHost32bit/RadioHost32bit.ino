@@ -32,23 +32,37 @@ void setup() {
     // radio.setChannelNumber(20);
 
     // Declare the radio mode and channel number. Note this channel is only set on init flash
-    radio.begin(OPENBCI_MODE_HOST,20);
+    radio.beginDebug(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
 
-
-    if (radio.doesTheHostHaveAStreamPacketToSendToPC()) {
-        radio.writeTheHostsStreamPacketBufferToThePC();
+    // Is there a stream packet waiting to get sent to the PC
+    if (radio.hasStreamPacket()) {
+        // Send all the stream packets to the Driver/PC
+        //  For resiliancy there is an oppertunity to have multiple stream
+        //  packets waiting to get sent.
+        radio.sendStreamPackets();
     }
 
-    if (radio.didPCSendDataToHost()) {
-        radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
-    }
-
+    // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {
+        // Write the buffer to the driver
         radio.writeTheHostsRadioBufferToThePC();
     }
+
+    // Is there new data from the PC/Driver?
+    if (radio.didPCSendDataToHost()) {
+        // Get data and put it on the serial buffer
+        boolean success = radio.storeCharToSerialBuffer(Serial.read());
+
+        if (!success) {
+            Serial.print("Input too large!$$$");
+        }
+
+        radio.lastTimeSerialRead = micros();
+    }
+
 
     if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
         if (radio.isWaitingForNewChannelNumberConfirmation) {
@@ -87,19 +101,18 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-
     // Reset the last time heard from host timer
-    radio.lastTimeHostHeardFromDevice = true;
+    radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
     boolean sendDataPacket = false;
     // Is the length of the packer equal to one?
     if (len == 1) {
         // Enter process single char subroutine
-        sendDataPacket = radio.processRadioChar(device,data[0]);
+        sendDataPacket = radio.processRadioCharHost(device,data[0]);
         // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine
-        sendDataPacket = radio.processHostRadioCharData(data,len);
+        sendDataPacket = radio.processHostRadioCharData(device,data,len);
 
     } else {
         // Are there packets waiting to be sent and was the Serial port read
@@ -114,6 +127,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        radio.sendPacketToDevice();
+        radio.sendPacketToDevice(device);
     }
 }
