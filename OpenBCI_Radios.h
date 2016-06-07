@@ -100,9 +100,10 @@ public:
     byte        processOutboundBufferCharDouble(char *buffer);
     byte        processOutboundBufferCharSingle(char aChar);
     boolean     processRadioChar(device_t device, char newChar);
+    boolean     processHostRadioCharData(device_t device, char *data, int len);
     void        resetPic32(void);
     void        revertToPreviousChannelNumber(void);
-    void        sendPacketToDevice(void);
+    void        sendPacketToDevice(device_t device);
     void        sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte msg);

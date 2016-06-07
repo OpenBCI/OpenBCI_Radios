@@ -114,6 +114,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        radio.sendPacketToDevice();
+        radio.sendPacketToDevice(device);
     }
 }

@@ -359,13 +359,13 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuff
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
-    switch (buffer->data[1]) {
+    switch (buffer[1]) {
         // Is the first byte equal to the channel change request?
         case OPENBCI_HOST_CHANNEL_CHANGE:
             // Make sure the channel is within bounds (<25)
-            if (buffer->data[2] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+            if (buffer[2] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
                 // Save requested new channel number
-                radioChannel = (uint32_t)buffer->data[2];
+                radioChannel = (uint32_t)buffer[2];
                 // Save the previous channel number
                 previousRadioChannel = getChannelNumber();
                 // Send a channel change request to the device
@@ -386,7 +386,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
             }
         case OPENBCI_HOST_POLL_TIME_CHANGE:
             // Save the new poll time
-            newPollTime = (uint8_t)buffer->data[2];
+            newPollTime = (uint8_t)buffer[2];
             // Send a time change request to the device
             singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
             return ACTION_RADIO_SEND_SINGLE_CHAR;
@@ -424,7 +424,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
     }
 }
 
-void OpenBCI_Radios_Class::sendPacketToDevice(void) {
+void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
     // Build byteId
     // char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length)
@@ -438,12 +438,14 @@ void OpenBCI_Radios_Class::sendPacketToDevice(void) {
         radioAction = processOutboundBuffer(bufferSerial.packetBuffer);
     }
 
+    // Make the byte id
+    char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
+
     switch (radioAction) {
         case ACTION_RADIO_SEND_SINGLE_CHAR:
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             break;
         case ACTION_RADIO_SEND_NORMAL:
-            char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
 
             // Add the byteId to the packet
             (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteId;
@@ -1552,12 +1554,14 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     }
 }
 
-boolean OpenBCI_Radios_Class::processHostRadioCharData() {
+boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *data, int len) {
     // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
 
     // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
 
     boolean gotLastPacket = false;
+    boolean goodToAddPacketToRadioBuffer = true;
+
 
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
