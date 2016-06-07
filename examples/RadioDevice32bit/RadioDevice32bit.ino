@@ -44,45 +44,43 @@ void loop() {
 
         radio.bufferSerial.overflowed = false;
 
-    }
+    } else {
+        if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+            // Get one char and process it
+            radio.processChar(Serial.read());
+            // Reset the poll timer to prevent contacting the host mid read
+            radio.pollRefresh();
 
-    if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
-        // Has 90uS passed since the last time we read from the serial port?
-        if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
-            radio.sendStreamPacketToTheHost();
+        } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
+            // Has 90uS passed since the last time we read from the serial port?
+            if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
+                radio.sendStreamPacketToTheHost();
+            }
+
+        } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
+            // Has 3ms passed since the last time the serial port was read. Only the
+            //  first packet get's sent from here
+            if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS) && radio.bufferSerial.numberOfPacketsSent == 0){
+                // In order to do checksumming we must only send one packet at a time
+                //  this stands as the first time we are going to send a packet!
+                radio.sendPacketToHost();
+            }
         }
 
-    }
-
-    if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
-        // Get one char and process it
-        radio.processChar(Serial.read());
-
-    }
-
-    if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
-        // Has 3ms passed since the last time the serial port was read. Only the
-        //  first packet get's sent from here
-        if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS) && radio.bufferSerial.numberOfPacketsSent == 0){
-            // In order to do checksumming we must only send one packet at a time
-            //  this stands as the first time we are going to send a packet!
-            radio.sendPacketToHost();
+        if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
+            // push radio buffer to pic
+            radio.pushRadioBuffer();
+            // reset the radio buffer
+            radio.bufferCleanRadio();
         }
-    }
 
-    if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
-        // push radio buffer to pic
-        radio.pushRadioBuffer();
-        // reset the radio buffer
-        radio.bufferCleanRadio();
-    }
+        if (millis() > (radio.timeOfLastPoll + OPENBCI_TIMEOUT_PACKET_POLL_MS)) {  // Has more than the poll time passed?
+            // Refresh the poll timer
+            radio.pollRefresh();
 
-    if (millis() > (radio.timeOfLastPoll + OPENBCI_TIMEOUT_PACKET_POLL_MS)) {  // Has more than the poll time passed?
-        // Refresh the poll timer
-        radio.pollRefresh();
-
-        // Poll the host
-        radio.sendPollMessageToHost();
+            // Poll the host
+            radio.sendPollMessageToHost();
+        }
     }
 }
 

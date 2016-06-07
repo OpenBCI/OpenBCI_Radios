@@ -1510,7 +1510,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
 
     // When in debug mode, state which packetNumber we just recieved
     if (verbosePrintouts) {
-        Serial.print("-R<-");Serial.println(packetNumber);
+        Serial.print("R<-");Serial.println(packetNumber);
     }
 
     // Verify the checksums are equal
@@ -1630,7 +1630,11 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
         bufferAddStreamPacket(data,len);
-    } else if (checkSumsAreEqual(data,len)) {
+        // Check to see if there is a packet to send back
+        return packetToSend();
+    }
+
+    if (checkSumsAreEqual(data,len)) {
         // This first statment asks if this is a last packet and the previous
         //  packet was 0 too, this is in an effort to get to the point in the
         //  program where we ask if this packet is a stream packet
@@ -1658,7 +1662,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
                 } else {
                     goodToAddPacketToRadioBuffer = false;
                     // We missed a packet, send resend message
-                    singleCharMsg[0] = ORPM_PACKET_MISSED & 0xFF;
+                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
 
                     // reset ring buffer to start
                     bufferPositionWriteRadio = 0;
@@ -1668,15 +1672,18 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
                     if (verbosePrintouts) {
                         Serial.println("S->M");
                     }
+                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+                    return false;
                 }
             }
         }
     } else {
-        goodToAddPacketToRadioBuffer = false;
         singleCharMsg[0] = ORPM_PACKET_BAD_CHECK_SUM & 0xFF;
         if (verbosePrintouts) {
             Serial.println("S->B");
         }
+        RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+        return false;
     }
 
     // goodToAddPacketToRadioBuffer is true if we have not recieved an error
@@ -1700,19 +1707,17 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
             // flag contents of radio buffer to be printed!
             gotAllRadioPackets = true;
         }
+    }
 
-        if (packetToSend()) {
-            return true;
-        } else if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend && bufferSerial.numberOfPacketsToSend != 0) {
-            // Serial.println("Cleaning Hosts's bufferSerial");
-            // Clear buffer
-            bufferCleanSerial(bufferSerial.numberOfPacketsSent);
-            return false;
-        }
-    } else { // We got a problem
-        RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+    if (packetToSend()) {
+        return true;
+    } else if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend && bufferSerial.numberOfPacketsToSend != 0) {
+        // Serial.println("Cleaning Hosts's bufferSerial");
+        // Clear buffer
+        bufferCleanSerial(bufferSerial.numberOfPacketsSent);
         return false;
     }
+
 }
 
 // void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
