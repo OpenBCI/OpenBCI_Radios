@@ -607,10 +607,10 @@ void OpenBCI_Radios_Class::sendTheDevicesFirstPacketToTheHost(void) {
 }
 
 void OpenBCI_Radios_Class::setByteIdForPacketBuffer(int packetNumber) {
-    char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + packetNumber)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
+    char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
 
     // Add the byteId to the packet
-    (bufferSerial.packetBuffer + packetNumber)->data[0] = byteId;
+    (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteId;
 }
 
 void OpenBCI_Radios_Class::sendPacketToHost(void) {
@@ -623,13 +623,18 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
     //     Serial.print("Num pack sent: "); Serial.println(bufferSerial.numberOfPacketsSent);
     //
     // }
+    char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
 
-    setByteIdForPacketBuffer(packetNumber);
+    // Add the byteId to the packet
+    (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteId;
 
-    // if (radio.verbosePrintouts) {
-    //     Serial.print("S->"); Serial.println(packetNumber);
-    // }
-    RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + packetNumber)->data, (bufferSerial.packetBuffer + packetNumber)->positionWrite);
+    // setByteIdForPacketBuffer(packetNumber);
+
+    if (radio.verbosePrintouts) {
+        Serial.print("S->"); Serial.println(packetNumber);
+        Serial.print("Packets sent:"); Serial.println(bufferSerial.numberOfPacketsSent);
+    }
+    RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
     pollRefresh();
 
     bufferSerial.numberOfPacketsSent++;
@@ -688,7 +693,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 streamPacketBuffer.bytesIn++;
             }
         } else {
-            // Serial.println("NS");
+            Serial.println("NS");
             // Store new char to serial buffer
             storeCharToSerialBuffer(newChar);
             // clear the stream packet buffer

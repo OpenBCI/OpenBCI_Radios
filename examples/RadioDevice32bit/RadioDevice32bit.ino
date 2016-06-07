@@ -59,7 +59,7 @@ void loop() {
         if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)){
             // In order to do checksumming we must only send one packet at a time
             //  this stands as the first time we are going to send a packet!
-            radio.sendTheDevicesFirstPacketToTheHost();
+            radio.sendPacketToHost();
         }
 
     } else if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
