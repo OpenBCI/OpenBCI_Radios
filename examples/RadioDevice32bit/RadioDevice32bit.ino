@@ -18,7 +18,7 @@ void setup() {
     // radio.setChannelNumber(20);
 
     // Declare the radio mode and channel
-    radio.begin(OPENBCI_MODE_DEVICE,20);
+    radio.beginDebug(OPENBCI_MODE_DEVICE,20);
 }
 
 void loop() {

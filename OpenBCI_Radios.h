@@ -52,6 +52,7 @@ public:
     OpenBCI_Radios_Class();
     boolean     begin(uint8_t mode);
     boolean     begin(uint8_t mode, uint32_t channelNumber);
+    boolean     beginDebug(uint8_t mode, uint32_t channelNumber);
     char        byteIdGetCheckSum(char byteId);
     boolean     byteIdGetIsStream(char byteId);
     int         byteIdGetPacketNumber(char byteId);

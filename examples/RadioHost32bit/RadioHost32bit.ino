@@ -32,7 +32,7 @@ void setup() {
     // radio.setChannelNumber(20);
 
     // Declare the radio mode and channel number. Note this channel is only set on init flash
-    radio.begin(OPENBCI_MODE_HOST,20);
+    radio.beginDebug(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
@@ -59,6 +59,8 @@ void loop() {
         if (!success) {
             Serial.print("Input too large!$$$");
         }
+
+        radio.lastTimeSerialRead = micros();
     }
 
 
@@ -111,7 +113,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine
-        sendDataPacket = radio.processHostRadioCharData(data,len);
+        sendDataPacket = radio.processHostRadioCharData(device,data,len);
 
     } else {
         // Are there packets waiting to be sent and was the Serial port read
