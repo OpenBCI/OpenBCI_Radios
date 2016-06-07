@@ -97,7 +97,7 @@ void testProcessOutboundBufferPollTimeChange() {
     // The code the driver sends to host to start a time change
     data[1] = (char)OPENBCI_HOST_POLL_TIME_CHANGE;
     // Verify the define
-    test.assertEqualInt(OPENBCI_HOST_POLL_TIME_CHANGE,0x07,"#define for cmd verify");
+    test.assertEqualInt(OPENBCI_HOST_POLL_TIME_CHANGE,0x05,"#define for cmd verify");
     // The channel to change to
     data[2] = (char)expectedPollTime;
 
@@ -117,7 +117,7 @@ void testProcessOutboundBufferCharDoubleNormal() {
 
     char data[OPENBCI_MAX_PACKET_SIZE_BYTES];
 
-    // The code the driver sends to host to start a channel change process
+    // Write code that is not a special case
     data[1] = 0x0B;
     data[2] = data[1];
 

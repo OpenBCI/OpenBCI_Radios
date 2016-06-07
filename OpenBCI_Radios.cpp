@@ -327,7 +327,7 @@ boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
  *      and number of packets to send will be greater than 0
  * @return {boolean} - If there are packets to send
  */
-boolean OpenBCI_Radios_Class::doesTheHostHaveAStreamPacketToSendToPC(void) {
+boolean OpenBCI_Radios_Class::hasStreamPacket(void) {
     return bufferStreamPackets.numberOfPacketsToSend > 0;
 }
 
@@ -424,6 +424,9 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
     }
 }
 
+/**
+ * @description Called from Host's on_recieve if a packet will be sent.
+ */
 void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
     // Build byteId
@@ -439,28 +442,27 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
     }
 
     // Make the byte id
-    char byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
+    char byteId;
 
     switch (radioAction) {
         case ACTION_RADIO_SEND_SINGLE_CHAR:
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             break;
         case ACTION_RADIO_SEND_NORMAL:
-
+            // Save the byteId
+            byteId = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
             // Add the byteId to the packet
             (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteId;
-
             if (verbosePrintouts) {
                 Serial.print("S->"); Serial.println(packetNumber);
             }
             RFduinoGZLL.sendToDevice(device,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+            // Increment number of bytes sent
+            bufferSerial.numberOfPacketsSent++;
             break;
-        default:
+        default: // do nothing
             break;
     }
-
-    // Increment number of bytes sent
-    bufferSerial.numberOfPacketsSent++;
 }
 
 /**
@@ -468,7 +470,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
  *      this into a buffer, and not try to write to the serial port in on_recieve because
  *      that will only lead to problems.
  */
-void OpenBCI_Radios_Class::writeTheHostsStreamPacketBufferToThePC(void) {
+void OpenBCI_Radios_Class::sendStreamPackets(void) {
     // Write packets until we have sent them all
     while (bufferStreamPackets.numberOfPacketsToSend > bufferStreamPackets.numberOfPacketsSent) {
 
@@ -673,7 +675,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 streamPacketBuffer.bytesIn++;
             }
         } else {
-            Serial.println("NS");
+            // Serial.println("NS");
             // Store new char to serial buffer
             storeCharToSerialBuffer(newChar);
             // clear the stream packet buffer
@@ -693,7 +695,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         streamPacketBuffer.bytesIn++;
     } else { // Really should not be hitting here
         if (bufferSerial.overflowed == false) {
-            Serial.println("f");
+            // Serial.println("f");
             // Store the new char to the serial buffer
             storeCharToSerialBuffer(newChar);
             // Is there a stream packet ready for launch?
@@ -1082,7 +1084,6 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
     //  buffer, on each call we are going to insert into
     // Serial.print("Read "); Serial.print(bytesThisRead); Serial.println(" bytes");
     while (Serial.available()) {
-
         // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
         if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
             // Go to the next packet
@@ -1137,14 +1138,53 @@ void OpenBCI_Radios_Class::bufferSerialFetch(void) {
                 Serial.read();
             }
         }
-
-        if (isDevice) {
-            pollRefresh();
-        }
-
         // Save time of last serial read...
         lastTimeNewSerialDataWasAvailable = micros();
+
     }
+}
+
+void OpenBCI_Radios_Class::processCharHost(char newChar) {
+    // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
+    if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
+        // Go to the next packet
+        bufferSerial.numberOfPacketsToSend++;
+        // Serial.print("#p2s3: "); Serial.println(bufferSerial.numberOfPacketsToSend);
+
+        // Did we run out of buffers?
+        if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+            // this is bad, so something, throw error, explode... idk yet...
+            //  for now set currentPacketBufferSerial to NULL
+            currentPacketBufferSerial = NULL;
+            // Clear out buffers... start again!
+            bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+
+            // Need an emergency breaking system...
+            Serial.print("Input too large!$$$");
+        } else {
+            // move the pointer 1 struct
+            currentPacketBufferSerial++;
+        }
+    }
+
+    // We are only going to mess with the current packet if it's not null
+    if (currentPacketBufferSerial) {
+        char newChar = Serial.read();
+        // Store the byte to current buffer at write postition
+        currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
+
+        // Increment currentPacketBufferSerial write postion
+        currentPacketBufferSerial->positionWrite++;
+
+    } else {
+        if (verbosePrintouts) {
+            Serial.print("BO:"); Serial.println(Serial.read());
+        } else {
+            Serial.read();
+        }
+    }
+    // Save time of last serial read...
+    lastTimeNewSerialDataWasAvailable = micros();
 }
 
 /**
@@ -1524,7 +1564,6 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
         //  the buffer
         if (gotLastPacket) {
             // flag contents of radio buffer to be printed!
-            isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice = true;
             gotAllRadioPackets = true;
         }
 
@@ -1558,7 +1597,6 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
     // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
 
     // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
-
     boolean gotLastPacket = false;
     boolean goodToAddPacketToRadioBuffer = true;
 

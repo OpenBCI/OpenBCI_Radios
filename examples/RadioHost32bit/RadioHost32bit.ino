@@ -37,18 +37,30 @@ void setup() {
 
 void loop() {
 
-
-    if (radio.doesTheHostHaveAStreamPacketToSendToPC()) {
-        radio.writeTheHostsStreamPacketBufferToThePC();
+    // Is there a stream packet waiting to get sent to the PC
+    if (radio.hasStreamPacket()) {
+        // Send all the stream packets to the Driver/PC
+        //  For resiliancy there is an oppertunity to have multiple stream
+        //  packets waiting to get sent.
+        radio.sendStreamPackets();
     }
 
-    if (radio.didPCSendDataToHost()) {
-        radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
-    }
-
+    // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {
+        // Write the buffer to the driver
         radio.writeTheHostsRadioBufferToThePC();
     }
+
+    // Is there new data from the PC/Driver?
+    if (radio.didPCSendDataToHost()) {
+        // Get data and put it on the serial buffer
+        boolean success = radio.storeCharToSerialBuffer(Serial.read());
+
+        if (!success) {
+            Serial.print("Input too large!$$$");
+        }
+    }
+
 
     if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
         if (radio.isWaitingForNewChannelNumberConfirmation) {
@@ -89,7 +101,7 @@ void loop() {
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Reset the last time heard from host timer
-    radio.lastTimeHostHeardFromDevice = true;
+    radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
     boolean sendDataPacket = false;
     // Is the length of the packer equal to one?

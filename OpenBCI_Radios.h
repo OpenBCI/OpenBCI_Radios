@@ -77,12 +77,12 @@ public:
     void        configurePassThru(void);
     boolean     didPCSendDataToHost(void);
     boolean     didPicSendDeviceSerialData(void);
-    boolean     doesTheHostHaveAStreamPacketToSendToPC(void);
     uint32_t    getChannelNumber(void);
     void        getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
     // void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
     // boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
     boolean     hasItBeenTooLongSinceHostHeardFromDevice(void);
+    boolean     hasStreamPacket(void);
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char newChar);
     void        ledFeedBackForPassThru(void);
@@ -107,6 +107,7 @@ public:
     void        sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte msg);
+    void        sendStreamPackets(void);
     void        sendStreamPacketToTheHost(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
     void        setByteIdForPacketBuffer(int packetNumber);
@@ -129,7 +130,6 @@ public:
     boolean isDevice;
     boolean isHost;
     boolean gotAllRadioPackets;
-    boolean isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice;
     boolean isWaitingForNewChannelNumber;
     boolean isWaitingForNewChannelNumberConfirmation;
     boolean verbosePrintouts;
