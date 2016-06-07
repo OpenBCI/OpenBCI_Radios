@@ -632,7 +632,6 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     if (radio.verbosePrintouts) {
         Serial.print("S->"); Serial.println(packetNumber);
-        Serial.print("Packets sent:"); Serial.println(bufferSerial.numberOfPacketsSent);
     }
     RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
     pollRefresh();
@@ -693,7 +692,6 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 streamPacketBuffer.bytesIn++;
             }
         } else {
-            Serial.println("NS");
             // Store new char to serial buffer
             storeCharToSerialBuffer(newChar);
             // clear the stream packet buffer
