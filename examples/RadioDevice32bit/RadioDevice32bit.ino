@@ -15,10 +15,10 @@
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.setChannelNumber(20);
+    // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel
-    radio.beginDebug(OPENBCI_MODE_DEVICE,20);
+    radio.begin(OPENBCI_MODE_DEVICE,20);
 }
 
 void loop() {
@@ -28,7 +28,7 @@ void loop() {
     //  initiaite a communication between back to the Driver.
     if (radio.bufferSerial.overflowed) {
         // Clear the buffer holding all serial data.
-        radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
+        radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Clear the stream packet buffer
         radio.bufferResetStreamPacketBuffer();
@@ -45,36 +45,50 @@ void loop() {
         radio.bufferSerial.overflowed = false;
 
     } else {
-        if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+        while(Serial.available()) { // Is there new serial data available?
+            char newChar = Serial.read();
+            // Mark the last serial as now;
+            radio.lastTimeSerialRead = micros();
             // Get one char and process it
-            radio.processChar(Serial.read());
+            radio.processChar(newChar);
             // Reset the poll timer to prevent contacting the host mid read
             radio.pollRefresh();
+        }
 
-        } else if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
+        if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
             // Has 90uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
+                // radio.debugT3 = micros();
+                // Serial.print("st:"); Serial.println(radio.debugT3 - radio.lastTimeSerialRead);
+                // Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
                 radio.sendStreamPacketToTheHost();
+                // Serial.println(radio.debugT2 - radio.debugT1);
             }
-
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
-            if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS) && radio.bufferSerial.numberOfPacketsSent == 0){
+
+            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
+                // radio.debugT3 = micros();
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
+                // Serial.print("se:"); Serial.println(radio.debugT3 - radio.lastTimeSerialRead);
+                // Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
                 radio.sendPacketToHost();
+                // Serial.print("-"); Serial.println((micros() - (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)));
             }
         }
 
         if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
-            // push radio buffer to pic
-            radio.pushRadioBuffer();
-            // reset the radio buffer
-            radio.bufferCleanRadio();
+            // Flush radio buffer to the driver
+            radio.bufferRadioFlush();
+            // Reset the radio buffer flags
+            radio.bufferRadioReset();
+            // Clean the buffer.. fill with zeros
+            radio.bufferRadioClean();
         }
 
-        if (millis() > (radio.timeOfLastPoll + OPENBCI_TIMEOUT_PACKET_POLL_MS)) {  // Has more than the poll time passed?
+        if (millis() > (radio.timeOfLastPoll + radio.pollTime)) {  // Has more than the poll time passed?
             // Refresh the poll timer
             radio.pollRefresh();
 
@@ -100,18 +114,23 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // Is the length of the packer equal to one?
     if (len == 1) {
         // Enter process single char subroutine
-        sendDataPacket = radio.processRadioCharDevice(device,data[0]);
+        sendDataPacket = radio.processRadioCharDevice(data[0]);
     // Is the length of the packet greater than one?
     } else if (len > 1) {
+        // Serial.print("len: "); Serial.print(len); Serial.println("|~|");
         // Enter process char data packet subroutine
         sendDataPacket = radio.processDeviceRadioCharData(data,len);
     } else {
+
+        // Serial.print("Nr"); Serial.println(radio.debugT5 - radio.debugT4);
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
         if (sendDataPacket == false) {
-            radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
-            radio.bufferResetStreamPacketBuffer();
+            if (radio.bufferSerial.numberOfPacketsSent > 0) {
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+            }
+            // radio.bufferResetStreamPacketBuffer();
         }
     }
 

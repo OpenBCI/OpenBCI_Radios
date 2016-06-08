@@ -35,6 +35,7 @@ void testProcessChar() {
     testIsATailByteChar();
     testProcessCharSingleChar();
     testProcessCharStreamPacket();
+    testProcessCharStreamPackets();
     testProcessCharNotStreamPacket();
     testProcessCharOverflow();
 }
@@ -129,6 +130,34 @@ void testProcessCharStreamPacket() {
 
 }
 
+// Send stream packets, one after the other
+void testProcessCharStreamPackets() {
+    test.describe("processCharForStreamPackets");
+
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
+
+    int numberOfTrials = 9;
+    char testMessage[] = "Sent 0";
+    unsigned long t1, t2;
+
+    for (int i = 0; i < numberOfTrials; i++) {
+        // Write a stream packet with end byte 0xC0
+        writeAStreamPacketToProcessChar(0xC0);
+        // Stream packet should be waiting
+        test.assertEqualBoolean(radio.isAStreamPacketWaitingForLaunch(),true);
+        // Save the current time;
+        t1 = micros();
+        // Wait
+        while(micros() < (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {};
+        // configure the test message
+        testMessage[5] = (i + 1) + '0';
+        // Send the stream packet
+        test.assertEqualBoolean(radio.sendStreamPacketToTheHost(),true,testMessage);
+    }
+}
+
 // Test conditions that result in a stream packet not being launched
 void testProcessCharNotStreamPacket() {
     test.describe("processCharForNotStreamPacket");
@@ -139,11 +168,15 @@ void testProcessCharNotStreamPacket() {
 
     // Write a stream packet
     writeAStreamPacketToProcessChar(0xC0);
+    // Fake Serial read
+    char newChar = (char)0xFF;
+    // Save current time as the last serial read
+    radio.lastTimeSerialRead = micros();
     // Quick! Write another char
-    radio.processChar(0xFF);
+    radio.processChar(newChar);
 
     test.assertEqualBoolean(radio.isAStreamPacketWaitingForLaunch(),false,"Too many packets in");
-    test.assertEqualInt(radio.streamPacketBuffer.bytesIn,1,"1 byte in");
+    test.assertEqualInt(radio.streamPacketBuffer.bytesIn,0,"0 bytes in");
 
     // Clear the buffers
     radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
@@ -152,6 +185,7 @@ void testProcessCharNotStreamPacket() {
     // Write a stream packet with a bad end byte
     writeAStreamPacketToProcessChar(0xB5);
     test.assertEqualBoolean(radio.isAStreamPacketWaitingForLaunch(),false,"Bad end byte");
+
 
     // Remember to clean up after yourself
     testProcessChar_CleanUp();
@@ -212,6 +246,9 @@ void testPacketToSend() {
     // Set the buffers up to think there is a packet to be sent
     //  by triggering a serial read
     char input = 'A';
+    // Set last serial read to now
+    radio.lastTimeSerialRead = micros();
+    // Process that char!
     radio.processChar(input);
     // Serial.print("Pos write: "); Serial.println(radio.bufferSerial.packetBuffer->positionWrite);
     // test.assertEqualChar(radio.bufferSerial.packetBuffer->data[radio.bufferSerial.packetBuffer->positionWrite - 1],input,"Char stored to serial buffer");
@@ -247,4 +284,5 @@ void writeAStreamPacketToProcessChar(char endByte) {
     radio.processChar(0x00); radio.processChar(0x02); // 30 bytes - Aux 2
     radio.processChar(0x00); radio.processChar(0x03); // 32 bytes - Aux 3
     radio.processChar(endByte); // This locks in the final stream packet
+    radio.lastTimeSerialRead = micros();
 }
