@@ -55,15 +55,16 @@ void loop() {
             // Has 90uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
                 radio.sendStreamPacketToTheHost();
+                // Serial.println(radio.debugT2 - radio.debugT1);
             }
-
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
-            if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS) && radio.bufferSerial.numberOfPacketsSent == 0){
+            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
                 radio.sendPacketToHost();
+                // Serial.print("-"); Serial.println((micros() - (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)));
             }
         }
 

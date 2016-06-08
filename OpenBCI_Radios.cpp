@@ -765,6 +765,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 streamPacketBuffer.bytesIn++;
 
                 streamPacketBuffer.typeByte = newChar;
+                debugT2 = micros();
                 // Serial.print("got stream packet");
             } else {
                 // Serial.println("B");
@@ -791,6 +792,9 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         }
 
     } else if (streamPacketBuffer.bytesIn < 32) {
+        if (streamPacketBuffer.bytesIn == 0) {
+            debugT1 = micros();
+        }
         // Store to the serial buffer
         storeCharToSerialBuffer(newChar);
         // Store to the stream packet buffer
@@ -1078,137 +1082,12 @@ void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
     streamPacketBuffer.readyForLaunch = false;
 }
 
-/**˝
-* @description Moves bytes on serial port into bufferSerial
-* @author AJ Keller (@pushtheworldllc)
-*/
-// void OpenBCI_Radios_Class::bufferSerialFetch(void) {
-//     // store the total number of bytes to read, this is faster then calling
-//     //  Serial.available() every loop
-//     // int numberOfBytesToRead = Serial.available();
-//
-//     // Set the number of packets to 1 initally, it will only grow
-//     if (bufferSerial.numberOfPacketsToSend == 0) {
-//         bufferSerial.numberOfPacketsToSend = 1;
-//         // Serial.print("#p2s2: "); Serial.println(bufferSerial.numberOfPacketsToSend);
-//
-//     }
-//     //
-//     // int bytesThisRead = ;
-//
-//     // We are going to call Serial.read() as many times as there are bytes on the
-//     //  buffer, on each call we are going to insert into
-//     // Serial.print("Read "); Serial.print(bytesThisRead); Serial.println(" bytes");
-//     while (Serial.available()) {
-//         // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
-//         if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
-//             // Go to the next packet
-//             bufferSerial.numberOfPacketsToSend++;
-//             // Serial.print("#p2s3: "); Serial.println(bufferSerial.numberOfPacketsToSend);
-//
-//             // Did we run out of buffers?
-//             if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
-//                 // this is bad, so something, throw error, explode... idk yet...
-//                 //  for now set currentPacketBufferSerial to NULL
-//                 currentPacketBufferSerial = NULL;
-//                 // Clear out buffers... start again!
-//                 bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
-//                 // Serial.println("#c1");
-//
-//                 // Need an emergency breaking system...
-//                 if (isDevice) {
-//                     char msg[1];
-//                     msg[0] = (char)ORPM_DEVICE_SERIAL_OVERFLOW;
-//                     RFduinoGZLL.sendToHost(msg,1);
-//                     Serial.print('v'); // issue a software reset to the board
-//                 } else if (isHost){
-//                     Serial.print("Input too large!$$$");
-//                 }
-//
-//             } else {
-//                 // move the pointer 1 struct
-//                 currentPacketBufferSerial++;
-//             }
-//         }
-//
-//         // We are only going to mess with the current packet if it's not null
-//         if (currentPacketBufferSerial) {
-//             char newChar = Serial.read();
-//             // Store the byte to current buffer at write postition
-//             currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
-//
-//             // Increment currentPacketBufferSerial write postion
-//             currentPacketBufferSerial->positionWrite++;
-//
-//             // We need to do some checking for a stream packet
-//             //  this only appliest to the device, so let's ask that question first
-//             if (isDevice) {
-//                 // follow the write rabbit!
-//                 processCharForStreamPacket(newChar);
-//             }
-//
-//         } else {
-//             if (verbosePrintouts) {
-//                 Serial.print("BO:"); Serial.println(Serial.read());
-//             } else {
-//                 Serial.read();
-//             }
-//         }
-//         // Save time of last serial read...
-//         lastTimeNewSerialDataWasAvailable = micros();
-//
-//     }
-// }
-
-// void OpenBCI_Radios_Class::processCharHost(char newChar) {
-//     // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
-//     if (currentPacketBufferSerial->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
-//         // Go to the next packet
-//         bufferSerial.numberOfPacketsToSend++;
-//         // Serial.print("#p2s3: "); Serial.println(bufferSerial.numberOfPacketsToSend);
-//
-//         // Did we run out of buffers?
-//         if (bufferSerial.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
-//             // this is bad, so something, throw error, explode... idk yet...
-//             //  for now set currentPacketBufferSerial to NULL
-//             currentPacketBufferSerial = NULL;
-//             // Clear out buffers... start again!
-//             bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
-//
-//             // Need an emergency breaking system...
-//             Serial.print("Input too large!$$$");
-//         } else {
-//             // move the pointer 1 struct
-//             currentPacketBufferSerial++;
-//         }
-//     }
-//
-//     // We are only going to mess with the current packet if it's not null
-//     if (currentPacketBufferSerial) {
-//         char newChar = Serial.read();
-//         // Store the byte to current buffer at write postition
-//         currentPacketBufferSerial->data[currentPacketBufferSerial->positionWrite] = newChar;
-//
-//         // Increment currentPacketBufferSerial write postion
-//         currentPacketBufferSerial->positionWrite++;
-//
-//     } else {
-//         if (verbosePrintouts) {
-//             Serial.print("BO:"); Serial.println(Serial.read());
-//         } else {
-//             Serial.read();
-//         }
-//     }
-//     // Save time of last serial read...
-//     lastTimeNewSerialDataWasAvailable = micros();
-// }
-
 /**
-* @description Moves bytes into bufferStreamPackets from on_recieve
-* @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
-* @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
-* @author AJ Keller (@pushtheworldllc)
-*/
+ * @description Moves bytes into bufferStreamPackets from on_recieve
+ * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
+ * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
+ * @author AJ Keller (@pushtheworldllc)
+ */
 void OpenBCI_Radios_Class::bufferAddStreamPacket(char *data, int length) {
 
     // Set the number of packets to 1 initally, it will only grow

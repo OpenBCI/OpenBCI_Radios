@@ -159,6 +159,9 @@ public:
     unsigned long lastTimeSerialRead;
     unsigned long timeWeGot0xFXFromPic;
     unsigned long timeOfLastPoll;
+    unsigned long debugT1;
+    unsigned long debugT2;
+    unsigned long debugT3;
 
     uint32_t radioChannel;
     uint32_t previousRadioChannel;
