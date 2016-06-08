@@ -80,7 +80,7 @@
 
 // Stream packet EOTs
 #define OPENBCI_STREAM_PACKET_HEAD 0x41
-#define OPENBCI_STREAM_PACKET_TAIL 0xA0
+#define OPENBCI_STREAM_PACKET_TAIL 0xC0
 
 // Special host codes
 #define OPENBCI_HOST_TIME_SYNC '<'

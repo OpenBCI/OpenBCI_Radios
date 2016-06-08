@@ -67,7 +67,7 @@ public:
     void        bufferCleanSerial(int numberOfPacketsToClean);
     void        bufferCleanStreamPackets(int numberOfPacketsToClean);
     void        bufferResetStreamPacketBuffer(void);
-    void        bufferSerialFetch(void);
+    // void        bufferSerialFetch(void);
     char        byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
     byte        byteIdMakeStreamPacketType(void);
     char        checkSumMake(char *data, int length);
@@ -96,7 +96,7 @@ public:
     void        pollRefresh(void);
     void        pushRadioBuffer(void);
     char        processChar(char newChar);
-    void        processCharForStreamPacket(char newChar);
+    // void        processCharForStreamPacket(char newChar);
     boolean     processDeviceRadioCharData(char *data, int len);
     byte        processOutboundBuffer(PacketBuffer *currentPacketBuffer);
     byte        processOutboundBufferCharDouble(char *buffer);
