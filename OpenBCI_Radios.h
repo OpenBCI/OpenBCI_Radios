@@ -57,7 +57,6 @@ public:
     boolean     byteIdGetIsStream(char byteId);
     int         byteIdGetPacketNumber(char byteId);
     byte        byteIdGetStreamPacketType(char byteId);
-    char        checkSumMake(char *data, int length);
     void        bufferAddStreamPacket(char *data, int length);
     void        bufferCleanChar(char *buffer, int bufferLength);
     void        bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean);
@@ -71,6 +70,7 @@ public:
     void        bufferSerialFetch(void);
     char        byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
     byte        byteIdMakeStreamPacketType(void);
+    char        checkSumMake(char *data, int length);
     boolean     checkSumsAreEqual(char *data, int len);
     void        configure(uint8_t mode,uint32_t channelNumber);
     void        configureDevice(void);
@@ -78,16 +78,17 @@ public:
     void        configurePassThru(void);
     boolean     didPCSendDataToHost(void);
     boolean     didPicSendDeviceSerialData(void);
+    boolean     flashNonVolatileMemory(void);
     uint32_t    getChannelNumber(void);
     void        getSerialDataFromPCAndPutItInHostsSerialBuffer(void);
-    // void        getSerialDataFromPicAndPutItInTheDevicesSerialBuffer(void);
-    // boolean     hasEnoughTimePassedToLaunchStreamPacket(void);
+    uint32_t    getPollTime(void);
     boolean     hasItBeenTooLongSinceHostHeardFromDevice(void);
     boolean     hasStreamPacket(void);
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char newChar);
     void        ledFeedBackForPassThru(void);
     boolean     needToSetChannelNumber(void);
+    boolean     needToSetPollTime(void);
     byte        outputGetStopByteFromByteId(char byteId);
     void        pollHost(void);
     boolean     pollNow(void);
@@ -103,6 +104,7 @@ public:
     boolean     processRadioChar(device_t device, char newChar);
     boolean     processHostRadioCharData(device_t device, char *data, int len);
     void        resetPic32(void);
+    void        revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
     void        sendPacketToDevice(device_t device);
     void        sendPacketToHost(void);
@@ -113,6 +115,7 @@ public:
     void        sendTheDevicesFirstPacketToTheHost(void);
     void        setByteIdForPacketBuffer(int packetNumber);
     boolean     setChannelNumber(uint32_t channelNumber);
+    boolean     setPollTime(uint32_t pollTime);
     boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);
     // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
@@ -133,6 +136,7 @@ public:
     boolean gotAllRadioPackets;
     boolean isWaitingForNewChannelNumber;
     boolean isWaitingForNewChannelNumberConfirmation;
+    boolean isWaitingForNewPollTime;
     boolean verbosePrintouts;
 
     char    bufferRadio[OPENBCI_BUFFER_LENGTH];
@@ -148,7 +152,6 @@ public:
     PacketBuffer *currentPacketBufferStreamPacket;
 
     uint8_t radioMode;
-    uint8_t newPollTime;
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
@@ -158,6 +161,7 @@ public:
 
     uint32_t radioChannel;
     uint32_t previousRadioChannel;
+    uint32_t pollTime;
 };
 
 // Very important, major key to success

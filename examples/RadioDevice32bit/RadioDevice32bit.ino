@@ -100,7 +100,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // Is the length of the packer equal to one?
     if (len == 1) {
         // Enter process single char subroutine
-        sendDataPacket = radio.processRadioChar(device,data[0]);
+        sendDataPacket = radio.processRadioCharDevice(device,data[0]);
     // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine

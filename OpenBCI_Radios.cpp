@@ -105,6 +105,13 @@ void OpenBCI_Radios_Class::configure(uint8_t mode, uint32_t channelNumber) {
         }
         radioChannel = getChannelNumber();
 
+        // Check to see if we need to set the poll time
+        //  this is only the case on the first run of the program
+        if (needToSetPollTime()) {
+            setPollTime(OPENBCI_TIMEOUT_PACKET_POLL_MS);
+        }
+        pollTime = getPollTime();
+
         // get the buffers ready
         bufferCleanRadio();
         bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
@@ -211,24 +218,57 @@ uint32_t OpenBCI_Radios_Class::getChannelNumber(void) {
 }
 
 /**
- * @description Returns the channel number from non-volitile flash memory
+ * @description Returns the poll time from non-volitile flash memory
+ */
+uint32_t OpenBCI_Radios_Class::getPollTime(void) {
+    return *(ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR) + 1);
+}
+
+/**
+ * @description Reads from memory to see if the channel number needs to be set
+ * @return {boolean} True if the channel number needs to be set
  */
 boolean OpenBCI_Radios_Class::needToSetChannelNumber(void) {
     return getChannelNumber() == 0xFFFFFFFF;
+}
+
+/**
+ * @description Reads from memory to see if the poll time needs to be set
+ * @return {boolean} True if the poll time needs to be set
+ */
+boolean OpenBCI_Radios_Class::needToSetPollTime(void) {
+    return getPollTime() == 0xFFFFFFFF;
 }
 
 void OpenBCI_Radios_Class::revertToPreviousChannelNumber(void) {
     RFduinoGZLL.channel = previousRadioChannel;
 }
 
+/**
+ * @description Resets the poll time to the define OPENBCI_TIMEOUT_PACKET_POLL_MS
+ */
+void OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
+    setPollTime(OPENBCI_TIMEOUT_PACKET_POLL_MS);
+}
+
+/**
+ * @description Store a channel number to memory. Allows for the channel to be
+ *      maintained even after power cycle.
+ * @param channelNumber {uint32_t} - The new channel to set to. Must be less
+ *      than 25.
+ * @return {boolean} - If the channel was successfully flashed to memory
+ */
 boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
     if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
         channelNumber = RFDUINOGZLL_CHANNEL_LIMIT_UPPER;
     }
     uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
 
-    int rc = flashPageErase(PAGE_FROM_ADDRESS(p));
-    if (rc == 1) {
+    int rc = flashWrite(p, channelNumber);
+    if (rc == 0) {
+        Serial.println("Channel Number Set$$$");
+        return true;
+    } else if (rc == 1) {
         if (isHost) {
             Serial.println("Error - the flash page is reserved$$$");
         }
@@ -239,13 +279,46 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
         }
         return false;
     }
+}
 
+/**
+ * @description Store a poll time to memory. Allows for poll time to be retained
+ *  after power down
+ * @param pollTime {uint32_t} - The new poll time to store to memory
+ * @return {boolean} - If the pollTime was successfully set
+ */
+boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
 
-    rc = flashWrite(p, channelNumber);
+    uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
+
+    int rc = flashWrite(p + 1, pollTime); // Always stored 1 more than chan
     if (rc == 0) {
-        Serial.println("Channel Number Set$$$");
+        Serial.println("Poll Number Set$$$");
         return true;
     } else if (rc == 1) {
+        if (isHost) {
+            Serial.println("Error - the flash page is reserved$$$");
+        }
+        return false;
+    } else if (rc == 2) {
+        if (isHost) {
+            Serial.println("Error - the flash page is used by the sketch$$$");
+        }
+        return false;
+    }
+}
+
+/**
+ * @description Useful to call if the radios totally need to be reset.
+ * @param pollTime {uint32_t} - The new poll time to store to memory
+ * @return {boolean} - If the pollTime was successfully set
+ */
+boolean OpenBCI_Radios_Class::flashNonVolatileMemory(void) {
+
+    uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
+
+    int rc = flashPageErase(PAGE_FROM_ADDRESS(p)); // erases 1k of flash
+    if (rc == 1) {
         if (isHost) {
             Serial.println("Error - the flash page is reserved$$$");
         }
@@ -328,7 +401,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (OPENBCI_TIMEOUT_PACKET_POLL_MS * 2)) {
+    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 2)) {
         return true;
     } else {
         return false;
@@ -399,7 +472,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
             }
         case OPENBCI_HOST_POLL_TIME_CHANGE:
             // Save the new poll time
-            newPollTime = (uint8_t)buffer[2];
+            pollTime = (uint32_t)buffer[2];
             // Send a time change request to the device
             singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
             return ACTION_RADIO_SEND_SINGLE_CHAR;
@@ -1373,7 +1446,7 @@ void OpenBCI_Radios_Class::pollHost(void) {
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::pollNow(void) {
-    return millis() - timeOfLastPoll > OPENBCI_TIMEOUT_PACKET_POLL_MS;
+    return millis() - timeOfLastPoll > pollTime;
 }
 
 /**
@@ -1404,8 +1477,73 @@ OpenBCI_Radios_Class radio;
 /********************************************/
 /********************************************/
 
-boolean OpenBCI_Radios_Class::processRadioChar(device_t device, char newChar) {
+/**
+ * @description Used to process a single char message recieved on the host
+ *      radio.
+ * @param newChar {char} - The char to be read in
+ * @return {boolean} - True if a packet should be sent from the serial buffer
+ */
+boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar) {
 
+    switch (newChar) {
+        case ORPM_PACKET_BAD_CHECK_SUM:
+            // Resend the last sent packet
+            bufferSerial.numberOfPacketsSent--;
+
+            if (verbosePrintouts) {
+                Serial.println("R<-B");
+            }
+            return true;
+
+        case ORPM_PACKET_MISSED:
+            // Start the page transmission over again
+            bufferSerial.numberOfPacketsSent = 0;
+
+            if (verbosePrintouts) {
+                Serial.println("R<-M");
+            }
+            return true;
+
+        case ORPM_CHANGE_CHANNEL_DEVICE_READY:
+            // We are the Host, and the device is ready to change it's channel number to what every we want
+            if (verbosePrintouts) {
+                Serial.println("R<-CCDR");
+            }
+            // send back the radio channel
+            singleCharMsg[0] = (char)radioChannel;
+            if (setChannelNumber(radioChannel)) { // Returns true if successful
+                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+                RFduinoGZLL.channel = radioChannel;
+            } else { // TODO: Need to tell the device to abort
+                radioChannel = getChannelNumber();
+            }
+            return false;
+
+        case ORPM_CHANGE_POLL_TIME_DEVICE_READY:
+            // Get the poll time from memory... should have been stored here before
+            singleCharMsg[0] = (char)getPollTime();
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+
+        case ORPM_INVALID_CODE_RECEIVED:
+            // Working theory
+            return false;
+
+        default:
+            singleCharMsg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+    }
+
+}
+
+/**
+ * @description Used to process a single char message recieved on the device
+ *      radio.
+ * @param newChar {char} - The char to be read in
+ * @return {boolean} - True if a packet should be sent from the serial buffer
+ */
+boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
     if (isWaitingForNewChannelNumber) {
         isWaitingForNewChannelNumber = false;
         // Refresh poll
@@ -1419,6 +1557,19 @@ boolean OpenBCI_Radios_Class::processRadioChar(device_t device, char newChar) {
             pollHost();
         }
         return false;
+    } else if (isWaitingForNewPollTime) {
+        isWaitingForNewPollTime = false;
+        // Refresh poll
+        pollRefresh();
+        // Set the new poll time
+        boolean success = setPollTime((uint32_t)newChar);
+        if (success) {
+            // Change Device poll time
+            pollTime = getPollTime;
+            // Poll the host
+            pollHost();
+        }
+
     } else {
         switch (newChar) {
             case ORPM_PACKET_BAD_CHECK_SUM:
@@ -1446,44 +1597,35 @@ boolean OpenBCI_Radios_Class::processRadioChar(device_t device, char newChar) {
                 if (verbosePrintouts) {
                     Serial.println("R<-CCHR");
                 }
-                if (isHost) {
-                    singleCharMsg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                } else {
-                    // Tell the Host we are ready to change channels
-                    singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
-                    isWaitingForNewChannelNumber = true;
-                    RFduinoGZLL.sendToHost(singleCharMsg,1);
-                    pollRefresh();
-                }
+                // Tell the Host we are ready to change channels
+                singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
+                isWaitingForNewChannelNumber = true;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                pollRefresh();
                 return false;
-            case ORPM_CHANGE_CHANNEL_DEVICE_READY:
-                // We are the Host, and the device is ready to change it's channel number to what every we want
+
+            case ORPM_CHANGE_POLL_TIME_HOST_REQUEST:
+                // We are the device and we just got asked if we want to change
+                //  our poll time
                 if (verbosePrintouts) {
                     Serial.println("R<-CCDR");
                 }
-                if (isHost) {
-                    // send back the radio channel
-                    singleCharMsg[0] = (char)radioChannel;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                    setChannelNumber(radioChannel);
-                    RFduinoGZLL.channel = radioChannel;
-                } else {
-                    // Send the channel to change to to the device
-                    singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
-                    RFduinoGZLL.sendToHost(singleCharMsg,1);
-                    pollRefresh();
-                }
+                // Now we have to wait for the new poll time
+                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_DEVICE_READY;
+                isWaitingForNewPollTime = true;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                pollRefresh();
+
+            case ORPM_INVALID_CODE_RECEIVED:
+                // Working theory
                 return false;
+
             default:
+                // Send the invalid code recieved message
                 singleCharMsg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
-                if (isHost) {
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                } else {
-                    RFduinoGZLL.sendToHost(singleCharMsg,1);
-                    pollRefresh();
-                }
-                return false;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                pollRefresh();
+                return false; // Don't send a packet
         }
     }
 }
