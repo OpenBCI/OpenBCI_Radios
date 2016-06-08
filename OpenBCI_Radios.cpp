@@ -1012,8 +1012,6 @@ void OpenBCI_Radios_Class::bufferCleanCompletePacketBuffer(PacketBuffer *packetB
 void OpenBCI_Radios_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean) {
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
-    // Serial.println("#p2s4:reset");// Serial.println(buffer->numberOfPacketsToSend);
-
     buffer->numberOfPacketsSent = 0;
     buffer->overflowed = false;
 }
@@ -1452,6 +1450,12 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
         case ORPM_CHANGE_POLL_TIME_DEVICE_READY:
             // Get the poll time from memory... should have been stored here before
             singleCharMsg[0] = (char)getPollTime();
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+
+        case ORPM_DEVICE_SERIAL_OVERFLOW:
+            Serial.print("Device overflow");
+            singleCharMsg[0] = 'v';
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             return false;
 

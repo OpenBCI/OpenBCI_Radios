@@ -15,7 +15,7 @@
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.setChannelNumber(20);
+    // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel
     radio.beginDebug(OPENBCI_MODE_DEVICE,20);
@@ -28,7 +28,7 @@ void loop() {
     //  initiaite a communication between back to the Driver.
     if (radio.bufferSerial.overflowed) {
         // Clear the buffer holding all serial data.
-        radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
+        radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Clear the stream packet buffer
         radio.bufferResetStreamPacketBuffer();
@@ -100,7 +100,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // Is the length of the packer equal to one?
     if (len == 1) {
         // Enter process single char subroutine
-        sendDataPacket = radio.processRadioCharDevice(device,data[0]);
+        sendDataPacket = radio.processRadioCharDevice(data[0]);
     // Is the length of the packet greater than one?
     } else if (len > 1) {
         // Enter process char data packet subroutine
