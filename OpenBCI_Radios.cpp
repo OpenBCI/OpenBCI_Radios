@@ -264,23 +264,42 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
     if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
         return false;
     }
-    uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
 
-    int rc = flashWrite(p, channelNumber);
-    if (rc == 0) {
-        Serial.println("Channel Number Set$$$");
-        return true;
-    } else if (rc == 1) {
-        if (isHost) {
-            Serial.println("Error - the flash page is reserved$$$");
-        }
-        return false;
-    } else if (rc == 2) {
-        if (isHost) {
-            Serial.println("Error - the flash page is used by the sketch$$$");
-        }
-        return false;
+    uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
+    boolean willSetPollTime = false;
+    uint32_t pollTime = 0xFFFFFFFF;
+    // If I don't need to set the channel number then grab that channel number
+    if (!needToSetPollTime()) {
+        pollTime = getPollTime();
+        willSetPollTime = true;
     }
+
+    int rc;
+    if (flashNonVolatileMemory()) {
+        if (willSetPollTime) {
+            if (flashWrite(p + 1, pollTime) > 0) {
+                return false;
+            }
+        }
+        rc = flashWrite(p, channelNumber);
+        if (rc == 0) {
+            if (isHost) {
+                Serial.println("Channel Number Set$$$");
+            }
+            return true;
+        } else if (rc == 1) {
+            if (isHost) {
+                Serial.println("Error - the flash page is reserved$$$");
+            }
+            return false;
+        } else if (rc == 2) {
+            if (isHost) {
+                Serial.println("Error - the flash page is used by the sketch$$$");
+            }
+            return false;
+        }
+    }
+    return false;
 }
 
 /**
@@ -292,24 +311,40 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
 boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
 
     uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
-
-    int rc = flashWrite(p + 1, pollTime); // Always stored 1 more than chan
-    if (rc == 0) {
-        if (isHost) {
-            Serial.println("Poll Number Set$$$");
-        }
-        return true;
-    } else if (rc == 1) {
-        if (isHost) {
-            Serial.println("Error - the flash page is reserved$$$");
-        }
-        return false;
-    } else if (rc == 2) {
-        if (isHost) {
-            Serial.println("Error - the flash page is used by the sketch$$$");
-        }
-        return false;
+    boolean willSetChannel = false;
+    uint32_t chan = 0xFFFFFFFF;
+    // If I don't need to set the channel number then grab that channel number
+    if (!needToSetChannelNumber()) {
+        chan = getChannelNumber();
+        willSetChannel = true;
     }
+
+    int rc;
+    if (flashNonVolatileMemory()) {
+        if (willSetChannel) {
+            if (flashWrite(p,chan)) {
+                return false;
+            }
+        }
+        rc = flashWrite(p + 1, pollTime); // Always stored 1 more than chan
+        if (rc == 0) {
+            if (isHost) {
+                Serial.println("Poll Number Set$$$");
+            }
+            return true;
+        } else if (rc == 1) {
+            if (isHost) {
+                Serial.println("Error - the flash page is reserved$$$");
+            }
+            return false;
+        } else if (rc == 2) {
+            if (isHost) {
+                Serial.println("Error - the flash page is used by the sketch$$$");
+            }
+            return false;
+        }
+    }
+    return false;
 }
 
 /**

@@ -211,7 +211,7 @@ void testNonVolatileFlashNonVolatileMemory() {
     test.assertEqualBoolean(radio.needToSetPollTime(),true,"Need to set the poll time.");
 
     test.describe("setPollTime");
-    uint32_t expectedPollTime = 100;
+    uint32_t expectedPollTime = 200;
     // Set the poll time to new poll time
     test.assertEqualBoolean(radio.setPollTime(expectedPollTime),true,"Able to set poll time");
     // Verify the poll time is set to the new poll time
@@ -233,4 +233,25 @@ void testNonVolatileFlashNonVolatileMemory() {
     test.assertEqualInt((int)radio.getChannelNumber(),(int)newChannelNumber,"Channel set correctly");
     // Verify the channel number does not have to be set
     test.assertEqualBoolean(radio.needToSetChannelNumber(),false,"Don't need to set the channel number");
+    // Verify the poll time is still set to define
+    test.assertEqualInt((int)radio.getPollTime(),(int)OPENBCI_TIMEOUT_PACKET_POLL_MS,"Poll time is still set");
+
+    test.describe("setPollAndChan");
+    // Set the channel to a new channel number lower than the first
+    newChannelNumber = 2;
+    test.assertEqualBoolean(radio.setChannelNumber(newChannelNumber),true,"Newer channel set");
+    // Verify the channel number has been set to new channel number
+    test.assertEqualInt((int)radio.getChannelNumber(),(int)newChannelNumber,"Newer channel set correctly");
+    // Verify the channel number does not have to be set
+    test.assertEqualBoolean(radio.needToSetChannelNumber(),false,"Still don't need to set the channel number");
+    // Verify the poll time is still set to define
+    test.assertEqualInt((int)radio.getPollTime(),(int)OPENBCI_TIMEOUT_PACKET_POLL_MS,"Poll time is still set");
+    // Set the poll time to a new poll time
+    expectedPollTime = 100;
+    test.assertEqualBoolean(radio.setPollTime(expectedPollTime),true,"Set poll time");
+    // Verify the poll time is set to the new poll time
+    test.assertEqualInt((int)radio.getPollTime(),(int)expectedPollTime,"Poll time set correctly");
+    // Verify the channel number is still set
+    test.assertEqualInt((int)radio.getChannelNumber(),(int)newChannelNumber,"Channel number still set correctly");
+
 }
