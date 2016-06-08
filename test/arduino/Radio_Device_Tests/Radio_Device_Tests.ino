@@ -42,11 +42,11 @@ void testProcessChar() {
 void testIsATailByteChar() {
     test.describe("isATailByteChar");
 
-    test.assertEqualBoolean(radio.isATailByteChar((char)0xA0),true,"Stream packet type 0");
-    test.assertEqualBoolean(radio.isATailByteChar((char)0xA1),true,"Stream packet type 1");
-    test.assertEqualBoolean(radio.isATailByteChar((char)0xA8),true,"Stream packet type 8");
-    test.assertEqualBoolean(radio.isATailByteChar((char)0xAA),true,"Stream packet type 10");
-    test.assertEqualBoolean(radio.isATailByteChar((char)0xAF),true,"Stream packet type 15");
+    test.assertEqualBoolean(radio.isATailByteChar((char)0xC0),true,"Stream packet type 0");
+    test.assertEqualBoolean(radio.isATailByteChar((char)0xC1),true,"Stream packet type 1");
+    test.assertEqualBoolean(radio.isATailByteChar((char)0xC8),true,"Stream packet type 8");
+    test.assertEqualBoolean(radio.isATailByteChar((char)0xCA),true,"Stream packet type 10");
+    test.assertEqualBoolean(radio.isATailByteChar((char)0xCF),true,"Stream packet type 15");
     test.assertEqualBoolean(radio.isATailByteChar((char)0xB0),false,"Not a stream packet type");
 
     // Remember to clean up after yourself
@@ -84,7 +84,7 @@ void testProcessCharStreamPacket() {
     radio.bufferResetStreamPacketBuffer();
 
     // Write a stream packet with end byte 0xA0
-    writeAStreamPacketToProcessChar(0xA0);
+    writeAStreamPacketToProcessChar(0xC0);
 
     // Right away we want to see if enough time has passed, this should be false
     //  because we just processed a char, after this test is complete, we should
@@ -109,7 +109,7 @@ void testProcessCharStreamPacket() {
     radio.bufferResetStreamPacketBuffer();
 
     // Write a stream packet with end byte not 0xA0
-    writeAStreamPacketToProcessChar(0xA5);
+    writeAStreamPacketToProcessChar(0xC5);
 
     // Right away we want to see if enough time has passed, this should be false
     //  because we just processed a char, after this test is complete, we should
@@ -138,7 +138,7 @@ void testProcessCharNotStreamPacket() {
     radio.bufferResetStreamPacketBuffer();
 
     // Write a stream packet
-    writeAStreamPacketToProcessChar(0xA0);
+    writeAStreamPacketToProcessChar(0xC0);
     // Quick! Write another char
     radio.processChar(0xFF);
 
