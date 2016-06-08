@@ -246,9 +246,10 @@ void OpenBCI_Radios_Class::revertToPreviousChannelNumber(void) {
 
 /**
  * @description Resets the poll time to the define OPENBCI_TIMEOUT_PACKET_POLL_MS
+ * @return {boolean} - see `::setPollTime()`
  */
-void OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
-    setPollTime(OPENBCI_TIMEOUT_PACKET_POLL_MS);
+boolean OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
+    return setPollTime((uint32_t)OPENBCI_TIMEOUT_PACKET_POLL_MS);
 }
 
 /**
@@ -256,11 +257,12 @@ void OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
  *      maintained even after power cycle.
  * @param channelNumber {uint32_t} - The new channel to set to. Must be less
  *      than 25.
- * @return {boolean} - If the channel was successfully flashed to memory
+ * @return {boolean} - If the channel was successfully flashed to memory. False
+ *      when the channel number is out of bounds.
  */
 boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
     if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
-        channelNumber = RFDUINOGZLL_CHANNEL_LIMIT_UPPER;
+        return false;
     }
     uint32_t *p = ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
 
@@ -293,7 +295,9 @@ boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
 
     int rc = flashWrite(p + 1, pollTime); // Always stored 1 more than chan
     if (rc == 0) {
-        Serial.println("Poll Number Set$$$");
+        if (isHost) {
+            Serial.println("Poll Number Set$$$");
+        }
         return true;
     } else if (rc == 1) {
         if (isHost) {
@@ -329,6 +333,7 @@ boolean OpenBCI_Radios_Class::flashNonVolatileMemory(void) {
         }
         return false;
     }
+    return true;
 }
 
 
@@ -352,31 +357,6 @@ boolean OpenBCI_Radios_Class::didPCSendDataToHost(void) {
         return false;
     }
 }
-
-/**
-* @description Private function to read data from serial port and write into
-*                 the bufferSerial. The important thing to note here is that
-*                 this function stores the incoming data into groups of 32 for
-*                 O(1) time to send data over the radio
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radios_Class::getSerialDataFromPCAndPutItInHostsSerialBuffer(void) {
-
-    // Get everything from the serial port and store to bufferSerial
-    bufferSerialFetch();
-
-    lastTimeHostHeardFromDevice = millis();
-
-}
-
-// boolean OpenBCI_Radios_Class::isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice(void) {
-//     // Check to see if we got all the packets
-//     if (bufferPacketsToReceive == bufferPacketsReceived) {
-//         return true;
-//     } else {
-//         return false;
-//     }
-// }
 
 /**
 * @description Called when readRadio returns true. We always write the contents
@@ -836,10 +816,10 @@ void OpenBCI_Radios_Class::resetPic32(void) {
 /**
  * @description Sends the contents of the `streamPacketBuffer`
  *                 to the HOST, sends as stream
- *
+ * @return {boolean} true when the packet has been sent
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
+boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 
     byte packetType = byteIdMakeStreamPacketType();
     // Serial.print("Packet type: "); Serial.println(packetType);
@@ -862,6 +842,8 @@ void OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 
     // Send the packet to the host...
     RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
+
+    return true;
 
 }
 
@@ -1063,7 +1045,7 @@ void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
     streamPacketBuffer.readyForLaunch = false;
 }
 
-/**
+/**˝
 * @description Moves bytes on serial port into bufferSerial
 * @author AJ Keller (@pushtheworldllc)
 */
@@ -1478,7 +1460,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
         boolean success = setPollTime((uint32_t)newChar);
         if (success) {
             // Change Device poll time
-            pollTime = getPollTime;
+            pollTime = getPollTime();
             // Poll the host
             pollHost();
         }

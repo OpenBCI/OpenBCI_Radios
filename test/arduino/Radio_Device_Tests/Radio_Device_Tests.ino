@@ -35,6 +35,7 @@ void testProcessChar() {
     testIsATailByteChar();
     testProcessCharSingleChar();
     testProcessCharStreamPacket();
+    testProcessCharStreamPackets();
     testProcessCharNotStreamPacket();
     testProcessCharOverflow();
 }
@@ -127,6 +128,34 @@ void testProcessCharStreamPacket() {
     // Remember to clean up after yourself
     testProcessChar_CleanUp();
 
+}
+
+// Send stream packets, one after the other
+void testProcessCharStreamPackets() {
+    test.describe("processCharForStreamPackets");
+
+    // Clear the buffers
+    radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferResetStreamPacketBuffer();
+
+    int numberOfTrials = 9;
+    char testMessage[] = "Sent 0";
+    unsigned long t1, t2;
+
+    for (int i = 0; i < numberOfTrials; i++) {
+        // Write a stream packet with end byte 0xC0
+        writeAStreamPacketToProcessChar(0xC0);
+        // Stream packet should be waiting
+        test.assertEqualBoolean(radio.isAStreamPacketWaitingForLaunch(),true);
+        // Save the current time;
+        t1 = micros();
+        // Wait
+        while(micros() < (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {};
+        // configure the test message
+        testMessage[5] = (i + 1) + '0';
+        // Send the stream packet
+        test.assertEqualBoolean(radio.sendStreamPacketToTheHost(),true,testMessage);
+    }
 }
 
 // Test conditions that result in a stream packet not being launched
