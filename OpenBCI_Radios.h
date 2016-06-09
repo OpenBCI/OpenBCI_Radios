@@ -27,6 +27,13 @@
 class OpenBCI_Radios_Class {
 
 public:
+    // ENUMS
+    typedef enum STREAM_STATE {
+        STREAM_STATE_INIT,
+        STREAM_STATE_STORING,
+        STREAM_STATE_READY,
+        STREAM_STATE_TAIL
+    };
     // STRUCTS
     typedef struct {
       char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
@@ -43,9 +50,7 @@ public:
 
     typedef struct {
         boolean     readyForLaunch;
-        boolean     gotHead;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
-        char        typeByte;
         int         bytesIn;
     } StreamPacketBuffer;
 
@@ -152,6 +157,8 @@ public:
     PacketBuffer *currentPacketBufferSerial;
     PacketBuffer *currentPacketBufferStreamPacket;
 
+    STREAM_STATE curStreamState;
+
     uint8_t radioMode;
 
     unsigned long lastTimeNewSerialDataWasAvailable;
@@ -162,6 +169,9 @@ public:
     unsigned long debugT1;
     unsigned long debugT2;
     unsigned long debugT3;
+    unsigned long debugT4;
+    unsigned long debugT5;
+    unsigned long debugT6;
 
     uint32_t radioChannel;
     uint32_t previousRadioChannel;

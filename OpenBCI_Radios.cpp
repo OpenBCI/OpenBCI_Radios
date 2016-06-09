@@ -750,78 +750,128 @@ boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
  * @param {char} - The char that was read in
  */
 char OpenBCI_Radios_Class::processChar(char newChar) {
-    // The number of bytes for a stream packet!
-    // Serial.println(newChar);
-    if (streamPacketBuffer.bytesIn == 32) {
-        // Serial.println("T");
-        // Is the current char equal to 0xAX where X is 0-F?
-        if (isATailByteChar(newChar)) {
-            // Is the first char in the stream packet buffer equal to 0x41?
-            if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
+    // Always store to serial buffer
+    static boolean success = storeCharToSerialBuffer(newChar);
+    // Verify we have not over flowed
+    if (!success) return newChar;
+
+    // Process the new char
+    switch (curStreamState) {
+        case STREAM_STATE_TAIL:
+            // Is the current char equal to 0xCX where X is 0-F?
+            if (isATailByteChar(newChar)) {
                 // Set flag for stream packet ready to launch
                 streamPacketBuffer.readyForLaunch = true;
-                // Serial.println("G");
-                // increment the number of bytes read in
-                streamPacketBuffer.bytesIn++;
-
+                // Set the type byte
                 streamPacketBuffer.typeByte = newChar;
-                debugT2 = micros();
-                // Serial.print("got stream packet");
+                // Change the state to ready
+                curStreamState = STREAM_STATE_READY;
             } else {
-                // Serial.println("B");
-                // Store new char to serial buffer
-                if(!storeCharToSerialBuffer(newChar) && verbosePrintouts) {
-                    Serial.println("Failed to store char");
-                }
-                // clear the stream packet buffer
-                streamPacketBuffer.bytesIn = 0;
-                // Store the new char into the stream packet buffer
-                streamPacketBuffer.data[0] = newChar;
-                // Increment the number of bytes read in
-                streamPacketBuffer.bytesIn++;
+                // Reset the state machine
+                curStreamState = STREAM_STATE_INIT;
             }
-        } else {
-            // Store new char to serial buffer
-            storeCharToSerialBuffer(newChar);
-            // clear the stream packet buffer
-            streamPacketBuffer.bytesIn = 0;
-            // Store the new char into the stream packet buffer
-            streamPacketBuffer.data[0] = newChar;
+            break;
+        case STREAM_STATE_STORING:
+            // Store to the stream packet buffer
+            streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
             // Increment the number of bytes read in
             streamPacketBuffer.bytesIn++;
-        }
 
-    } else if (streamPacketBuffer.bytesIn < 32) {
-        if (streamPacketBuffer.bytesIn == 0) {
-            debugT1 = micros();
-        }
-        // Store to the serial buffer
-        storeCharToSerialBuffer(newChar);
-        // Store to the stream packet buffer
-        streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
-        // Increment the number of bytes read in
-        streamPacketBuffer.bytesIn++;
-    } else { // Really should not be hitting here
-        if (bufferSerial.overflowed == false) {
-            // Serial.println("f");
-            // Store the new char to the serial buffer
-            storeCharToSerialBuffer(newChar);
-            // Is there a stream packet ready for launch?
-            if (streamPacketBuffer.readyForLaunch) {
-                // Set readt to launch flag to false
-                streamPacketBuffer.readyForLaunch = false;
+            if (streamPacketBuffer.bytesIn == 32) {
+                curStreamState = STREAM_STATE_TAIL;
             }
-            // Reset bytes in to zero
-            streamPacketBuffer.bytesIn = 0;
-            // Store the new char into the stream packet buffer
-            streamPacketBuffer.data[0] = newChar;
-            // Increment the number of bytes read in
-            streamPacketBuffer.bytesIn++;
-        } // else {discard char}
+
+            break;
+        case STREAM_STATE_READY:
+            // Got a 34th byte, go back to start
+            curStreamState = STREAM_STATE_INIT;
+            break;
+        case STREAM_STATE_INIT:
+            if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
+                // Move the state
+                curStreamState = STREAM_STATE_STORING;
+                // Set to 1
+                streamPacketBuffer.bytesIn = 1;
+            }
+            break;
+        default:
+            // Reset the state
+            curStreamState = STREAM_STATE_INIT;
+
     }
 
+    // // The number of bytes for a stream packet!
+    // // Serial.println(newChar);
+    // if (streamPacketBuffer.bytesIn == 32) {
+    //     // Serial.println("T");
+    //     // Is the current char equal to 0xAX where X is 0-F?
+    //     if (isATailByteChar(newChar)) {
+    //         // Is the first char in the stream packet buffer equal to 0x41?
+    //         if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
+    //             // Set flag for stream packet ready to launch
+    //             streamPacketBuffer.readyForLaunch = true;
+    //             // Serial.println("G");
+    //             // increment the number of bytes read in
+    //             streamPacketBuffer.bytesIn++;
+    //
+    //             streamPacketBuffer.typeByte = newChar;
+    //             debugT2 = micros();
+    //             // Serial.print("got stream packet");
+    //         } else {
+    //             // Serial.println("B");
+    //             // Store new char to serial buffer
+    //             if(!storeCharToSerialBuffer(newChar) && verbosePrintouts) {
+    //                 Serial.println("Failed to store char");
+    //             }
+    //             // clear the stream packet buffer
+    //             streamPacketBuffer.bytesIn = 0;
+    //             // Store the new char into the stream packet buffer
+    //             streamPacketBuffer.data[0] = newChar;
+    //             // Increment the number of bytes read in
+    //             streamPacketBuffer.bytesIn++;
+    //         }
+    //     } else {
+    //         // Store new char to serial buffer
+    //         storeCharToSerialBuffer(newChar);
+    //         // clear the stream packet buffer
+    //         streamPacketBuffer.bytesIn = 0;
+    //         // Store the new char into the stream packet buffer
+    //         streamPacketBuffer.data[0] = newChar;
+    //         // Increment the number of bytes read in
+    //         streamPacketBuffer.bytesIn++;
+    //     }
+    //
+    // } else if (streamPacketBuffer.bytesIn < 32) {
+    //     if (streamPacketBuffer.bytesIn == 0) {
+    //         debugT1 = micros();
+    //     }
+    //     // Store to the serial buffer
+    //     storeCharToSerialBuffer(newChar);
+    //     // Store to the stream packet buffer
+    //     streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
+    //     // Increment the number of bytes read in
+    //     streamPacketBuffer.bytesIn++;
+    // } else { // Really should not be hitting here
+    //     if (bufferSerial.overflowed == false) {
+    //         // Serial.println("f");
+    //         // Store the new char to the serial buffer
+    //         storeCharToSerialBuffer(newChar);
+    //         // Is there a stream packet ready for launch?
+    //         if (streamPacketBuffer.readyForLaunch) {
+    //             // Set readt to launch flag to false
+    //             streamPacketBuffer.readyForLaunch = false;
+    //         }
+    //         // Reset bytes in to zero
+    //         streamPacketBuffer.bytesIn = 0;
+    //         // Store the new char into the stream packet buffer
+    //         streamPacketBuffer.data[0] = newChar;
+    //         // Increment the number of bytes read in
+    //         streamPacketBuffer.bytesIn++;
+    //     } // else {discard char}
+    // }
+
     // Set the last time we heard from the Pic to the current time in micros
-    lastTimeSerialRead = micros();
+    // lastTimeSerialRead = micros();
 
     // Send that new char back out!
     return newChar;
@@ -880,6 +930,7 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     pollRefresh();
 
     // Send the packet to the host...
+    debugT4 = micros();
     RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
 
     return true;
@@ -1077,9 +1128,9 @@ void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) 
  * @description Resets the stream packet buffer to default settings
  */
 void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
-    streamPacketBuffer.gotHead = false;
     streamPacketBuffer.bytesIn = 0;
     streamPacketBuffer.readyForLaunch = false;
+    curStreamState = STREAM_STATE_INIT;
 }
 
 /**
