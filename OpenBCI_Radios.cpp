@@ -1414,7 +1414,7 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
             return false;
 
         case ORPM_DEVICE_SERIAL_OVERFLOW:
-            Serial.print("Device overflow");
+            Serial.print("Device overflow$$$");
             singleCharMsg[0] = 'v';
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             return false;
