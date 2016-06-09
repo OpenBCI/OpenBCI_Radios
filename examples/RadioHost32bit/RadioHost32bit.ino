@@ -53,14 +53,14 @@ void loop() {
 
     // Is there new data from the PC/Driver?
     if (radio.didPCSendDataToHost()) {
+        const newChar = Serial.read();
+        // Save the last time serial data was read to now
+        radio.lastTimeSerialRead = micros();
         // Get data and put it on the serial buffer
-        boolean success = radio.storeCharToSerialBuffer(Serial.read());
-
+        boolean success = radio.storeCharToSerialBuffer();
         if (!success) {
             Serial.print("Input too large!$$$");
         }
-
-        radio.lastTimeSerialRead = micros();
     }
 
 

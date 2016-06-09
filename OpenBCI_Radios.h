@@ -49,7 +49,7 @@ public:
     } Buffer;
 
     typedef struct {
-        boolean     readyForLaunch;
+        char        typeByte;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         int         bytesIn;
     } StreamPacketBuffer;

@@ -48,33 +48,32 @@ void loop() {
         if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
             // Has 90uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
-                radio.debugT3 = micros();
-                Serial.print("st:"); Serial.print(radio.debugT3 - radio.lastTimeSerialRead);
-                Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
+                // radio.debugT3 = micros();
+                // Serial.print("st:"); Serial.print(radio.debugT3 - radio.lastTimeSerialRead);
+                // Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
                 radio.sendStreamPacketToTheHost();
                 // Serial.println(radio.debugT2 - radio.debugT1);
             }
         } else if (radio.didPicSendDeviceSerialData()) { // Is there new serial data available?
+            const char newChar;
+            // Read a new char
+            newChar = Serial.read();
+            // Mark the last serial as now;
+            radio.lastTimeSerialRead = micros();
             // Get one char and process it
             radio.processChar(Serial.read());
             // Reset the poll timer to prevent contacting the host mid read
             radio.pollRefresh();
-
-            // radio.debugT4 = micros();
-
-            radio.lastTimeSerialRead = micros();
-
-
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
 
             if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
-                radio.debugT3 = micros();
+                // radio.debugT3 = micros();
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
-                Serial.print("se:"); Serial.print(radio.debugT3 - radio.lastTimeSerialRead);
-                Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
+                // Serial.print("se:"); Serial.print(radio.debugT3 - radio.lastTimeSerialRead);
+                // Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
                 radio.sendPacketToHost();
                 // Serial.print("-"); Serial.println((micros() - (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)));
             }

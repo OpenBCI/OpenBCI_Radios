@@ -733,7 +733,7 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
  * @return {bool} if we have a packet waiting
  */
 boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
-    return streamPacketBuffer.readyForLaunch;
+    return curStreamState == STREAM_STATE_READY;
 }
 
 /**
@@ -751,7 +751,7 @@ boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
  */
 char OpenBCI_Radios_Class::processChar(char newChar) {
     // Always store to serial buffer
-    static boolean success = storeCharToSerialBuffer(newChar);
+    const boolean success = storeCharToSerialBuffer(newChar);
     // Verify we have not over flowed
     if (!success) return newChar;
 
@@ -760,8 +760,6 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         case STREAM_STATE_TAIL:
             // Is the current char equal to 0xCX where X is 0-F?
             if (isATailByteChar(newChar)) {
-                // Set flag for stream packet ready to launch
-                streamPacketBuffer.readyForLaunch = true;
                 // Set the type byte
                 streamPacketBuffer.typeByte = newChar;
                 // Change the state to ready
@@ -769,6 +767,12 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             } else {
                 // Reset the state machine
                 curStreamState = STREAM_STATE_INIT;
+                // Set bytes in to 0
+                streamPacketBuffer.bytesIn = 0;
+                // Test to see if this byte is a head byte, maybe if it's not a
+                //  tail byte then that's because a byte was dropped on the way
+                //  over from the Pic.
+                processChar(newChar);
             }
             break;
         case STREAM_STATE_STORING:
@@ -782,14 +786,21 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             }
 
             break;
+        // We have called the function before we were able to send the stream
+        //  packet which means this is not a stream packet, it's part of a
+        //  bigger message
         case STREAM_STATE_READY:
             // Got a 34th byte, go back to start
             curStreamState = STREAM_STATE_INIT;
+            // Set bytes in to 0
+            streamPacketBuffer.bytesIn = 0;
             break;
         case STREAM_STATE_INIT:
             if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
                 // Move the state
                 curStreamState = STREAM_STATE_STORING;
+                // Store to the streamPacketBuffer
+                streamPacketBuffer.data[0] = newChar;
                 // Set to 1
                 streamPacketBuffer.bytesIn = 1;
             }
@@ -800,6 +811,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
 
     }
 
+    return newChar;
     // // The number of bytes for a stream packet!
     // // Serial.println(newChar);
     // if (streamPacketBuffer.bytesIn == 32) {
@@ -874,7 +886,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
     // lastTimeSerialRead = micros();
 
     // Send that new char back out!
-    return newChar;
+    // return newChar;
 }
 
 /**
@@ -930,7 +942,7 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     pollRefresh();
 
     // Send the packet to the host...
-    debugT4 = micros();
+    // debugT4 = micros();
     RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
 
     return true;
@@ -1117,6 +1129,7 @@ void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
  *      clean, for example, on init, we would clean all packets, but on cleaning
  *      from the RFduinoGZLL_onReceive() we would only clean the number of
  *      packets acutally used.
+
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) {
@@ -1129,7 +1142,6 @@ void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) 
  */
 void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
     streamPacketBuffer.bytesIn = 0;
-    streamPacketBuffer.readyForLaunch = false;
     curStreamState = STREAM_STATE_INIT;
 }
 
