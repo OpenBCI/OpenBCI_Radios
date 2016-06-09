@@ -751,7 +751,7 @@ boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
  */
 char OpenBCI_Radios_Class::processChar(char newChar) {
     // Always store to serial buffer
-    const boolean success = storeCharToSerialBuffer(newChar);
+    boolean success = storeCharToSerialBuffer(newChar);
     // Verify we have not over flowed
     if (!success) return newChar;
 
@@ -764,9 +764,11 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 streamPacketBuffer.typeByte = newChar;
                 // Change the state to ready
                 curStreamState = STREAM_STATE_READY;
+                // Serial.println("SSR");
             } else {
                 // Reset the state machine
                 curStreamState = STREAM_STATE_INIT;
+                // Serial.println("SSI");
                 // Set bytes in to 0
                 streamPacketBuffer.bytesIn = 0;
                 // Test to see if this byte is a head byte, maybe if it's not a
@@ -783,6 +785,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
 
             if (streamPacketBuffer.bytesIn == 32) {
                 curStreamState = STREAM_STATE_TAIL;
+                // Serial.println("SST");
             }
 
             break;
@@ -792,8 +795,10 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         case STREAM_STATE_READY:
             // Got a 34th byte, go back to start
             curStreamState = STREAM_STATE_INIT;
+            // Serial.println("SSI");
             // Set bytes in to 0
             streamPacketBuffer.bytesIn = 0;
+
             break;
         case STREAM_STATE_INIT:
             if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
