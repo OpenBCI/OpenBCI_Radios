@@ -101,6 +101,7 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+    Serial.print("poll time: "); Serial.println(millis() - radio.lastTimeHostHeardFromDevice);
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false

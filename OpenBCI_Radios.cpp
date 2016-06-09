@@ -416,7 +416,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 2)) {
+    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 4)) {
         return true;
     } else {
         return false;
@@ -475,6 +475,8 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
                 if (verbosePrintouts) {
                     Serial.print("N_CHAN: "); Serial.println((uint32_t)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[2]);
                 }
+                // Clear the serial buffer
+                bufferCleanSerial(1);
                 // Send a single char message
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
             } else {
@@ -490,6 +492,8 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
             pollTime = (uint32_t)buffer[2];
             // Send a time change request to the device
             singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
+            // Clear the serial buffer
+            bufferCleanSerial(1);
             return ACTION_RADIO_SEND_SINGLE_CHAR;
         default:
             return ACTION_RADIO_SEND_NORMAL;
@@ -774,7 +778,14 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
                 // Test to see if this byte is a head byte, maybe if it's not a
                 //  tail byte then that's because a byte was dropped on the way
                 //  over from the Pic.
-                processChar(newChar);
+                if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
+                    // Move the state
+                    curStreamState = STREAM_STATE_STORING;
+                    // Store to the streamPacketBuffer
+                    streamPacketBuffer.data[0] = newChar;
+                    // Set to 1
+                    streamPacketBuffer.bytesIn = 1;
+                }
             }
             break;
         case STREAM_STATE_STORING:
@@ -1396,8 +1407,10 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
 
         case ORPM_CHANGE_POLL_TIME_DEVICE_READY:
             // Get the poll time from memory... should have been stored here before
-            singleCharMsg[0] = (char)getPollTime();
+            singleCharMsg[0] = (char)pollTime;
+            setPollTime(pollTime);
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+
             return false;
 
         case ORPM_DEVICE_SERIAL_OVERFLOW:
@@ -1438,6 +1451,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
             pollHost();
         }
         return false;
+
     } else if (isWaitingForNewPollTime) {
         isWaitingForNewPollTime = false;
         // Refresh poll
@@ -1450,6 +1464,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
             // Poll the host
             pollHost();
         }
+        return false;
 
     } else {
         switch (newChar) {
@@ -1496,6 +1511,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                 isWaitingForNewPollTime = true;
                 RFduinoGZLL.sendToHost(singleCharMsg,1);
                 pollRefresh();
+                return false;
 
             case ORPM_INVALID_CODE_RECEIVED:
                 // Working theory

@@ -54,7 +54,7 @@ void loop() {
             // Reset the poll timer to prevent contacting the host mid read
             radio.pollRefresh();
         }
-        
+
         if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
             // Has 90uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
@@ -86,7 +86,7 @@ void loop() {
             radio.bufferCleanRadio();
         }
 
-        if (millis() > (radio.timeOfLastPoll + OPENBCI_TIMEOUT_PACKET_POLL_MS)) {  // Has more than the poll time passed?
+        if (millis() > (radio.timeOfLastPoll + radio.pollTime)) {  // Has more than the poll time passed?
             // Refresh the poll timer
             radio.pollRefresh();
 
@@ -107,7 +107,6 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-    radio.debugT5 = micros();
     // Set send data packet flag to false
     boolean sendDataPacket = false;
     // Is the length of the packer equal to one?
@@ -125,7 +124,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
         if (sendDataPacket == false) {
-            radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+            if (radio.bufferSerial.numberOfPacketsSent > 0) {
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+            }
             // radio.bufferResetStreamPacketBuffer();
         }
     }
