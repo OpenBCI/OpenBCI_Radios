@@ -540,7 +540,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
     byte radioAction = ACTION_RADIO_SEND_NORMAL;
 
-    // Is there only one packet to send and is the first packet?
+    // Is there only one packet to send and it's the first packet?
     if (bufferSerial.numberOfPacketsToSend == 1 && packetNumber == 0) {
         // Enter the process outbound buffer subroutine
         radioAction = processOutboundBuffer(bufferSerial.packetBuffer);
