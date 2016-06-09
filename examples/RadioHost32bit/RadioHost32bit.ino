@@ -24,32 +24,50 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
 
-
+// OpenBCI_Radios_Class radio = OpenBCI_Radio_Class();
 
 void setup() {
-  // put your setup code here, to run once:
-  radio.begin(OPENBCI_MODE_HOST,20);
+    // If you forgot your channel numbers, then force a reset by uncommenting
+    //  the line below. This will force a reflash of the non-volitile memory space.
+    // radio.setChannelNumber(20);
+
+    // Declare the radio mode and channel number. Note this channel is only set on init flash
+    radio.begin(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
 
-    if (radio.doesTheHostHaveAStreamPacketToSendToPC()) {
-        radio.writeTheHostsStreamPacketBufferToThePC();
+    // Is there a stream packet waiting to get sent to the PC
+    if (radio.hasStreamPacket()) {
+        // Send all the stream packets to the Driver/PC
+        //  For resiliancy there is an oppertunity to have multiple stream
+        //  packets waiting to get sent.
+        radio.sendStreamPackets();
     }
 
-    if (radio.didPCSendDataToHost()) {
-        radio.getSerialDataFromPCAndPutItInHostsSerialBuffer();
-    }
-
-    if (radio.isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice) {
+    // Is there data in the radio buffer ready to be sent to the Driver?
+    if (radio.gotAllRadioPackets) {
+        // Write the buffer to the driver
         radio.writeTheHostsRadioBufferToThePC();
     }
+
+    // Is there new data from the PC/Driver?
+    if (radio.didPCSendDataToHost()) {
+        char newChar = Serial.read();
+        // Save the last time serial data was read to now
+        radio.lastTimeSerialRead = micros();
+        // Get data and put it on the serial buffer
+        boolean success = radio.storeCharToSerialBuffer(newChar);
+        if (!success) {
+            Serial.print("Input too large!$$$");
+        }
+    }
+
 
     if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
         if (radio.isWaitingForNewChannelNumberConfirmation) {
             radio.revertToPreviousChannelNumber();
-            Serial.println("Timeout failed to restablish connection.$$$");
+            Serial.println("Timeout failed to reestablish connection.$$$");
         } else {
             if (radio.bufferSerial.numberOfPacketsToSend == 1) {
                 if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
@@ -69,5 +87,47 @@ void loop() {
                 Serial.print("$$$");
             }
         }
+    }
+}
+
+/**
+ * @description A packet with 1 byte is a private radio message, a packet with
+ *                  more than 1 byte is a standard packet with a checksum. and
+ *                  a packet with no length is a NULL packet that indicates a
+ *                  successful message transmission
+ * @param device {device_t} - The host in this case
+ * @param rssi {int} - NOT used
+ * @param data {char *} - The packet of data sent in the packet
+ * @param len {int} - The length of the `data` packet
+ */
+void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+    //Serial.print("poll time: "); Serial.println(millis() - radio.lastTimeHostHeardFromDevice);
+    // Reset the last time heard from host timer
+    radio.lastTimeHostHeardFromDevice = millis();
+    // Set send data packet flag to false
+    boolean sendDataPacket = false;
+    // Is the length of the packer equal to one?
+    if (len == 1) {
+        // Enter process single char subroutine
+        sendDataPacket = radio.processRadioCharHost(device,data[0]);
+        // Is the length of the packet greater than one?
+    } else if (len > 1) {
+        // Enter process char data packet subroutine
+        sendDataPacket = radio.processHostRadioCharData(device,data,len);
+
+    } else {
+        // Are there packets waiting to be sent and was the Serial port read
+        //  more then 3 ms ago?
+        sendDataPacket = radio.packetToSend();
+        if (sendDataPacket == false) {
+            if (radio.bufferSerial.numberOfPacketsSent > 0) {
+                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+            }
+        }
+    }
+
+    // Is the send data packet flag set to true
+    if (sendDataPacket) {
+        radio.sendPacketToDevice(device);
     }
 }

@@ -18,7 +18,11 @@
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
 #define OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES 33
 #define OPENBCI_MAX_NUMBER_OF_BUFFERS 16
-#define OPENBCI_MAX_SERIAL_TIMEOUT_MS 3
+
+
+#define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
+#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 87 // Slightly longer than it takes to send a serial byte at 115200
+#define OPENBCI_TIMEOUT_PACKET_POLL_MS 65 // Poll time out length for sending null packet from device to host
 
 // Stream byte stuff
 #define OPENBCI_STREAM_BYTE_START 0xA0
@@ -49,6 +53,11 @@
 // flash memory address for RFdunioGZLL
 #define RFDUINOGZLL_FLASH_MEM_ADDR 251
 
+// radio errors
+#define ERROR_RADIO_NONE 0x00
+#define ERROR_RADIO_RESEND_LAST_PACKET 0x01
+#define ERROR_RADIO_RESEND_LAST_PAGE 0x02
+
 // Private Radio communications
 //  ORPM --> "OpenBCI Radio Private Message"
 #define ORPM_INVALID_CODE_RECEIVED 0x00 // The other radio sent a 1 byte message that does not match any
@@ -58,27 +67,30 @@
 #define ORPM_DEVICE_SERIAL_OVERFLOW 0x04 // The Device is being overflowed by Pic
 #define ORPM_CHANGE_CHANNEL_HOST_REQUEST 0x05 // CCHR
 #define ORPM_CHANGE_CHANNEL_DEVICE_READY 0x06 //
+#define ORPM_CHANGE_POLL_TIME_HOST_REQUEST 0x07 //
+#define ORPM_CHANGE_POLL_TIME_DEVICE_READY 0x08 //
+
+// Used to determine what to send after a proccess out bound buffer
+#define ACTION_RADIO_SEND_NONE 0x00
+#define ACTION_RADIO_SEND_NORMAL 0x01
+#define ACTION_RADIO_SEND_SINGLE_CHAR 0x02
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
 
-// Poll time out length for sending null packet from device to host
-#define OPENBCI_POLL_TIME_DURATION_MS 63
-
-#define OPENBCI_SERIAL_TIMEOUT_uS 100
-
 // Stream packet EOTs
-#define OPENBCI_STREAM_PACKET_HEAD 'A'
-#define OPENBCI_STREAM_PACKET_TYPE 0xF0
+#define OPENBCI_STREAM_PACKET_HEAD 0x41
+#define OPENBCI_STREAM_PACKET_TAIL 0xC0
 
 // Special host codes
 #define OPENBCI_HOST_TIME_SYNC '<'
 #define OPENBCI_HOST_TIME_SYNC_ACK ','
-#define OPENBCI_HOST_CHANNEL_QUERY 0x00
-#define OPENBCI_HOST_CHANNEL_CHANGE 0x01
-#define OPENBCI_HOST_CHANNEL_CHANGE_INVALID 0x02
-#define OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS 0x03
-#define OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE 0x04
+#define OPENBCI_HOST_CHANNEL_QUERY 0xF0
+#define OPENBCI_HOST_CHANNEL_CHANGE 0xF1
+#define OPENBCI_HOST_CHANNEL_CHANGE_INVALID 0xF2
+#define OPENBCI_HOST_CHANNEL_CHANGE_SUCCESS 0xF3
+#define OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE 0xF4
+#define OPENBCI_HOST_POLL_TIME_CHANGE 0xF5
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011
