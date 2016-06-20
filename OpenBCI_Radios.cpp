@@ -1135,7 +1135,6 @@ void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) 
 boolean OpenBCI_Radios_Class::bufferRadioAddData(char *data, int len) {
     // skip the byteId
     for (int i = 0; i < len; i++) {
-        // Serial.write(','); Serial.write(','); Serial.write(','); Serial.write(bufferPositionWriteRadio);
         if (bufferRadio.positionWrite < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
             bufferRadio.data[bufferRadio.positionWrite] = data[i];
             bufferRadio.positionWrite++;

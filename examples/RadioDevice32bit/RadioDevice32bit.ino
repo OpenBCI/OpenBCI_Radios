@@ -18,7 +18,7 @@ void setup() {
     // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel
-    radio.begin(OPENBCI_MODE_DEVICE,20);
+    radio.begin(OPENBCI_MODE_DEVICE,14);
 }
 
 void loop() {
