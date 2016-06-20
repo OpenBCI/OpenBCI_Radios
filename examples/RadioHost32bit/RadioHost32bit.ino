@@ -29,7 +29,7 @@
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.setChannelNumber(20);
+    // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel number. Note this channel is only set on init flash
     radio.begin(OPENBCI_MODE_HOST,20);
@@ -47,8 +47,12 @@ void loop() {
 
     // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {
-        // Write the buffer to the driver
-        radio.writeTheHostsRadioBufferToThePC();
+        // Flush radio buffer to the driver
+        radio.bufferRadioFlush();
+        // Reset the radio buffer flags
+        radio.bufferRadioReset();
+        // Clean the buffer.. fill with zeros
+        radio.bufferRadioClean();
     }
 
     // Is there new data from the PC/Driver?
@@ -71,7 +75,7 @@ void loop() {
         } else {
             if (radio.bufferSerial.numberOfPacketsToSend == 1) {
                 if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
-                    Serial.print("Host is on channel number: "); Serial.print(radio.getChannelNumber()); Serial.print(" no word from the Device though...");
+                    Serial.print("Host is on channelNumber: "); Serial.print(radio.getChannelNumber()); Serial.print(", however there is no communications with the Board");
                 } else if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE) {
                     // radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
                     radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);

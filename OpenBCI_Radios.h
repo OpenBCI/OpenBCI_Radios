@@ -54,6 +54,12 @@ public:
         int         bytesIn;
     } StreamPacketBuffer;
 
+    typedef struct {
+        char    data[OPENBCI_BUFFER_LENGTH];
+        int     positionWrite;
+        int     previousPacketNumber;
+    } BufferRadio;
+
     OpenBCI_Radios_Class();
     boolean     begin(uint8_t mode);
     boolean     begin(uint8_t mode, uint32_t channelNumber);
@@ -68,9 +74,12 @@ public:
     void        bufferCleanCompletePacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets);
     void        bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
     void        bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean);
-    void        bufferCleanRadio(void);
     void        bufferCleanSerial(int numberOfPacketsToClean);
     void        bufferCleanStreamPackets(int numberOfPacketsToClean);
+    boolean     bufferRadioAddData(char *data, int len);
+    void        bufferRadioClean(void);
+    void        bufferRadioFlush(void);
+    void        bufferRadioReset(void);
     void        bufferResetStreamPacketBuffer(void);
     // void        bufferSerialFetch(void);
     char        byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
@@ -134,6 +143,8 @@ public:
     Buffer  bufferSerial;
     Buffer  bufferStreamPackets;
 
+    BufferRadio bufferRadio;
+
     StreamPacketBuffer streamPacketBuffer;
 
     boolean debugMode;
@@ -145,14 +156,7 @@ public:
     boolean isWaitingForNewPollTime;
     boolean verbosePrintouts;
 
-    char    bufferRadio[OPENBCI_BUFFER_LENGTH];
     char    singleCharMsg[1];
-
-    int     bufferPacketsReceived;
-    int     bufferPacketsToReceive;
-    int     bufferPositionReadRadio;
-    int     bufferPositionWriteRadio;
-    int     previousPacketNumber;
 
     PacketBuffer *currentPacketBufferSerial;
     PacketBuffer *currentPacketBufferStreamPacket;

@@ -80,10 +80,12 @@ void loop() {
         }
 
         if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
-            // push radio buffer to pic
-            radio.pushRadioBuffer();
-            // reset the radio buffer
-            radio.bufferCleanRadio();
+            // Flush radio buffer to the driver
+            radio.bufferRadioFlush();
+            // Reset the radio buffer flags
+            radio.bufferRadioReset();
+            // Clean the buffer.. fill with zeros
+            radio.bufferRadioClean();
         }
 
         if (millis() > (radio.timeOfLastPoll + radio.pollTime)) {  // Has more than the poll time passed?

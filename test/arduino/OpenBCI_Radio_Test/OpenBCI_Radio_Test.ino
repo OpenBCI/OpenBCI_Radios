@@ -157,6 +157,7 @@ void testOutput() {
 void testBuffer() {
     testBufferCleanChar();
     testBufferCleanPacketBuffer();
+    testBufferRadio();
 }
 
 
@@ -253,5 +254,59 @@ void testNonVolatileFlashNonVolatileMemory() {
     test.assertEqualInt((int)radio.getPollTime(),(int)expectedPollTime,"Poll time set correctly");
     // Verify the channel number is still set
     test.assertEqualInt((int)radio.getChannelNumber(),(int)newChannelNumber,"Channel number still set correctly");
+
+}
+
+void testBufferRadio() {
+    test.describe("bufferRadioAddData");
+    char buffer[] = "AJ Keller is the best programmer";
+    int expectedLength = 32; // Then length of the above buffer
+
+    radio.bufferRadioAddData(buffer,expectedLength);
+
+    // Verify the correct number of bytes were added
+    test.assertEqualInt(radio.bufferRadio.positionWrite,expectedLength,"The buffer added the correct number of bytes");
+
+    for (int i = 0; i < expectedLength; i++) {
+        test.assertEqualChar(radio.bufferRadio.data[i],buffer[i], "Char is correct");
+    }
+
+    // Verify the flags and such
+    test.assertEqualInt(radio.bufferRadio.previousPacketNumber,0,"Packet Number is set correct");
+    test.assertEqualBoolean(radio.gotAllRadioPackets,false,"Did not get all the packets yet");
+
+    // Mess up the flags
+    radio.gotAllRadioPackets = true;
+    radio.bufferRadio.previousPacketNumber = 0;
+
+    // Test the reset functions
+    test.describe("bufferRadioReset");
+    // Reset the flags
+    radio.bufferRadioReset();
+
+    // Verify they got Reset
+    test.assertEqualInt(radio.bufferRadio.positionWrite,0,"Position write was reset");
+    test.assertEqualInt(radio.bufferRadio.previousPacketNumber,0,"Packet Number was reset");
+    test.assertEqualBoolean(radio.gotAllRadioPackets,false,"Global flag reset");
+
+    // Now clear it!
+    test.describe("bufferRadioClean");
+    radio.bufferRadioClean();
+    // Should fill the array with all zeros
+    for (int j = 0; j < expectedLength; j++) {
+        test.assertEqualChar(radio.bufferRadio.data[j],0);
+    }
+
+    // Test how this will work in normal operations
+    radio.bufferRadioAddData(buffer+1,expectedLength-1);
+
+    // Verify the correct number of bytes were added
+    test.assertEqualInt(radio.bufferRadio.positionWrite,expectedLength - 1,"The buffer added the correct number of bytes");
+
+    for (int i = 1; i < expectedLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        test.assertEqualChar(radio.bufferRadio.data[i-1],buffer[i], "Char is correct");
+    }
 
 }

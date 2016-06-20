@@ -113,7 +113,8 @@ void OpenBCI_Radios_Class::configure(uint8_t mode, uint32_t channelNumber) {
         pollTime = getPollTime();
 
         // get the buffers ready
-        bufferCleanRadio();
+        bufferRadioReset();
+        bufferRadioClean();
         bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Diverge program execution based on Device or Host
@@ -400,16 +401,16 @@ boolean OpenBCI_Radios_Class::didPCSendDataToHost(void) {
 */
 void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
     if (debugMode) {
-        for (int j = 0; j < bufferPositionWriteRadio; j++) {
-            Serial.print(bufferRadio[j]);
+        for (int j = 0; j < bufferRadio.positionWrite; j++) {
+            Serial.print(bufferRadio.data[j]);
         }
         Serial.println();
     } else {
-        for (int j = 0; j < bufferPositionWriteRadio; j++) {
-            Serial.write(bufferRadio[j]);
+        for (int j = 0; j < bufferRadio.positionWrite; j++) {
+            Serial.write(bufferRadio.data[j]);
         }
     }
-    bufferCleanRadio();
+    bufferRadioReset();
 }
 
 /**
@@ -515,7 +516,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
         // Is the byte the command for time sync set?
         case OPENBCI_HOST_TIME_SYNC:
             // Send a comma back to the PC/Driver
-            Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
+            Serial.write(OPENBCI_HOST_TIME_SYNC_ACK); Serial.print("$$$");
             return ACTION_RADIO_SEND_NORMAL;
         // Is the byte the command for a host channel number?
         case OPENBCI_HOST_CHANNEL_QUERY:
@@ -561,6 +562,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
             if (verbosePrintouts) {
                 Serial.print("S->"); Serial.println(packetNumber);
             }
+            // Serial.print("Sending "); Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite); Serial.println(" bytes");
             RFduinoGZLL.sendToDevice(device,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
             // Increment number of bytes sent
             bufferSerial.numberOfPacketsSent++;
@@ -906,24 +908,6 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
 }
 
 /**
-* @description Called when readRadio returns true. We always write the contents
-*                 of bufferRadio over Serial.
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radios_Class::pushRadioBuffer(void) {
-    if (debugMode) {
-        for (int j = 0; j < bufferPositionWriteRadio; j++) {
-            Serial.print(bufferRadio[j]);
-        }
-        Serial.println();
-    } else {
-        for (int j = 0; j < bufferPositionWriteRadio; j++) {
-            Serial.write(bufferRadio[j]);
-        }
-    }
-}
-
-/**
  * @description Sends a soft reset command to the Pic 32 incase of an emergency.
  */
 void OpenBCI_Radios_Class::resetPic32(void) {
@@ -1113,19 +1097,6 @@ void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberO
 }
 
 /**
-* @description Private function to clean (clear/reset) the bufferRadio.
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radios_Class::bufferCleanRadio(void) {
-    bufferCleanChar(bufferRadio,OPENBCI_BUFFER_LENGTH);
-    bufferPacketsReceived = 0;
-    bufferPacketsToReceive = 0;
-    bufferPositionReadRadio = 0;
-    bufferPositionWriteRadio = 0;
-    gotAllRadioPackets = false;
-}
-
-/**
  * @description Private function to clean (clear/reset) the bufferSerial.
  * @param - `numberOfPacketsToClean` - [int] - The number of packets you want to
  *      clean, for example, on init, we would clean all packets, but on cleaning
@@ -1136,7 +1107,7 @@ void OpenBCI_Radios_Class::bufferCleanRadio(void) {
 void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
     bufferCleanBuffer(&bufferSerial, numberOfPacketsToClean);
     currentPacketBufferSerial = bufferSerial.packetBuffer;
-    previousPacketNumber = 0;
+    // previousPacketNumber = 0;
 }
 
 /**
@@ -1151,6 +1122,64 @@ void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
 void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) {
     bufferCleanCompleteBuffer(&bufferStreamPackets, numberOfPacketsToClean);
     currentPacketBufferStreamPacket = bufferStreamPackets.packetBuffer;
+}
+
+/**
+ * @description Used to add a char data array to the the radio buffer. Always
+ *      skips the fist
+ * @param data {char *} - An array from RFduinoGZLL_onReceive
+ * @param len {int} - Length of array from RFduinoGZLL_onReceive
+ * @return {boolean} - True if the data was added to the buffer, false if the
+ *      buffer was overflowed.
+ */
+boolean OpenBCI_Radios_Class::bufferRadioAddData(char *data, int len) {
+    // skip the byteId
+    for (int i = 0; i < len; i++) {
+        // Serial.write(','); Serial.write(','); Serial.write(','); Serial.write(bufferPositionWriteRadio);
+        if (bufferRadio.positionWrite < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
+            bufferRadio.data[bufferRadio.positionWrite] = data[i];
+            bufferRadio.positionWrite++;
+        } else { // We overflowed, need to return false.
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * @description Used to fill the buffer with all zeros. Should be used as
+ *      frequently as possible. This is very useful if you need to ensure that
+ *      no bad data is sent over the serial port.
+ */
+void OpenBCI_Radios_Class::bufferRadioClean(void) {
+    bufferCleanChar(bufferRadio.data,OPENBCI_BUFFER_LENGTH);
+}
+
+/**
+ * @description Called when all the packets have been recieved to flush the
+ *       contents of the radio buffer to the serial port.
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radios_Class::bufferRadioFlush(void) {
+    if (debugMode) {
+        for (int j = 0; j < bufferRadio.positionWrite; j++) {
+            Serial.print(bufferRadio.data[j]);
+        }
+        Serial.println();
+    } else {
+        for (int j = 0; j < bufferRadio.positionWrite; j++) {
+            Serial.write(bufferRadio.data[j]);
+        }
+    }
+}
+
+/**
+ * @description Used to reset the flags and positions of the radio buffer.
+ */
+void OpenBCI_Radios_Class::bufferRadioReset(void) {
+    bufferRadio.positionWrite = 0;
+    bufferRadio.previousPacketNumber = 0;
+    gotAllRadioPackets = false;
 }
 
 /**
@@ -1537,9 +1566,11 @@ boolean OpenBCI_Radios_Class::packetToSend(void) {
 }
 
 boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
-    // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
+    // We enter this if statement if we got a packet with length greater than
+    //  1. If we recieve a packet with packetNumber equal to 0, then we can set
+    //  a flag to write the radio buffer.
 
-    // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
+    // TODO: Answer the question: Where should the radio buffer be cleared?
 
     boolean gotLastPacket = false;
     boolean goodToAddPacketToRadioBuffer = true;
@@ -1557,20 +1588,20 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
         // This first statment asks if this is a last packet and the previous
         //  packet was 0 too, this is in an effort to get to the point in the
         //  program where we ask if this packet is a stream packet
-        if (packetNumber == 0 && previousPacketNumber == 0) {
+        if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
             // This is a one packet message
             gotLastPacket = true;
 
         } else {
-            if (packetNumber > 0 && previousPacketNumber == 0) {
+            if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
                 // This is the first of multiple packets we are recieving
-                previousPacketNumber = packetNumber;
+                bufferRadio.previousPacketNumber = packetNumber;
 
             } else {
                 // This is not the first packet we are reciving of this page
-                if (previousPacketNumber - packetNumber == 1) { // Normal...
-                    // update
-                    previousPacketNumber = packetNumber;
+                if (bufferRadio.previousPacketNumber - packetNumber == 1) { // Normal...
+                    // Update the global var
+                    bufferRadio.previousPacketNumber = packetNumber;
 
                     // Is this the last packet?
                     if (packetNumber == 0) {
@@ -1583,11 +1614,10 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
                     // We missed a packet, send resend message
                     singleCharMsg[0] = ORPM_PACKET_MISSED & 0xFF;
 
-                    // reset ring buffer to start
-                    bufferPositionWriteRadio = 0;
+                    // Clean the radio buffer. Resets the flags.
+                    bufferRadioReset();
+                    bufferRadioClean();
 
-                    // Reset the packet state
-                    previousPacketNumber = 0;
                     if (verbosePrintouts) {
                         Serial.println("S->M");
                     }
@@ -1608,12 +1638,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     if (goodToAddPacketToRadioBuffer) {
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        for (int i = 1; i < len; i++) { // skip the byteId
-            if (bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
-                bufferRadio[bufferPositionWriteRadio] = data[i];
-                bufferPositionWriteRadio++;
-            }
-        }
+        bufferRadioAddData(data+1,len-1);
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
         if (gotLastPacket) {
@@ -1628,10 +1653,8 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
         if (packetToSend()) {
             return true;
         } else if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend && bufferSerial.numberOfPacketsToSend != 0) {
-            // Serial.println("Cleaning Hosts's bufferSerial");
             // Clear buffer
             bufferCleanSerial(bufferSerial.numberOfPacketsSent);
-            // Serial.println("#c2");
             return false;
         } else {
             pollHost();
@@ -1677,20 +1700,20 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
         // This first statment asks if this is a last packet and the previous
         //  packet was 0 too, this is in an effort to get to the point in the
         //  program where we ask if this packet is a stream packet
-        if (packetNumber == 0 && previousPacketNumber == 0) {
+        if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
             // This is a one packet message
             gotLastPacket = true;
 
         } else {
-            if (packetNumber > 0 && previousPacketNumber == 0) {
+            if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
                 // This is the first of multiple packets we are recieving
-                previousPacketNumber = packetNumber;
+                bufferRadio.previousPacketNumber = packetNumber;
 
             } else {
                 // This is not the first packet we are reciving of this page
-                if (previousPacketNumber - packetNumber == 1) { // Normal...
+                if (bufferRadio.previousPacketNumber - packetNumber == 1) { // Normal...
                     // update
-                    previousPacketNumber = packetNumber;
+                    bufferRadio.previousPacketNumber = packetNumber;
 
                     // Is this the last packet?
                     if (packetNumber == 0) {
@@ -1704,10 +1727,9 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
                     singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
 
                     // reset ring buffer to start
-                    bufferPositionWriteRadio = 0;
-
                     // Reset the packet state
-                    previousPacketNumber = 0;
+                    bufferRadioReset();
+
                     if (verbosePrintouts) {
                         Serial.println("S->M");
                     }
@@ -1734,12 +1756,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
 
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        for (int i = 1; i < len; i++) { // skip the byteId
-            if (bufferPositionWriteRadio < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
-                bufferRadio[bufferPositionWriteRadio] = data[i];
-                bufferPositionWriteRadio++;
-            }
-        }
+        bufferRadioAddData(data+1,len-1);
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
         if (gotLastPacket) {
