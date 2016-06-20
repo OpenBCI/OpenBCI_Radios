@@ -285,7 +285,7 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
         rc = flashWrite(p, channelNumber);
         if (rc == 0) {
             if (isHost) {
-                Serial.println("Channel Number Set$$$");
+                //Serial.println("Host Channel Number Set$$$");
             }
             return true;
         } else if (rc == 1) {
@@ -1423,13 +1423,17 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
             if (verbosePrintouts) {
                 Serial.println("R<-CCDR");
             }
-            // send back the radio channel
-            singleCharMsg[0] = (char)radioChannel;
             if (setChannelNumber(radioChannel)) { // Returns true if successful
+                // send back the radio channel
+                singleCharMsg[0] = (char)radioChannel;
+                isWaitingForNewChannelNumberConfirmation = true;
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
                 RFduinoGZLL.channel = radioChannel;
-            } else { // TODO: Need to tell the device to abort
+            } else {
+                // TODO: Need to tell the device to abort
                 radioChannel = getChannelNumber();
+                singleCharMsg[0] = (char)radioChannel;
+                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             }
             return false;
 

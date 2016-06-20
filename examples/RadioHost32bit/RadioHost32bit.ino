@@ -32,7 +32,7 @@ void setup() {
     // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel number. Note this channel is only set on init flash
-    radio.begin(OPENBCI_MODE_HOST,20);
+    radio.beginDebug(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
@@ -75,11 +75,15 @@ void loop() {
         } else {
             if (radio.bufferSerial.numberOfPacketsToSend == 1) {
                 if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
-                    Serial.print("Host is on channelNumber: "); Serial.print(radio.getChannelNumber()); Serial.print(", however there is no communications with the Board");
+                    Serial.print("Board comm failure, Host on channel number: "); Serial.write(radio.getChannelNumber());
                 } else if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE) {
                     // radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
-                    radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
-                    Serial.print("Channel Set To Number: "); Serial.println(radio.getChannelNumber());
+                    if (radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2])) {
+                        Serial.print("Host override. Channel Number: "); Serial.println(radio.getChannelNumber());
+                    } else {
+                        Serial.println("Failed to flash channel number");
+                    }
+
                 } else {
                     Serial.print("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?");
                 }
@@ -120,6 +124,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         sendDataPacket = radio.processHostRadioCharData(device,data,len);
 
     } else {
+        // Condition
+        if (radio.isWaitingForNewChannelNumberConfirmation) {
+            Serial.print("Channel changed: "); Serial.print(radio.getChannelNumber()); Serial.print("$$$");
+            radio.isWaitingForNewChannelNumberConfirmation = false;
+        }
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
         sendDataPacket = radio.packetToSend();
