@@ -18,7 +18,7 @@ void setup() {
     // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel
-    radio.begin(OPENBCI_MODE_DEVICE,14);
+    radio.begin(OPENBCI_MODE_DEVICE,20);
 }
 
 void loop() {
@@ -117,6 +117,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         sendDataPacket = radio.processRadioCharDevice(data[0]);
     // Is the length of the packet greater than one?
     } else if (len > 1) {
+        // Serial.print("len: "); Serial.print(len); Serial.println("|~|");
         // Enter process char data packet subroutine
         sendDataPacket = radio.processDeviceRadioCharData(data,len);
     } else {

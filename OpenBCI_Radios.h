@@ -68,24 +68,24 @@ public:
     boolean     byteIdGetIsStream(char byteId);
     int         byteIdGetPacketNumber(char byteId);
     byte        byteIdGetStreamPacketType(char byteId);
-    void        bufferAddStreamPacket(char *data, int length);
-    void        bufferCleanChar(char *buffer, int bufferLength);
-    void        bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean);
-    void        bufferCleanCompletePacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets);
-    void        bufferCleanPacketBuffer(PacketBuffer *packetBuffer,int numberOfPackets);
-    void        bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean);
+    void        bufferAddStreamPacket(volatile char *data, int length);
+    void        bufferCleanChar(volatile char *buffer, int bufferLength);
+    void        bufferCleanCompleteBuffer(volatile Buffer *buffer, int numberOfPacketsToClean);
+    void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *packetBuffer, int numberOfPackets);
+    void        bufferCleanPacketBuffer(volatile PacketBuffer *packetBuffer,int numberOfPackets);
+    void        bufferCleanBuffer(volatile Buffer *buffer, int numberOfPacketsToClean);
     void        bufferCleanSerial(int numberOfPacketsToClean);
     void        bufferCleanStreamPackets(int numberOfPacketsToClean);
-    boolean     bufferRadioAddData(char *data, int len);
+    boolean     bufferRadioAddData(volatile char *data, int len, boolean clearBuffer);
     void        bufferRadioClean(void);
     void        bufferRadioFlush(void);
     void        bufferRadioReset(void);
     void        bufferResetStreamPacketBuffer(void);
     // void        bufferSerialFetch(void);
-    char        byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length);
+    char        byteIdMake(boolean isStreamPacket, int packetNumber, volatile char *data, int length);
     byte        byteIdMakeStreamPacketType(void);
-    char        checkSumMake(char *data, int length);
-    boolean     checkSumsAreEqual(char *data, int len);
+    char        checkSumMake(volatile char *data, int length);
+    boolean     checkSumsAreEqual(volatile char *data, int len);
     void        configure(uint8_t mode,uint32_t channelNumber);
     void        configureDevice(void);
     void        configureHost(void);
@@ -111,13 +111,13 @@ public:
     void        pushRadioBuffer(void);
     char        processChar(char newChar);
     // void        processCharForStreamPacket(char newChar);
-    boolean     processDeviceRadioCharData(char *data, int len);
-    byte        processOutboundBuffer(PacketBuffer *currentPacketBuffer);
-    byte        processOutboundBufferCharDouble(char *buffer);
+    boolean     processDeviceRadioCharData(volatile char *data, int len);
+    byte        processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer);
+    byte        processOutboundBufferCharDouble(volatile char *buffer);
     byte        processOutboundBufferCharSingle(char aChar);
     boolean     processRadioCharDevice(char newChar);
     boolean     processRadioCharHost(device_t device, char newChar);
-    boolean     processHostRadioCharData(device_t device, char *data, int len);
+    boolean     processHostRadioCharData(device_t device, volatile char *data, int len);
     void        resetPic32(void);
     boolean     revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
@@ -133,33 +133,33 @@ public:
     boolean     setPollTime(uint32_t pollTime);
     boolean     storeCharToSerialBuffer(char newChar);
     boolean     thereIsDataInSerialBuffer(void);
-    // boolean     theLastTimeNewSerialDataWasAvailableWasLongEnough(void);
     void        writeBufferToSerial(char *buffer,int length);
     void        writeTheHostsRadioBufferToThePC(void);
     void        writeTheHostsStreamPacketBufferToThePC(void);
-    void        writeStreamPacket(char *data);
+    void        writeStreamPacket(volatile char *data);
 
     // VARIABLES
-    Buffer  bufferSerial;
-    Buffer  bufferStreamPackets;
+    volatile StreamPacketBuffer streamPacketBuffer;
+    volatile BufferRadio bufferRadio;
+    volatile Buffer bufferSerial;
+    volatile Buffer bufferStreamPackets;
 
-    BufferRadio bufferRadio;
 
-    StreamPacketBuffer streamPacketBuffer;
+
 
     boolean debugMode;
     boolean isDevice;
     boolean isHost;
-    boolean gotAllRadioPackets;
-    boolean isWaitingForNewChannelNumber;
-    boolean isWaitingForNewChannelNumberConfirmation;
-    boolean isWaitingForNewPollTime;
+    volatile boolean gotAllRadioPackets;
+    volatile boolean isWaitingForNewChannelNumber;
+    volatile boolean isWaitingForNewChannelNumberConfirmation;
+    volatile boolean isWaitingForNewPollTime;
     boolean verbosePrintouts;
 
     char    singleCharMsg[1];
 
-    PacketBuffer *currentPacketBufferSerial;
-    PacketBuffer *currentPacketBufferStreamPacket;
+    volatile PacketBuffer *currentPacketBufferSerial;
+    volatile PacketBuffer *currentPacketBufferStreamPacket;
 
     STREAM_STATE curStreamState;
 
@@ -167,15 +167,9 @@ public:
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
-    unsigned long lastTimeSerialRead;
+    volatile unsigned long lastTimeSerialRead;
     unsigned long timeWeGot0xFXFromPic;
-    unsigned long timeOfLastPoll;
-    unsigned long debugT1;
-    unsigned long debugT2;
-    unsigned long debugT3;
-    unsigned long debugT4;
-    unsigned long debugT5;
-    unsigned long debugT6;
+    volatile unsigned long timeOfLastPoll;
 
     uint32_t radioChannel;
     uint32_t previousRadioChannel;

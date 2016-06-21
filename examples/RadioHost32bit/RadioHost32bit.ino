@@ -32,7 +32,7 @@ void setup() {
     // radio.flashNonVolatileMemory();
 
     // Declare the radio mode and channel number. Note this channel is only set on init flash
-    radio.beginDebug(OPENBCI_MODE_HOST,20);
+    radio.begin(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
@@ -126,11 +126,12 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     } else {
         // Condition
         if (radio.isWaitingForNewChannelNumberConfirmation) {
-            Serial.print("Channel changed: "); Serial.print(radio.getChannelNumber()); Serial.print("$$$");
+            Serial.print("Channel changed: "); Serial.write(radio.getChannelNumber()); Serial.print("$$$");
             radio.isWaitingForNewChannelNumberConfirmation = false;
         }
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
+
         sendDataPacket = radio.packetToSend();
         if (sendDataPacket == false) {
             if (radio.bufferSerial.numberOfPacketsSent > 0) {
@@ -141,6 +142,10 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
+        // Serial.print("+");
         radio.sendPacketToDevice(device);
+    } else {
+        // Serial.print(".");
+        RFduinoGZLL.sendToDevice(device,NULL,0);
     }
 }

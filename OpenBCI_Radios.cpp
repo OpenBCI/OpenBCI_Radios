@@ -441,7 +441,7 @@ boolean OpenBCI_Radios_Class::hasStreamPacket(void) {
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
-byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuffer) {
+byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
     if (currentPacketBuffer->positionWrite == 2) {
         return processOutboundBufferCharSingle(currentPacketBuffer->data[1]);
     } else if (currentPacketBuffer->positionWrite == 3) {
@@ -460,7 +460,7 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuff
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
-byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
+byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
     switch (buffer[1]) {
         // Is the first byte equal to the channel change request?
         case OPENBCI_HOST_CHANNEL_CHANGE:
@@ -563,7 +563,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
                 Serial.print("S->"); Serial.println(packetNumber);
             }
             // Serial.print("Sending "); Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite); Serial.println(" bytes");
-            RFduinoGZLL.sendToDevice(device,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+            RFduinoGZLL.sendToDevice(device,(char *)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
             // Increment number of bytes sent
             bufferSerial.numberOfPacketsSent++;
             break;
@@ -584,7 +584,6 @@ void OpenBCI_Radios_Class::sendStreamPackets(void) {
         // Send first buffer out... first call would be 0th packet then 1st, and so on
         writeStreamPacket(bufferStreamPackets.packetBuffer->data + bufferStreamPackets.numberOfPacketsSent);
 
-
         // Increment the number of packets we wrote out the serial port
         bufferStreamPackets.numberOfPacketsSent++;
     }
@@ -598,7 +597,7 @@ void OpenBCI_Radios_Class::sendStreamPackets(void) {
 * @param data [char *] The 32 byte packet buffer
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::writeStreamPacket(char *data) {
+void OpenBCI_Radios_Class::writeStreamPacket(volatile char *data) {
 
     // Write the start byte
     Serial.write(OPENBCI_STREAM_BYTE_START);
@@ -685,7 +684,7 @@ void OpenBCI_Radios_Class::sendTheDevicesFirstPacketToTheHost(void) {
         //     Serial.write(getChannelNumber());
         // }
         // Send back some data
-        RFduinoGZLL.sendToHost(bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
+        RFduinoGZLL.sendToHost((char *)bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
         // We know we just sent the first packet
         bufferSerial.numberOfPacketsSent = 1;
@@ -727,7 +726,12 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
     if (radio.verbosePrintouts) {
         Serial.print("S->"); Serial.println(packetNumber);
     }
-    RFduinoGZLL.sendToHost((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+
+    // (Host sends Payload ACK, TX Fifo: 1)
+    RFduinoGZLL.sendToHost((char *)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+    // (Payload ACK is received, but still remains in TX Fifo: 1)
+    RFduinoGZLL.sendToHost(NULL, 0);
+    // onReceive called with Payload ACK 
     pollRefresh();
 
     bufferSerial.numberOfPacketsSent++;
@@ -943,7 +947,7 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 
     // Send the packet to the host...
     // debugT4 = micros();
-    RFduinoGZLL.sendToHost(streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
+    RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
 
     return true;
 
@@ -1041,10 +1045,49 @@ void OpenBCI_Radios_Class::writeBufferToSerial(char *buffer, int length) {
 }
 
 /**
+ * @description Moves bytes into bufferStreamPackets from on_recieve
+ * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
+ * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
+ * @author AJ Keller (@pushtheworldllc)
+ */
+void OpenBCI_Radios_Class::bufferAddStreamPacket(volatile char *data, int length) {
+
+    // Set the number of packets to 1 initally, it will only grow
+    if (bufferStreamPackets.numberOfPacketsToSend == 0) {
+        bufferStreamPackets.numberOfPacketsToSend = 1;
+    }
+
+    for (int i = 0; i < length; i++) {
+        // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
+        if (currentPacketBufferStreamPacket->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
+            // Go to the next packet
+            bufferStreamPackets.numberOfPacketsToSend++;
+            // Did we run out of buffers?
+            if (bufferStreamPackets.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+                // this is bad, so something, throw error, explode... idk yet...
+                //  for now set currentPacketBufferSerial to NULL
+                currentPacketBufferStreamPacket = NULL;
+            } else {
+                // move the pointer 1 struct
+                currentPacketBufferStreamPacket++;
+            }
+        }
+        // We are only going to mess with the current packet if it's not null
+        if (currentPacketBufferStreamPacket) {
+            // Store the byte to current buffer at write postition
+            currentPacketBufferStreamPacket->data[currentPacketBufferStreamPacket->positionWrite] = data[i];
+
+            // Increment currentPacketBufferSerial write postion
+            currentPacketBufferStreamPacket->positionWrite++;
+        }
+    }
+}
+
+/**
 * @description Private function to clear the given buffer of length
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::bufferCleanChar(char *buffer, int bufferLength) {
+void OpenBCI_Radios_Class::bufferCleanChar(volatile char *buffer, int bufferLength) {
     for (int i = 0; i < bufferLength; i++) {
         buffer[i] = 0;
     }
@@ -1054,7 +1097,7 @@ void OpenBCI_Radios_Class::bufferCleanChar(char *buffer, int bufferLength) {
 * @description Private function to clean a PacketBuffer.
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::bufferCleanPacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets) {
+void OpenBCI_Radios_Class::bufferCleanPacketBuffer(volatile PacketBuffer *packetBuffer, int numberOfPackets) {
     for(int i = 0; i < numberOfPackets; i++) {
         packetBuffer[i].positionRead = 0;
         packetBuffer[i].positionWrite = 1;
@@ -1065,7 +1108,7 @@ void OpenBCI_Radios_Class::bufferCleanPacketBuffer(PacketBuffer *packetBuffer, i
 * @description Private function to clean a PacketBuffer.
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::bufferCleanCompletePacketBuffer(PacketBuffer *packetBuffer, int numberOfPackets) {
+void OpenBCI_Radios_Class::bufferCleanCompletePacketBuffer(volatile PacketBuffer *packetBuffer, int numberOfPackets) {
     for(int i = 0; i < numberOfPackets; i++) {
         packetBuffer[i].positionRead = 0;
         packetBuffer[i].positionWrite = 0;
@@ -1076,7 +1119,7 @@ void OpenBCI_Radios_Class::bufferCleanCompletePacketBuffer(PacketBuffer *packetB
 * @description Private function to clean (clear/reset) a Buffer.
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPacketsToClean) {
+void OpenBCI_Radios_Class::bufferCleanBuffer(volatile Buffer *buffer, int numberOfPacketsToClean) {
     bufferCleanPacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
@@ -1087,7 +1130,7 @@ void OpenBCI_Radios_Class::bufferCleanBuffer(Buffer *buffer, int numberOfPackets
 * @description Private function to clean (clear/reset) a Buffer.
 * @author AJ Keller (@pushtheworldllc)
 */
-void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(Buffer *buffer, int numberOfPacketsToClean) {
+void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(volatile Buffer *buffer, int numberOfPacketsToClean) {
     bufferCleanCompletePacketBuffer(buffer->packetBuffer,numberOfPacketsToClean);
     buffer->numberOfPacketsToSend = 0;
     buffer->numberOfPacketsSent = 0;
@@ -1129,11 +1172,16 @@ void OpenBCI_Radios_Class::bufferCleanStreamPackets(int numberOfPacketsToClean) 
  *      skips the fist
  * @param data {char *} - An array from RFduinoGZLL_onReceive
  * @param len {int} - Length of array from RFduinoGZLL_onReceive
+ * @param clearBuffer {boolean} - If true then will reset the flags on the radio
+ *      buffer.
  * @return {boolean} - True if the data was added to the buffer, false if the
  *      buffer was overflowed.
  */
-boolean OpenBCI_Radios_Class::bufferRadioAddData(char *data, int len) {
-    // skip the byteId
+boolean OpenBCI_Radios_Class::bufferRadioAddData(volatile char *data, int len, boolean clearBuffer) {
+    if (clearBuffer) {
+        bufferRadioReset();
+    }
+
     for (int i = 0; i < len; i++) {
         if (bufferRadio.positionWrite < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
             bufferRadio.data[bufferRadio.positionWrite] = data[i];
@@ -1190,45 +1238,6 @@ void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
 }
 
 /**
- * @description Moves bytes into bufferStreamPackets from on_recieve
- * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
- * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
- * @author AJ Keller (@pushtheworldllc)
- */
-void OpenBCI_Radios_Class::bufferAddStreamPacket(char *data, int length) {
-
-    // Set the number of packets to 1 initally, it will only grow
-    if (bufferStreamPackets.numberOfPacketsToSend == 0) {
-        bufferStreamPackets.numberOfPacketsToSend = 1;
-    }
-
-    for (int i = 0; i < length; i++) {
-        // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
-        if (currentPacketBufferStreamPacket->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
-            // Go to the next packet
-            bufferStreamPackets.numberOfPacketsToSend++;
-            // Did we run out of buffers?
-            if (bufferStreamPackets.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
-                // this is bad, so something, throw error, explode... idk yet...
-                //  for now set currentPacketBufferSerial to NULL
-                currentPacketBufferStreamPacket = NULL;
-            } else {
-                // move the pointer 1 struct
-                currentPacketBufferStreamPacket++;
-            }
-        }
-        // We are only going to mess with the current packet if it's not null
-        if (currentPacketBufferStreamPacket) {
-            // Store the byte to current buffer at write postition
-            currentPacketBufferStreamPacket->data[currentPacketBufferStreamPacket->positionWrite] = data[i];
-
-            // Increment currentPacketBufferSerial write postion
-            currentPacketBufferStreamPacket->positionWrite++;
-        }
-    }
-}
-
-/**
 * @description Strips and gets the check sum from a byteId
 * @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [int] the check sum
@@ -1277,7 +1286,7 @@ byte OpenBCI_Radios_Class::byteIdGetStreamPacketType(char byteId) {
 *           Bits[2:0] - The check sum
 * @author AJ Keller (@pushtheworldllc)
 */
-char OpenBCI_Radios_Class::byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length) {
+char OpenBCI_Radios_Class::byteIdMake(boolean isStreamPacket, int packetNumber, volatile char *data, int length) {
     // Set output initially equal to 0
     char output = 0x00;
 
@@ -1308,7 +1317,7 @@ byte OpenBCI_Radios_Class::byteIdMakeStreamPacketType(void) {
 * @param len [int] The length of data packet
 * @returns boolean if equal
 */
-boolean OpenBCI_Radios_Class::checkSumsAreEqual(char *data, int len) {
+boolean OpenBCI_Radios_Class::checkSumsAreEqual(volatile char *data, int len) {
     char expectedCheckSum = byteIdGetCheckSum(data[0]);
 
     char calculatedCheckSum = checkSumMake(data + 1,len - 1);
@@ -1323,7 +1332,7 @@ boolean OpenBCI_Radios_Class::checkSumsAreEqual(char *data, int len) {
 * @returns [char] of the check sum
 * @author AJ Keller (@pushtheworldllc) with Leif Percifield
 */
-char OpenBCI_Radios_Class::checkSumMake(char *data, int length) {
+char OpenBCI_Radios_Class::checkSumMake(volatile char *data, int length) {
     int count;
     unsigned int sum = 0;
 
@@ -1568,7 +1577,7 @@ boolean OpenBCI_Radios_Class::packetToSend(void) {
     return false;
 }
 
-boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
+boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, int len) {
     // We enter this if statement if we got a packet with length greater than
     //  1. If we recieve a packet with packetNumber equal to 0, then we can set
     //  a flag to write the radio buffer.
@@ -1577,6 +1586,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
 
     boolean gotLastPacket = false;
     boolean goodToAddPacketToRadioBuffer = true;
+    boolean firstPacket = false;
 
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
@@ -1584,6 +1594,12 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     // When in debug mode, state which packetNumber we just recieved
     if (verbosePrintouts) {
         Serial.print("R<-");Serial.println(packetNumber);
+    }
+
+    if (byteIdGetIsStream(data[0])) {
+        // Serial.println("Got stream packet!");
+        // Check to see if there is a packet to send back
+        return packetToSend();
     }
 
     // Verify the checksums are equal
@@ -1594,11 +1610,15 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
         if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
             // This is a one packet message
             gotLastPacket = true;
+            // Mark this as the first packet
+            firstPacket = true;
 
         } else {
             if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
                 // This is the first of multiple packets we are recieving
                 bufferRadio.previousPacketNumber = packetNumber;
+                // Mark as the first packet
+                // firstPacket = true;
 
             } else {
                 // This is not the first packet we are reciving of this page
@@ -1641,12 +1661,13 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     if (goodToAddPacketToRadioBuffer) {
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        bufferRadioAddData(data+1,len-1);
+        bufferRadioAddData(data+1,len-1,false);
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
         if (gotLastPacket) {
             // flag contents of radio buffer to be printed!
             gotAllRadioPackets = true;
+            // Serial.print("len: "); Serial.print(len); Serial.println("|~|");
         }
 
         if (verbosePrintouts) {
@@ -1673,13 +1694,13 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     }
 }
 
-boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *data, int len) {
+boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile char *data, int len) {
     // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
 
     // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
     boolean gotLastPacket = false;
     boolean goodToAddPacketToRadioBuffer = true;
-
+    boolean firstPacket = false;
 
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
@@ -1706,12 +1727,15 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
         if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
             // This is a one packet message
             gotLastPacket = true;
+            // Mark this as the first packet
+            // firstPacket = true;
 
         } else {
             if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
                 // This is the first of multiple packets we are recieving
                 bufferRadio.previousPacketNumber = packetNumber;
-
+                // Mark this as the first packet
+                // firstPacket = true;
             } else {
                 // This is not the first packet we are reciving of this page
                 if (bufferRadio.previousPacketNumber - packetNumber == 1) { // Normal...
@@ -1720,7 +1744,6 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
 
                     // Is this the last packet?
                     if (packetNumber == 0) {
-                        // Serial.println("Last packet of multiple.");
                         gotLastPacket = true;
                     }
 
@@ -1759,7 +1782,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
 
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        bufferRadioAddData(data+1,len-1);
+        bufferRadioAddData(data+1,len-1,false);
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
         if (gotLastPacket) {
