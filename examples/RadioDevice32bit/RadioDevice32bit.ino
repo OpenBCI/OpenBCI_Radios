@@ -72,10 +72,7 @@ void loop() {
                 // radio.debugT3 = micros();
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
-                // Serial.print("se:"); Serial.println(radio.debugT3 - radio.lastTimeSerialRead);
-                // Serial.print(" tt:"); Serial.println(radio.debugT3 - radio.debugT1);
                 radio.sendPacketToHost();
-                // Serial.print("-"); Serial.println((micros() - (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)));
             }
         }
 

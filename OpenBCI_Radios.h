@@ -156,6 +156,9 @@ public:
 
     char    singleCharMsg[1];
 
+    volatile boolean packetInTXRadioBuffer;
+    volatile device_t deviceRadio;
+
     volatile int lastPacketSent;
 
     volatile PacketBuffer *currentPacketBufferSerial;

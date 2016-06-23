@@ -67,7 +67,16 @@ void loop() {
         }
     }
 
+    // Is there data waiting to be sent out to the host?
+    //  If there is code that shall be sent to device, then we want to move it
+    //  into the TX buffer right away, because it will be sent the next time the
+    //  device contacts the Host!
+    // TODO: Move code below into Linrary
+    if (radio.hostPacketToSend()) {
+        radio.sendPacketToDevice(device);
+    }
 
+    // TODO: Move code below into Library!
     if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
         if (radio.isWaitingForNewChannelNumberConfirmation) {
             radio.isWaitingForNewChannelNumberConfirmation = false;
@@ -113,6 +122,8 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+    if (!radio.deviceRadio) radio.deviceRadio = device;
+    if (radio.packetInTXRadioBuffer) radio.packetInTXRadioBuffer = false;
     //Serial.print("poll time: "); Serial.println(millis() - radio.lastTimeHostHeardFromDevice);
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
