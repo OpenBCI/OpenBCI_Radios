@@ -31,7 +31,8 @@ void setup() {
     //  the line below. This will force a reflash of the non-volitile memory space.
     // radio.flashNonVolatileMemory();
 
-    // Declare the radio mode and channel number. Note this channel is only set on init flash
+    // Declare the radio mode and channel number. Note this channel is only
+    //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
     radio.begin(OPENBCI_MODE_HOST,20);
 }
 
@@ -63,38 +64,21 @@ void loop() {
         // Get data and put it on the serial buffer
         boolean success = radio.storeCharToSerialBuffer(newChar);
         if (!success) {
-            Serial.print("Input too large!$$$");
+            Serial.print("Failure: Input too large!$$$");
         }
     }
 
+    // Is there data waiting to be sent out to the host?
+    //  If there is code that shall be sent to device, then we want to move it
+    //  into the TX buffer right away, because it will be sent the next time the
+    //  device contacts the Host!
+    if (radio.hostPacketToSend()) {
+        radio.sendPacketToDevice(DEVICE0);
+    }
 
-    if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
-        if (radio.isWaitingForNewChannelNumberConfirmation) {
-            radio.revertToPreviousChannelNumber();
-            Serial.println("Timeout failed to reestablish connection.$$$");
-        } else {
-            if (radio.bufferSerial.numberOfPacketsToSend == 1) {
-                if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_QUERY) {
-                    Serial.print("Board comm failure, Host on channel number: "); Serial.write(radio.getChannelNumber());
-                } else if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_CHANGE_OVERIDE) {
-                    // radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
-                    if (radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2])) {
-                        Serial.print("Host override. Channel Number: "); Serial.println(radio.getChannelNumber());
-                    } else {
-                        Serial.println("Failed to flash channel number");
-                    }
-
-                } else {
-                    Serial.print("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?");
-                }
-                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
-                Serial.print("$$$");
-            } else if (radio.bufferSerial.numberOfPacketsToSend > 1) {
-                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
-                Serial.print("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?");
-                Serial.print("$$$");
-            }
-        }
+    // Has more than 3 * pollTime passed since last contact from Device?
+    if (radio.commsFailureTimeout()) {
+        radio.processCommsFailure();
     }
 }
 
@@ -109,7 +93,11 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-    //Serial.print("poll time: "); Serial.println(millis() - radio.lastTimeHostHeardFromDevice);
+    // We know that the last packet was just sent
+    if (radio.packetInTXRadioBuffer) {
+        radio.packetInTXRadioBuffer = false;
+    }
+
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
@@ -126,13 +114,16 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     } else {
         // Condition
         if (radio.isWaitingForNewChannelNumberConfirmation) {
-            Serial.print("Channel changed: "); Serial.write(radio.getChannelNumber()); Serial.print("$$$");
+            Serial.print("Success: Channel changed to 0x"); Serial.write(radio.getChannelNumber()); Serial.print("$$$");
             radio.isWaitingForNewChannelNumberConfirmation = false;
+        } else if (radio.isWaitingForNewPollTimeConfirmation) {
+            Serial.println("Success: Poll time set$$$");
+            radio.isWaitingForNewPollTimeConfirmation = false;
         }
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
 
-        sendDataPacket = radio.packetToSend();
+        sendDataPacket = radio.hostPacketToSend();
         if (sendDataPacket == false) {
             if (radio.bufferSerial.numberOfPacketsSent > 0) {
                 radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
@@ -142,10 +133,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        // Serial.print("+");
         radio.sendPacketToDevice(device);
-    } else {
-        // Serial.print(".");
-        RFduinoGZLL.sendToDevice(device,NULL,0);
     }
 }
