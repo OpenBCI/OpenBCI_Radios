@@ -1028,7 +1028,6 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
     // onReceive called with Payload ACK
     return true;
-
 }
 
 /**
@@ -1538,8 +1537,9 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
 
         case ORPM_DEVICE_SERIAL_OVERFLOW:
             Serial.print("Failure: Board RFduino buffer overflowed. Soft reset command sent to Board.$$$");
-            singleCharMsg[0] = 'v';
-            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            // TODO : Decide if this is a good idea
+            // singleCharMsg[0] = 'v';
+            // RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             packetInTXRadioBuffer = true;
             return false;
 
@@ -1620,7 +1620,8 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                 }
                 // Tell the Host we are ready to change channels
                 isWaitingForNewChannelNumber = true;
-                sendRadioMessageToHost(ORPM_CHANGE_CHANNEL_DEVICE_READY);
+                singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
                 pollRefresh();
                 return false;
 
@@ -1632,7 +1633,8 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                 }
                 // Now we have to wait for the new poll time
                 isWaitingForNewPollTime = true;
-                sendRadioMessageToHost(ORPM_CHANGE_POLL_TIME_DEVICE_READY);
+                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_DEVICE_READY;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
                 pollRefresh();
                 return false;
 
@@ -1642,7 +1644,8 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 
             default:
                 // Send the invalid code recieved message
-                sendRadioMessageToHost(ORPM_INVALID_CODE_RECEIVED);
+                singleCharMsg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
+                RFduinoGZLL.sendToHost(singleCharMsg,1);
                 pollRefresh();
                 return false; // Don't send a packet
         }

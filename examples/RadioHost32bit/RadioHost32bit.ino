@@ -118,6 +118,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
             radio.isWaitingForNewChannelNumberConfirmation = false;
         } else if (radio.isWaitingForNewPollTimeConfirmation) {
             Serial.println("Success: Poll time set$$$");
+            radio.isWaitingForNewPollTimeConfirmation = false;
         }
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?

@@ -41,7 +41,8 @@ void loop() {
         radio.pollRefresh();
 
         // Send emergency message to the host
-        radio.sendRadioMessageToHost(ORPM_DEVICE_SERIAL_OVERFLOW);
+        radio.singleCharMsg[0] = (char)ORPM_DEVICE_SERIAL_OVERFLOW;
+        RFduinoGZLL.sendToHost(radio.singleCharMsg,1);
 
         radio.bufferSerial.overflowed = false;
 
