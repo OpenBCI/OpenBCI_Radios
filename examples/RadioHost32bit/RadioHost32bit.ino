@@ -71,43 +71,13 @@ void loop() {
     //  If there is code that shall be sent to device, then we want to move it
     //  into the TX buffer right away, because it will be sent the next time the
     //  device contacts the Host!
-    // TODO: Move code below into Linrary
     if (radio.hostPacketToSend()) {
-        radio.sendPacketToDevice(device);
+        radio.sendPacketToDevice(radio.deviceRadio);
     }
 
-    // TODO: Move code below into Library!
-    if (radio.hasItBeenTooLongSinceHostHeardFromDevice()) {
-        if (radio.isWaitingForNewChannelNumberConfirmation) {
-            radio.isWaitingForNewChannelNumberConfirmation = false;
-            radio.revertToPreviousChannelNumber();
-            Serial.println("Failure: Timeout failed to re-establish connection$$$");
-        } else if (radio.isWaitingForNewPollTimeConfirmation) {
-            radio.isWaitingForNewPollTimeConfirmation = false;
-            Serial.println("Failure: Timeout failed to re-establish connection$$$");
-        } else {
-            if (radio.bufferSerial.numberOfPacketsToSend == 1) {
-                if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_SET) {
-                    Serial.print("Failure: No Board communications; Dongle on channel number: 0x"); Serial.write(radio.getChannelNumber());
-                } else if (radio.bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_CHANNEL_SET_OVERIDE) {
-                    // radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2]);
-                    if (radio.setChannelNumber((uint32_t)radio.bufferSerial.packetBuffer->data[2])) {
-                        Serial.print("Success: Dongle override; channel number: "); Serial.println(radio.getChannelNumber());
-                    } else {
-                        Serial.println("Failure: Could not change Dongle channel number");
-                    }
-
-                } else {
-                    Serial.print("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?");
-                }
-                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
-                Serial.print("$$$");
-            } else if (radio.bufferSerial.numberOfPacketsToSend > 1) {
-                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsToSend);
-                Serial.print("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?");
-                Serial.print("$$$");
-            }
-        }
+    // Has more than 3 * pollTime passed since last contact from Device?
+    if (radio.commsFailureTimeout()) {
+        radio.processCommsFailure();
     }
 }
 
@@ -122,9 +92,18 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-    if (!radio.deviceRadio) radio.deviceRadio = device;
-    if (radio.packetInTXRadioBuffer) radio.packetInTXRadioBuffer = false;
-    //Serial.print("poll time: "); Serial.println(millis() - radio.lastTimeHostHeardFromDevice);
+    // Save the device code
+    if (!radio.deviceRadio) {
+        radio.deviceRadio = device;
+    } else if (radio.deviceRadio != device) {
+        radio.deviceRadio = device;
+    }
+
+    // We know that the last packet was just sent
+    if (radio.packetInTXRadioBuffer) {
+        radio.packetInTXRadioBuffer = false;
+    }
+
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
@@ -149,7 +128,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
 
-        sendDataPacket = radio.packetToSend();
+        sendDataPacket = radio.hostPacketToSend();
         if (sendDataPacket == false) {
             if (radio.bufferSerial.numberOfPacketsSent > 0) {
                 radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
@@ -159,6 +138,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        radio.sendPacketToDevice(device);
+        radio.sendPacketToDevice(radio.deviceRadio);
     }
 }

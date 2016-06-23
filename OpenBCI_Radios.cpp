@@ -397,7 +397,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
 /**
  * @description The first line of defense against a system that has lost it's device
  */
-boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
+boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
     if (millis() > lastTimeHostHeardFromDevice + (pollTime * 4)) {
         return true;
     } else {
@@ -413,6 +413,93 @@ boolean OpenBCI_Radios_Class::hasItBeenTooLongSinceHostHeardFromDevice(void) {
 boolean OpenBCI_Radios_Class::hasStreamPacket(void) {
     return bufferStreamPackets.numberOfPacketsToSend > 0;
 }
+
+boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
+    return packetToSend() && deviceRadio && (packetInTXRadioBuffer == false);
+}
+
+void OpenBCI_Radios_Class::printChannelNumber(char c) {
+    Serial.print("Channel number: 0x"); Serial.write(c);
+}
+
+void OpenBCI_Radios_Class::printCommsTimeout(void) {
+    Serial.print("Communications timeout - Device failed to poll Host");
+}
+
+void OpenBCI_Radios_Class::printEOT(void) {
+    Serial.print("$$$");
+}
+
+void OpenBCI_Radios_Class::printFailure(void) {
+    Serial.print("Failure: ");
+}
+
+void OpenBCI_Radios_Class::printPollTime(char p) {
+    Serial.print("Poll time: "); Serial.write(p);
+}
+
+void OpenBCI_Radios_Class::printSuccess(void) {
+    Serial.print("Success: ");
+}
+
+void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
+    printFailure();
+    printCommsTimeout();
+    printEOT();
+}
+
+void OpenBCI_Radios_Class::processCommsFailure(void) {
+    if (isWaitingForNewChannelNumberConfirmation) {
+        isWaitingForNewChannelNumberConfirmation = false;
+        revertToPreviousChannelNumber();
+        printValidatedCommsTimeout();
+    } else if (isWaitingForNewPollTimeConfirmation) {
+        isWaitingForNewPollTimeConfirmation = false;
+        printValidatedCommsTimeout();
+    } else {
+        switch (bufferSerial.numberOfPacketsToSend) {
+            case 0:
+                break; // Do nothing
+            case 1:
+                processCommsFailureSinglePacket();
+                break;
+            default: // numberOfPacketsToSend > 1
+                bufferCleanSerial(bufferSerial.numberOfPacketsToSend);
+                printValidatedCommsTimeout();
+                break;
+        }
+    }
+}
+
+/**
+ * Used to process the the serial buffer if the device fails to poll the host
+ *  more than 3*pollTime.
+ */
+void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
+    // Switch on the first byte of the first packet.
+    switch (bufferSerial.packetBuffer->data[1]) {
+        case OPENBCI_HOST_CHANNEL_SET:
+            printValidatedCommsTimeout();
+            break;
+        case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
+            if (radio.setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
+                printSuccess();
+                printChannelNumber(getChannelNumber());
+                printEOT();
+            } else {
+                printFailure();
+                Serial.print("Verify channel number is less than 25");
+                printEOT();
+            }
+            break;
+        default:
+            printValidatedCommsTimeout();
+            break;
+    }
+    // Always clear the serial buffer
+    bufferCleanSerial(1);
+}
+
 
 /**
  * @description The host can recieve messaged from the PC/Driver that should
@@ -514,7 +601,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
 /**
  * @description Called from Host's on_recieve if a packet will be sent.
  */
-void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
+void OpenBCI_Radios_Class::sendPacketToDevice(volatile device_t device) {
 
     // When do we process the outbound buffer?
     // SOME RADIO PACKETS NEVER GET SENT! WHAT DO WE DO THEN?
@@ -1558,10 +1645,6 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                 return false; // Don't send a packet
         }
     }
-}
-
-boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
-    return packetToSend() && deviceRadio && (packetInTXRadioBuffer == false);
 }
 
 boolean OpenBCI_Radios_Class::packetToSend(void) {
