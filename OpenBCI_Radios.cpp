@@ -29,6 +29,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     debugMode = false; // Set true if doing dongle-dongle sim
     isHost = false;
     isDevice = false;
+    lastPacketSent = 0;
 }
 
 /**
@@ -289,14 +290,8 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
             }
             return true;
         } else if (rc == 1) {
-            if (isHost) {
-                Serial.println("Error - the flash page is reserved$$$");
-            }
             return false;
         } else if (rc == 2) {
-            if (isHost) {
-                Serial.println("Error - the flash page is used by the sketch$$$");
-            }
             return false;
         }
     }
@@ -329,19 +324,10 @@ boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
         }
         rc = flashWrite(p + 1, pollTime); // Always stored 1 more than chan
         if (rc == 0) {
-            if (isHost) {
-                Serial.println("Poll Number Set$$$");
-            }
             return true;
         } else if (rc == 1) {
-            if (isHost) {
-                Serial.println("Error - the flash page is reserved$$$");
-            }
             return false;
         } else if (rc == 2) {
-            if (isHost) {
-                Serial.println("Error - the flash page is used by the sketch$$$");
-            }
             return false;
         }
     }
@@ -359,14 +345,8 @@ boolean OpenBCI_Radios_Class::flashNonVolatileMemory(void) {
 
     int rc = flashPageErase(PAGE_FROM_ADDRESS(p)); // erases 1k of flash
     if (rc == 1) {
-        if (isHost) {
-            Serial.println("Error - the flash page is reserved$$$");
-        }
         return false;
     } else if (rc == 2) {
-        if (isHost) {
-            Serial.println("Error - the flash page is used by the sketch$$$");
-        }
         return false;
     }
     return true;
@@ -463,7 +443,7 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentP
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
     switch (buffer[1]) {
         // Is the first byte equal to the channel change request?
-        case OPENBCI_HOST_CHANNEL_CHANGE:
+        case OPENBCI_HOST_CHANNEL_SET:
             // Make sure the channel is within bounds (<25)
             if (buffer[2] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
                 // Save requested new channel number
@@ -484,7 +464,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 // Send back error message to the PC/Driver
-                Serial.write(OPENBCI_HOST_CHANNEL_CHANGE_INVALID);
+                Serial.print("Failure: invalid channel number$$$");
                 // Don't send a single char message
                 return ACTION_RADIO_SEND_NONE;
             }
@@ -519,7 +499,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
             Serial.write(OPENBCI_HOST_TIME_SYNC_ACK); Serial.print("$$$");
             return ACTION_RADIO_SEND_NORMAL;
         // Is the byte the command for a host channel number?
-        case OPENBCI_HOST_CHANNEL_QUERY:
+        case OPENBCI_HOST_CHANNEL_GET:
             // Send the channel number back to the driver
             Serial.write(getChannelNumber());
             // Clear the serial buffer
@@ -731,7 +711,7 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
     RFduinoGZLL.sendToHost((char *)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
     // (Payload ACK is received, but still remains in TX Fifo: 1)
     RFduinoGZLL.sendToHost(NULL, 0);
-    // onReceive called with Payload ACK 
+    // onReceive called with Payload ACK
     pollRefresh();
 
     bufferSerial.numberOfPacketsSent++;
@@ -946,9 +926,11 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     pollRefresh();
 
     // Send the packet to the host...
-    // debugT4 = micros();
+    // (Host sends Payload ACK, TX Fifo: 1)
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
-
+    // (Payload ACK is received, but still remains in TX Fifo: 1)
+    RFduinoGZLL.sendToHost(NULL, 0);
+    // onReceive called with Payload ACK
     return true;
 
 }
@@ -1439,7 +1421,7 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
                 RFduinoGZLL.channel = radioChannel;
             } else {
-                // TODO: Need to tell the device to abort
+                // Tell device to switch to the previous channel number
                 radioChannel = getChannelNumber();
                 singleCharMsg[0] = (char)radioChannel;
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
@@ -1451,11 +1433,11 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
             singleCharMsg[0] = (char)pollTime;
             setPollTime(pollTime);
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-
+            isWaitingForNewPollTimeConfirmation = true;
             return false;
 
         case ORPM_DEVICE_SERIAL_OVERFLOW:
-            Serial.print("Device overflow$$$");
+            Serial.print("Failure: Board RFduino buffer overflowed. Soft reset command sent to Board.$$$");
             singleCharMsg[0] = 'v';
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
             return false;
@@ -1612,6 +1594,10 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
             gotLastPacket = true;
             // Mark this as the first packet
             firstPacket = true;
+
+        // If you are getting a packet that has the same packet number, check to
+        //  make sure we are not getting the same
+        } else if (packetNumber == bufferRadio.previousPacketNumber) {
 
         } else {
             if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {

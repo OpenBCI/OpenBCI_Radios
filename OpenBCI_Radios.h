@@ -144,9 +144,6 @@ public:
     volatile Buffer bufferSerial;
     volatile Buffer bufferStreamPackets;
 
-
-
-
     boolean debugMode;
     boolean isDevice;
     boolean isHost;
@@ -154,9 +151,12 @@ public:
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTime;
+    volatile boolean isWaitingForNewPollTimeConfirmation;
     boolean verbosePrintouts;
 
     char    singleCharMsg[1];
+
+    volatile int lastPacketSent;
 
     volatile PacketBuffer *currentPacketBufferSerial;
     volatile PacketBuffer *currentPacketBufferStreamPacket;
