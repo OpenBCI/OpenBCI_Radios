@@ -414,8 +414,13 @@ boolean OpenBCI_Radios_Class::hasStreamPacket(void) {
     return bufferStreamPackets.numberOfPacketsToSend > 0;
 }
 
+/**
+ * @descirption Answers the question of if a packet is ready to be sent. need
+ *  to check and there is no packet in the TX Radio Buffer, there are in fact
+ *  packets to send and enough time has passed.
+ */
 boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
-    return packetToSend() && deviceRadio && (packetInTXRadioBuffer == false);
+    return packetToSend() && (packetInTXRadioBuffer == false);
 }
 
 void OpenBCI_Radios_Class::printChannelNumber(char c) {
@@ -448,6 +453,10 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
     printEOT();
 }
 
+/**
+ * Used to process the the serial buffer if the device fails to poll the host
+ *  more than 3 * pollTime.
+ */
 void OpenBCI_Radios_Class::processCommsFailure(void) {
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
@@ -473,7 +482,8 @@ void OpenBCI_Radios_Class::processCommsFailure(void) {
 
 /**
  * Used to process the the serial buffer if the device fails to poll the host
- *  more than 3*pollTime.
+ *  more than 3 * pollTime. The single packet condition should be parsed because
+ *  it may contain actionable queries to the OpenBCI Radio system.
  */
 void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
     // Switch on the first byte of the first packet.
@@ -601,7 +611,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
 /**
  * @description Called from Host's on_recieve if a packet will be sent.
  */
-void OpenBCI_Radios_Class::sendPacketToDevice(volatile device_t device) {
+void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
     // When do we process the outbound buffer?
     // SOME RADIO PACKETS NEVER GET SENT! WHAT DO WE DO THEN?
@@ -799,9 +809,6 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     // (Host sends Payload ACK, TX Fifo: 1)
     RFduinoGZLL.sendToHost((char *)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
-    // (Payload ACK is received, but still remains in TX Fifo: 1)
-    // TODO: Test the effect of uncommenting the line below
-    // RFduinoGZLL.sendToHost(NULL, 0);
     // onReceive called with Payload ACK
     pollRefresh();
 
@@ -1019,8 +1026,6 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     // Send the packet to the host...
     // (Host sends Payload ACK, TX Fifo: 1)
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
-    // (Payload ACK is received, but still remains in TX Fifo: 1)
-    RFduinoGZLL.sendToHost(NULL, 0);
     // onReceive called with Payload ACK
     return true;
 
@@ -1614,9 +1619,8 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                     Serial.println("R<-CCHR");
                 }
                 // Tell the Host we are ready to change channels
-                singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_DEVICE_READY;
                 isWaitingForNewChannelNumber = true;
-                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                sendRadioMessageToHost(ORPM_CHANGE_CHANNEL_DEVICE_READY);
                 pollRefresh();
                 return false;
 
@@ -1627,9 +1631,8 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                     Serial.println("R<-CCDR");
                 }
                 // Now we have to wait for the new poll time
-                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_DEVICE_READY;
                 isWaitingForNewPollTime = true;
-                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                sendRadioMessageToHost(ORPM_CHANGE_POLL_TIME_DEVICE_READY);
                 pollRefresh();
                 return false;
 
@@ -1639,8 +1642,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 
             default:
                 // Send the invalid code recieved message
-                singleCharMsg[0] = (char)ORPM_INVALID_CODE_RECEIVED;
-                RFduinoGZLL.sendToHost(singleCharMsg,1);
+                sendRadioMessageToHost(ORPM_INVALID_CODE_RECEIVED);
                 pollRefresh();
                 return false; // Don't send a packet
         }

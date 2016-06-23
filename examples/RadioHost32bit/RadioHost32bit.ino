@@ -31,8 +31,9 @@ void setup() {
     //  the line below. This will force a reflash of the non-volitile memory space.
     // radio.flashNonVolatileMemory();
 
-    // Declare the radio mode and channel number. Note this channel is only set on init flash
-    radio.begin(OPENBCI_MODE_HOST,20);
+    // Declare the radio mode and channel number. Note this channel is only
+    //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
+    radio.beginDebug(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
@@ -72,7 +73,7 @@ void loop() {
     //  into the TX buffer right away, because it will be sent the next time the
     //  device contacts the Host!
     if (radio.hostPacketToSend()) {
-        radio.sendPacketToDevice(radio.deviceRadio);
+        radio.sendPacketToDevice(DEVICE0);
     }
 
     // Has more than 3 * pollTime passed since last contact from Device?
@@ -92,13 +93,6 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
-    // Save the device code
-    if (!radio.deviceRadio) {
-        radio.deviceRadio = device;
-    } else if (radio.deviceRadio != device) {
-        radio.deviceRadio = device;
-    }
-
     // We know that the last packet was just sent
     if (radio.packetInTXRadioBuffer) {
         radio.packetInTXRadioBuffer = false;
@@ -138,6 +132,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        radio.sendPacketToDevice(radio.deviceRadio);
+        radio.sendPacketToDevice(device);
     }
 }
