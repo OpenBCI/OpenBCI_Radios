@@ -33,7 +33,7 @@ void setup() {
 
     // Declare the radio mode and channel number. Note this channel is only
     //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
-    radio.beginDebug(OPENBCI_MODE_HOST,20);
+    radio.begin(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
