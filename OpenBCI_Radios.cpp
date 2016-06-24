@@ -594,12 +594,14 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
         // Is the byte the command for time sync set?
         case OPENBCI_HOST_TIME_SYNC:
             // Send a comma back to the PC/Driver
-            Serial.write(OPENBCI_HOST_TIME_SYNC_ACK); Serial.print("$$$");
+            Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
             return ACTION_RADIO_SEND_NORMAL;
         // Is the byte the command for a host channel number?
         case OPENBCI_HOST_CHANNEL_GET:
             // Send the channel number back to the driver
-            Serial.write(getChannelNumber());
+            printSuccess();
+            printChannelNumber(getChannelNumber());
+            printEOT();
             // Clear the serial buffer
             bufferCleanSerial(1);
             return ACTION_RADIO_SEND_NONE;
