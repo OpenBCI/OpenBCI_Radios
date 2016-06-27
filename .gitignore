@@ -4,4 +4,7 @@
 RemoteSystemsTempFiles/
 gmock/
 gtest/
+
+# JavaScript Tests
+npm-debug.log
 node_modules/

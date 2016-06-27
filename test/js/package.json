@@ -9,6 +9,11 @@
   "author": "AJ Keller",
   "license": "ISC",
   "dependencies": {
-    "serialport": "^3.1.2"
+    "openbci-sdk": "^0.3.8",
+    "serialport": "^3.1.2",
+    "streamsearch": "^0.1.2"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0"
   }
 }

@@ -1030,6 +1030,8 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 
     // Send the packet to the host...
     // (Host sends Payload ACK, TX Fifo: 1)
+    // TODO: Remove the debug line below
+    Serial.write(streamPacketBuffer.data[2]); // Sample number
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
     // onReceive called with Payload ACK
     return true;
@@ -1671,11 +1673,12 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
         Serial.print("R<-");Serial.println(packetNumber);
     }
 
-    if (byteIdGetIsStream(data[0])) {
-        // Serial.println("Got stream packet!");
-        // Check to see if there is a packet to send back
-        return packetToSend();
-    }
+    // TODO: Uncomment the line below!
+    // if (byteIdGetIsStream(data[0])) {
+    //     // Serial.println("Got stream packet!");
+    //     // Check to see if there is a packet to send back
+    //     return packetToSend();
+    // }
 
     // This first statment asks if this is a last packet and the previous
     //  packet was 0 too, this is in an effort to get to the point in the
