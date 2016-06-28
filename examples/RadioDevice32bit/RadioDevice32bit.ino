@@ -23,7 +23,7 @@ void setup() {
     // Declare the radio mode and channel number. Note this channel is only
     //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE HOST!
     radio.begin(OPENBCI_MODE_DEVICE,20);
-
+    // The ack counter
     ackCounter = 0;
 }
 
