@@ -4,7 +4,7 @@ var StreamSearch = require('streamsearch');
 var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({verbose:true});
 
 var portNames = {
@@ -18,7 +18,7 @@ var deviceSample = (num) => {
     if (num > 255) {
         num = 0;
     }
-    return new Buffer([0x41, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
+    return new Buffer([0x41, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
 }
 
 var hostSample = (num) => {
@@ -28,8 +28,7 @@ var hostSample = (num) => {
     return new Buffer([0xA0, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
 }
 
-
-var testPacketsToSend = 32;
+var testPacketsToSend = 2000;
 var packetsRecieved = 0;
 var lastPacketNumber = 0;
 var sampleRecievedCounter = 0;
@@ -37,6 +36,7 @@ var badPackets = 0;
 var goodPackets = 0;
 var sampleRate = 250;
 var packetIntervalMS = 1 / sampleRate * 1000;
+var deviceBaudRate = 115200;
 
 var timeoutDuration = 3000 + (testPacketsToSend * packetIntervalMS); // 10 seconds
 
@@ -86,11 +86,14 @@ var startHost = () => {
                 ourBoard.streamStart();
                 streamStartTimeout();
             });
+        // ourBoard.on('rawDataPacket', rawDataPacket => {
+        //     console.log('rawDataPacket',rawDataPacket);
+        // })
         ourBoard.on('sample',function(sample) {
             rawSampleCount++;
             /** Work with sample */
             if (done) return;
-            console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
+            // console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
 
             if (sample.sampleNumber === sampleRecievedCounter) {
                 // console.log(`\tgood`);
@@ -116,7 +119,7 @@ var startHost = () => {
 
 
 deviceSerial = new serialPort.SerialPort(portNames.device, {
-    baudRate: 115200
+    baudRate: deviceBaudRate
 },(err) => {
     if (err) {
         console.log(`error opening device serialport: ${err}`);
@@ -134,7 +137,7 @@ deviceSerial.on('data',(data) => {
     } else if (doesHaveStop(data)) {
         stopStream();
     } else {
-        console.log(`device data: ${data}`);
+        console.log(`device data:`, data);
     }
 
 });

@@ -52,7 +52,7 @@ void loop() {
         radio.bufferSerial.overflowed = false;
 
     } else {
-        while(Serial.available()) { // Is there new serial data available?
+        if (Serial.available()) { // Is there new serial data available?
             char newChar = Serial.read();
             // Mark the last serial as now;
             radio.lastTimeSerialRead = micros();
@@ -78,7 +78,13 @@ void loop() {
             if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
-                radio.sendPacketToHost();
+                if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
+                    radio.sendPacketToHost();
+                    radio.ackCounter++;
+                } else {
+                    Serial.println("Err: dropping packet");
+                }
+
             }
         }
 
@@ -111,9 +117,15 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+<<<<<<< ba7c7ca83020b338687b6a757d6b41b991021b7e
     // packet counter
     if (ackCounter > 0) {
         ackCounter--;
+=======
+    // We just got an ack, so decrease the ack counter if need be
+    if (radio.ackCounter > 0) {
+        radio.ackCounter--;
+>>>>>>> dusting
     }
     // Set send data packet flag to false
     boolean sendDataPacket = false;

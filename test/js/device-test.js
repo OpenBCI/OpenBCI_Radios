@@ -24,7 +24,7 @@ var packetIntervalMS = 1 / sampleRate * 1000;
 var deviceSerial;
 
 deviceSerial = new serialPort.SerialPort(portNames.device, {
-    baudRate: 230400
+    baudRate: 115200
 },(err) => {
     if (err) {
         console.log(`error opening serialport: ${err}`);

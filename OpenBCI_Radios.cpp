@@ -30,6 +30,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     isHost = false;
     isDevice = false;
     lastPacketSent = 0;
+    ackCounter = 0;
 }
 
 /**
@@ -915,83 +916,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             curStreamState = STREAM_STATE_INIT;
 
     }
-
     return newChar;
-    // // The number of bytes for a stream packet!
-    // // Serial.println(newChar);
-    // if (streamPacketBuffer.bytesIn == 32) {
-    //     // Serial.println("T");
-    //     // Is the current char equal to 0xAX where X is 0-F?
-    //     if (isATailByteChar(newChar)) {
-    //         // Is the first char in the stream packet buffer equal to 0x41?
-    //         if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
-    //             // Set flag for stream packet ready to launch
-    //             streamPacketBuffer.readyForLaunch = true;
-    //             // Serial.println("G");
-    //             // increment the number of bytes read in
-    //             streamPacketBuffer.bytesIn++;
-    //
-    //             streamPacketBuffer.typeByte = newChar;
-    //             debugT2 = micros();
-    //             // Serial.print("got stream packet");
-    //         } else {
-    //             // Serial.println("B");
-    //             // Store new char to serial buffer
-    //             if(!storeCharToSerialBuffer(newChar) && verbosePrintouts) {
-    //                 Serial.println("Failed to store char");
-    //             }
-    //             // clear the stream packet buffer
-    //             streamPacketBuffer.bytesIn = 0;
-    //             // Store the new char into the stream packet buffer
-    //             streamPacketBuffer.data[0] = newChar;
-    //             // Increment the number of bytes read in
-    //             streamPacketBuffer.bytesIn++;
-    //         }
-    //     } else {
-    //         // Store new char to serial buffer
-    //         storeCharToSerialBuffer(newChar);
-    //         // clear the stream packet buffer
-    //         streamPacketBuffer.bytesIn = 0;
-    //         // Store the new char into the stream packet buffer
-    //         streamPacketBuffer.data[0] = newChar;
-    //         // Increment the number of bytes read in
-    //         streamPacketBuffer.bytesIn++;
-    //     }
-    //
-    // } else if (streamPacketBuffer.bytesIn < 32) {
-    //     if (streamPacketBuffer.bytesIn == 0) {
-    //         debugT1 = micros();
-    //     }
-    //     // Store to the serial buffer
-    //     storeCharToSerialBuffer(newChar);
-    //     // Store to the stream packet buffer
-    //     streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
-    //     // Increment the number of bytes read in
-    //     streamPacketBuffer.bytesIn++;
-    // } else { // Really should not be hitting here
-    //     if (bufferSerial.overflowed == false) {
-    //         // Serial.println("f");
-    //         // Store the new char to the serial buffer
-    //         storeCharToSerialBuffer(newChar);
-    //         // Is there a stream packet ready for launch?
-    //         if (streamPacketBuffer.readyForLaunch) {
-    //             // Set readt to launch flag to false
-    //             streamPacketBuffer.readyForLaunch = false;
-    //         }
-    //         // Reset bytes in to zero
-    //         streamPacketBuffer.bytesIn = 0;
-    //         // Store the new char into the stream packet buffer
-    //         streamPacketBuffer.data[0] = newChar;
-    //         // Increment the number of bytes read in
-    //         streamPacketBuffer.bytesIn++;
-    //     } // else {discard char}
-    // }
-
-    // Set the last time we heard from the Pic to the current time in micros
-    // lastTimeSerialRead = micros();
-
-    // Send that new char back out!
-    // return newChar;
 }
 
 /**
@@ -1029,11 +954,7 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     pollRefresh();
 
     // Send the packet to the host...
-    // (Host sends Payload ACK, TX Fifo: 1)
-    // TODO: Remove the debug line below
-    Serial.write(streamPacketBuffer.data[2]); // Sample number
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
-    // onReceive called with Payload ACK
     return true;
 }
 
@@ -1674,11 +1595,11 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     }
 
     // TODO: Uncomment the line below!
-    // if (byteIdGetIsStream(data[0])) {
-    //     // Serial.println("Got stream packet!");
-    //     // Check to see if there is a packet to send back
-    //     return packetToSend();
-    // }
+    if (byteIdGetIsStream(data[0])) {
+        Serial.println("Got stream packet!");
+        // Check to see if there is a packet to send back
+        // return packetToSend();
+    }
 
     // This first statment asks if this is a last packet and the previous
     //  packet was 0 too, this is in an effort to get to the point in the
