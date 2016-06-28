@@ -12,6 +12,9 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
 
+volatile int ackCounter;
+int txMaxPackets = 3;
+
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
@@ -20,6 +23,8 @@ void setup() {
     // Declare the radio mode and channel number. Note this channel is only
     //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE HOST!
     radio.begin(OPENBCI_MODE_DEVICE,20);
+
+    ackCounter = 0;
 }
 
 void loop() {
@@ -60,7 +65,12 @@ void loop() {
         if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
             // Has 80uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
-                radio.sendStreamPacketToTheHost();
+                if (ackCounter < txMaxPackets) {
+                    radio.sendStreamPacketToTheHost();
+                } else {
+                    // packet loss incur
+                }
+
             }
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
@@ -101,6 +111,10 @@ void loop() {
  * @param len {int} - The length of the `data` packet
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
+    // packet counter
+    if (ackCounter > 0) {
+        ackCounter--;
+    }
     // Set send data packet flag to false
     boolean sendDataPacket = false;
     // Is the length of the packer equal to one?
