@@ -18,7 +18,7 @@ var deviceSample = (num) => {
     if (num > 255) {
         num = 0;
     }
-    return new Buffer([0x41, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
+    return new Buffer([0x41, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
 }
 
 var hostSample = (num) => {
@@ -28,13 +28,13 @@ var hostSample = (num) => {
     return new Buffer([0xA0, num, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
 }
 
-var testPacketsToSend = 2000;
+var testPacketsToSend = 50;
 var packetsRecieved = 0;
 var lastPacketNumber = 0;
 var sampleRecievedCounter = 0;
 var badPackets = 0;
 var goodPackets = 0;
-var sampleRate = 250;
+var sampleRate = 25;
 var packetIntervalMS = 1 / sampleRate * 1000;
 var deviceBaudRate = 115200;
 
@@ -86,9 +86,9 @@ var startHost = () => {
                 ourBoard.streamStart();
                 streamStartTimeout();
             });
-        // ourBoard.on('rawDataPacket', rawDataPacket => {
-        //     console.log('rawDataPacket',rawDataPacket);
-        // })
+        ourBoard.on('rawDataPacket', rawDataPacket => {
+            console.log('rawDataPacket',rawDataPacket);
+        })
         ourBoard.on('sample',function(sample) {
             rawSampleCount++;
             /** Work with sample */
@@ -137,7 +137,7 @@ deviceSerial.on('data',(data) => {
     } else if (doesHaveStop(data)) {
         stopStream();
     } else {
-        console.log(`device data:`, data);
+        console.log(`device data:`, data.toString());
     }
 
 });

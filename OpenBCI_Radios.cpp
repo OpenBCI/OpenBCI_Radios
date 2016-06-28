@@ -1594,11 +1594,10 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
         Serial.print("R<-");Serial.println(packetNumber);
     }
 
-    // TODO: Uncomment the line below!
     if (byteIdGetIsStream(data[0])) {
-        Serial.println("Got stream packet!");
+        // Serial.println("Got stream packet!");
         // Check to see if there is a packet to send back
-        // return packetToSend();
+        return packetToSend();
     }
 
     // This first statment asks if this is a last packet and the previous
