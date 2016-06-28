@@ -144,14 +144,14 @@ public:
     boolean     thereIsDataInSerialBuffer(void);
     void        writeBufferToSerial(char *buffer,int length);
     void        writeTheHostsRadioBufferToThePC(void);
-    void        writeTheHostsStreamPacketBufferToThePC(void);
+    // void        writeTheHostsStreamPacketBufferToThePC(void);
     void        writeStreamPacket(volatile char *data);
 
     // VARIABLES
     volatile StreamPacketBuffer streamPacketBuffer;
     volatile BufferRadio bufferRadio;
     volatile Buffer bufferSerial;
-    volatile Buffer bufferStreamPackets;
+    // volatile Buffer bufferStreamPackets;
 
     boolean debugMode;
     boolean isDevice;
@@ -164,10 +164,14 @@ public:
     boolean verbosePrintouts;
 
     char    singleCharMsg[1];
+    volatile char ringBuffer[OPENBCI_BUFFER_LENGTH];
 
     volatile boolean packetInTXRadioBuffer;
 
+    int ringBufferRead;
     volatile int lastPacketSent;
+    volatile int ringBufferWrite;
+    volatile int ringBufferNumBytes;
 
     volatile PacketBuffer *currentPacketBufferSerial;
     volatile PacketBuffer *currentPacketBufferStreamPacket;
@@ -175,6 +179,7 @@ public:
     STREAM_STATE curStreamState;
 
     uint8_t radioMode;
+    volatile uint8_t ackCounter;
 
     unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;

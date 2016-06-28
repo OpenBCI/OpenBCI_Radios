@@ -12,9 +12,6 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
 
-volatile int ackCounter;
-int txMaxPackets = 3;
-
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
@@ -23,8 +20,6 @@ void setup() {
     // Declare the radio mode and channel number. Note this channel is only
     //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE HOST!
     radio.begin(OPENBCI_MODE_DEVICE,20);
-
-    ackCounter = 0;
 }
 
 void loop() {
@@ -52,7 +47,7 @@ void loop() {
         radio.bufferSerial.overflowed = false;
 
     } else {
-        while(Serial.available()) { // Is there new serial data available?
+        if (Serial.available()) { // Is there new serial data available?
             char newChar = Serial.read();
             // Mark the last serial as now;
             radio.lastTimeSerialRead = micros();
@@ -65,7 +60,7 @@ void loop() {
         if (radio.isAStreamPacketWaitingForLaunch()) { // Is there a stream packet waiting to get sent to the Host?
             // Has 80uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
-                if (ackCounter < txMaxPackets) {
+                if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
                     radio.sendStreamPacketToTheHost();
                 } else {
                     // packet loss incur
@@ -78,7 +73,13 @@ void loop() {
             if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
-                radio.sendPacketToHost();
+                if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
+                    radio.sendPacketToHost();
+                    radio.ackCounter++;
+                } else {
+                    Serial.println("Err: dropping packet");
+                }
+
             }
         }
 
@@ -112,8 +113,8 @@ void loop() {
  */
 void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     // packet counter
-    if (ackCounter > 0) {
-        ackCounter--;
+    if (radio.ackCounter > 0) {
+        radio.ackCounter--;
     }
     // Set send data packet flag to false
     boolean sendDataPacket = false;

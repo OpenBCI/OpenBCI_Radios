@@ -22,6 +22,7 @@ void go() {
 
     testProcessChar();
     testProcessRadioChar();
+    testByteIdMakeStreamPacketType();
 
     test.end();
 }
@@ -266,6 +267,15 @@ void testPacketToSend() {
     // Re ask if there is something to send
     test.assertEqualBoolean(radio.packetToSend(),true,"Enough time passed");
 
+}
+
+void testByteIdMakeStreamPacketType() {
+    test.describe("byteIdMakeStreamPacketType");
+
+    radio.streamPacketBuffer.typeByte = 0xC5;
+    test.assertEqualChar(radio.byteIdMakeStreamPacketType(),5,"Can get type 5");
+
+    testProcessChar_CleanUp();
 }
 
 void writeAStreamPacketToProcessChar(char endByte) {
