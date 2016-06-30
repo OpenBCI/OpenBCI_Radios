@@ -86,13 +86,11 @@ var startHost = () => {
                 ourBoard.streamStart();
                 streamStartTimeout();
             });
-        ourBoard.on('rawDataPacket', rawDataPacket => {
-            console.log('rawDataPacket',rawDataPacket);
-        })
+        // ourBoard.on('rawDataPacket', rawDataPacket => {
+        //     console.log('rawDataPacket',rawDataPacket);
+        // })
         ourBoard.on('sample',function(sample) {
             rawSampleCount++;
-            /** Work with sample */
-            if (done) return;
             // console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
 
             if (sample.sampleNumber === sampleRecievedCounter) {

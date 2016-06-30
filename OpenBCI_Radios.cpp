@@ -496,7 +496,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
             printValidatedCommsTimeout();
             break;
         case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
-            if (radio.setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
+            if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
                 printSuccess();
                 printChannelNumber(getChannelNumber());
                 printEOT();
@@ -505,6 +505,12 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 Serial.print("Verify channel number is less than 25");
                 printEOT();
             }
+            break;
+        case OPENBCI_HOST_CHANNEL_GET:
+            printFailure();
+            Serial.print("Host on ");
+            printChannelNumber(getChannelNumber());
+            printEOT();
             break;
         default:
             printValidatedCommsTimeout();
@@ -578,6 +584,17 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
             // Clear the serial buffer
             bufferCleanSerial(1);
             return ACTION_RADIO_SEND_SINGLE_CHAR;
+        case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
+            if (radio.setChannelNumber((uint32_t)buffer[2])) {
+                printSuccess();
+                Serial.print("Host override - ");
+                printChannelNumber(getChannelNumber());
+                printEOT();
+            } else {
+                printFailure();
+                Serial.print("Verify channel number is less than 25");
+                printEOT();
+            }
         default:
             return ACTION_RADIO_SEND_NORMAL;
     }
@@ -604,6 +621,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
         case OPENBCI_HOST_CHANNEL_GET:
             // Send the channel number back to the driver
             printSuccess();
+            Serial.print("Host and device on ");
             printChannelNumber(getChannelNumber());
             printEOT();
             // Clear the serial buffer
@@ -691,7 +709,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 void OpenBCI_Radios_Class::writeStreamPacket(volatile char *data) {
 
     // Write the start byte
-    Serial.write(OPENBCI_STREAM_BYTE_START);
+    Serial.write(0xA0);
 
     // Write the data
     int positionToStopReading = OPENBCI_MAX_DATA_BYTES_IN_PACKET + 1; // because byteId
@@ -1004,7 +1022,6 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
                 // Increment the write position
                 currentPacketBufferSerial->positionWrite++;
                 // End the subroutine with success
-                // Serial.println("NXP");
                 return true;
             }
         }
@@ -1707,7 +1724,12 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
-        bufferAddStreamPacket(data,len);
+        Serial.write(0xA0);
+        for (int i = 1; i < len; i++) {
+            Serial.write(data[i]);
+        }
+        Serial.write(outputGetStopByteFromByteId(data[0]));
+        // bufferAddStreamPacket(data,len);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }

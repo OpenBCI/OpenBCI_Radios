@@ -59,7 +59,8 @@ void loop() {
     }
 
     // Is there new data from the PC/Driver?
-    if (radio.didPCSendDataToHost()) {
+    // While loop to read successive bytes
+    while (radio.didPCSendDataToHost()) {
         char newChar = Serial.read();
         // Save the last time serial data was read to now
         radio.lastTimeSerialRead = micros();
@@ -116,10 +117,14 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     } else {
         // Condition
         if (radio.isWaitingForNewChannelNumberConfirmation) {
-            Serial.print("Success: Channel changed to 0x"); Serial.write(radio.getChannelNumber()); Serial.print("$$$");
+            radio.printSuccess();
+            radio.printChannelNumber(radio.getChannelNumber());
+            radio.printEOT();
             radio.isWaitingForNewChannelNumberConfirmation = false;
         } else if (radio.isWaitingForNewPollTimeConfirmation) {
-            Serial.println("Success: Poll time set$$$");
+            radio.printSuccess();
+            radio.printPollTime(radio.getPollTime());
+            radio.printEOT();
             radio.isWaitingForNewPollTimeConfirmation = false;
         }
         // Are there packets waiting to be sent and was the Serial port read
