@@ -30,6 +30,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     isHost = false;
     isDevice = false;
     lastPacketSent = 0;
+    ackCounter = 0;
 }
 
 /**
@@ -495,7 +496,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
             printValidatedCommsTimeout();
             break;
         case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
-            if (radio.setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
+            if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
                 printSuccess();
                 printChannelNumber(getChannelNumber());
                 printEOT();
@@ -504,6 +505,12 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 Serial.print("Verify channel number is less than 25");
                 printEOT();
             }
+            break;
+        case OPENBCI_HOST_CHANNEL_GET:
+            printFailure();
+            Serial.print("Host on ");
+            printChannelNumber(getChannelNumber());
+            printEOT();
             break;
         default:
             printValidatedCommsTimeout();
@@ -577,6 +584,17 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
             // Clear the serial buffer
             bufferCleanSerial(1);
             return ACTION_RADIO_SEND_SINGLE_CHAR;
+        case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
+            if (radio.setChannelNumber((uint32_t)buffer[2])) {
+                printSuccess();
+                Serial.print("Host override - ");
+                printChannelNumber(getChannelNumber());
+                printEOT();
+            } else {
+                printFailure();
+                Serial.print("Verify channel number is less than 25");
+                printEOT();
+            }
         default:
             return ACTION_RADIO_SEND_NORMAL;
     }
@@ -603,6 +621,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
         case OPENBCI_HOST_CHANNEL_GET:
             // Send the channel number back to the driver
             printSuccess();
+            Serial.print("Host and device on ");
             printChannelNumber(getChannelNumber());
             printEOT();
             // Clear the serial buffer
@@ -690,7 +709,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 void OpenBCI_Radios_Class::writeStreamPacket(volatile char *data) {
 
     // Write the start byte
-    Serial.write(OPENBCI_STREAM_BYTE_START);
+    Serial.write(0xA0);
 
     // Write the data
     int positionToStopReading = OPENBCI_MAX_DATA_BYTES_IN_PACKET + 1; // because byteId
@@ -915,83 +934,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
             curStreamState = STREAM_STATE_INIT;
 
     }
-
     return newChar;
-    // // The number of bytes for a stream packet!
-    // // Serial.println(newChar);
-    // if (streamPacketBuffer.bytesIn == 32) {
-    //     // Serial.println("T");
-    //     // Is the current char equal to 0xAX where X is 0-F?
-    //     if (isATailByteChar(newChar)) {
-    //         // Is the first char in the stream packet buffer equal to 0x41?
-    //         if (streamPacketBuffer.data[0] == OPENBCI_STREAM_PACKET_HEAD) {
-    //             // Set flag for stream packet ready to launch
-    //             streamPacketBuffer.readyForLaunch = true;
-    //             // Serial.println("G");
-    //             // increment the number of bytes read in
-    //             streamPacketBuffer.bytesIn++;
-    //
-    //             streamPacketBuffer.typeByte = newChar;
-    //             debugT2 = micros();
-    //             // Serial.print("got stream packet");
-    //         } else {
-    //             // Serial.println("B");
-    //             // Store new char to serial buffer
-    //             if(!storeCharToSerialBuffer(newChar) && verbosePrintouts) {
-    //                 Serial.println("Failed to store char");
-    //             }
-    //             // clear the stream packet buffer
-    //             streamPacketBuffer.bytesIn = 0;
-    //             // Store the new char into the stream packet buffer
-    //             streamPacketBuffer.data[0] = newChar;
-    //             // Increment the number of bytes read in
-    //             streamPacketBuffer.bytesIn++;
-    //         }
-    //     } else {
-    //         // Store new char to serial buffer
-    //         storeCharToSerialBuffer(newChar);
-    //         // clear the stream packet buffer
-    //         streamPacketBuffer.bytesIn = 0;
-    //         // Store the new char into the stream packet buffer
-    //         streamPacketBuffer.data[0] = newChar;
-    //         // Increment the number of bytes read in
-    //         streamPacketBuffer.bytesIn++;
-    //     }
-    //
-    // } else if (streamPacketBuffer.bytesIn < 32) {
-    //     if (streamPacketBuffer.bytesIn == 0) {
-    //         debugT1 = micros();
-    //     }
-    //     // Store to the serial buffer
-    //     storeCharToSerialBuffer(newChar);
-    //     // Store to the stream packet buffer
-    //     streamPacketBuffer.data[streamPacketBuffer.bytesIn] = newChar;
-    //     // Increment the number of bytes read in
-    //     streamPacketBuffer.bytesIn++;
-    // } else { // Really should not be hitting here
-    //     if (bufferSerial.overflowed == false) {
-    //         // Serial.println("f");
-    //         // Store the new char to the serial buffer
-    //         storeCharToSerialBuffer(newChar);
-    //         // Is there a stream packet ready for launch?
-    //         if (streamPacketBuffer.readyForLaunch) {
-    //             // Set readt to launch flag to false
-    //             streamPacketBuffer.readyForLaunch = false;
-    //         }
-    //         // Reset bytes in to zero
-    //         streamPacketBuffer.bytesIn = 0;
-    //         // Store the new char into the stream packet buffer
-    //         streamPacketBuffer.data[0] = newChar;
-    //         // Increment the number of bytes read in
-    //         streamPacketBuffer.bytesIn++;
-    //     } // else {discard char}
-    // }
-
-    // Set the last time we heard from the Pic to the current time in micros
-    // lastTimeSerialRead = micros();
-
-    // Send that new char back out!
-    // return newChar;
 }
 
 /**
@@ -1029,9 +972,7 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
     pollRefresh();
 
     // Send the packet to the host...
-    // (Host sends Payload ACK, TX Fifo: 1)
     RFduinoGZLL.sendToHost((char *)streamPacketBuffer.data, OPENBCI_MAX_PACKET_SIZE_BYTES); // 32 bytes
-    // onReceive called with Payload ACK
     return true;
 }
 
@@ -1081,7 +1022,6 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
                 // Increment the write position
                 currentPacketBufferSerial->positionWrite++;
                 // End the subroutine with success
-                // Serial.println("NXP");
                 return true;
             }
         }
@@ -1148,38 +1088,7 @@ void OpenBCI_Radios_Class::bufferAddStreamPacket(volatile char *data, int length
     ringBuffer[ringBufferWrite] = outputGetStopByteFromByteId(data[0]);
     ringBufferWrite++;
     ringBufferNumBytes += OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES;
-    // Serial.print("Write pos: "); Serial.println(ringBufferWrite);
-    // Serial.print("Num bytes: "); Serial.println(ringBufferNumBytes);
-    // Serial.print("Read pos: "); Serial.println(ringBufferRead);
-    // Set the number of packets to 1 initally, it will only grow
-    // if (bufferStreamPackets.numberOfPacketsToSend == 0) {
-    //     bufferStreamPackets.numberOfPacketsToSend = 1;
-    // }
-    //
-    // for (int i = 0; i < length; i++) {
-    //     // If positionWrite >= OPENBCI_BUFFER_LENGTH need to wrap around
-    //     if (currentPacketBufferStreamPacket->positionWrite >= OPENBCI_MAX_PACKET_SIZE_BYTES) {
-    //         // Go to the next packet
-    //         bufferStreamPackets.numberOfPacketsToSend++;
-    //         // Did we run out of buffers?
-    //         if (bufferStreamPackets.numberOfPacketsToSend >= OPENBCI_MAX_NUMBER_OF_BUFFERS) {
-    //             // this is bad, so something, throw error, explode... idk yet...
-    //             //  for now set currentPacketBufferSerial to NULL
-    //             currentPacketBufferStreamPacket = NULL;
-    //         } else {
-    //             // move the pointer 1 struct
-    //             currentPacketBufferStreamPacket++;
-    //         }
-    //     }
-    //     // We are only going to mess with the current packet if it's not null
-    //     if (currentPacketBufferStreamPacket) {
-    //         // Store the byte to current buffer at write postition
-    //         currentPacketBufferStreamPacket->data[currentPacketBufferStreamPacket->positionWrite] = data[i];
-    //
-    //         // Increment currentPacketBufferSerial write postion
-    //         currentPacketBufferStreamPacket->positionWrite++;
-    //     }
-    // }
+
 }
 
 /**
@@ -1815,7 +1724,12 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
-        bufferAddStreamPacket(data,len);
+        Serial.write(0xA0);
+        for (int i = 1; i < len; i++) {
+            Serial.write(data[i]);
+        }
+        Serial.write(outputGetStopByteFromByteId(data[0]));
+        // bufferAddStreamPacket(data,len);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }
