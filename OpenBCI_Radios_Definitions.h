@@ -21,7 +21,7 @@
 
 
 #define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
-#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 87 // Slightly longer than it takes to send a serial byte at 115200
+#define OPENBCI_TIMEOUT_PACKET_STREAM_uS 88 // Slightly longer than it takes to send a serial byte at 115200
 #define OPENBCI_TIMEOUT_PACKET_POLL_MS 80 // Poll time out length for sending null packet from device to host
 
 // Stream byte stuff
@@ -29,7 +29,7 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH 500
+#define OPENBCI_BUFFER_LENGTH 528
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
@@ -72,6 +72,7 @@
 #define ORPM_CHANGE_CHANNEL_DEVICE_READY 0x06 //
 #define ORPM_CHANGE_POLL_TIME_HOST_REQUEST 0x07 //
 #define ORPM_CHANGE_POLL_TIME_DEVICE_READY 0x08 //
+#define ORPM_CHANGE_POLL_TIME_GET 0x09 //
 
 // Used to determine what to send after a proccess out bound buffer
 #define ACTION_RADIO_SEND_NONE 0x00
@@ -88,16 +89,26 @@
 // Special host codes
 #define OPENBCI_HOST_TIME_SYNC '<'
 #define OPENBCI_HOST_TIME_SYNC_ACK ','
-#define OPENBCI_HOST_CHANNEL_GET 0xF0
-#define OPENBCI_HOST_CHANNEL_SET 0xF1
-#define OPENBCI_HOST_CHANNEL_SET_OVERIDE 0xF2
-#define OPENBCI_HOST_POLL_TIME_GET 0xF3 // TODO: Implement
-#define OPENBCI_HOST_POLL_TIME_SET 0xF4
+
+// Commands
+#define OPENBCI_HOST_PRIVATE_CMD_KEY 0xF0
+#define OPENBCI_HOST_CMD_CHANNEL_GET 0x00
+#define OPENBCI_HOST_CMD_CHANNEL_SET 0x01
+#define OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE 0x02
+#define OPENBCI_HOST_CMD_POLL_TIME_GET 0x03 // TODO: Implement
+#define OPENBCI_HOST_CMD_POLL_TIME_SET 0x04
+#define OPENBCI_HOST_CMD_BAUD_DEFAULT 0x05
+#define OPENBCI_HOST_CMD_BAUD_FAST 0x06
+#define OPENBCI_HOST_CMD_SYS_UP 0x07
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011
 #define OPENBCI_PACKET_TYPE_STANDARD     = 0; // 0000
 #define OPENBCI_PACKET_TYPE_TIME_SYNCED  = 1; // 0001
 #define OPENBCI_PACKET_TYPE_USER_DEFINED = 2; // 0010
+
+// Possible baud rates
+#define OPENBCI_BAUD_RATE_DEFAULT 115200
+#define OPENBCI_BAUD_RATE_FAST 230400
 
 #endif

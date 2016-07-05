@@ -146,7 +146,7 @@ void OpenBCI_Radios_Class::configureDevice(void) {
         pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
         pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
         digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
-        Serial.begin(115200);
+        Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
         // END: To run host as device
     } else {
         // BEGIN: To run host normally
@@ -155,7 +155,7 @@ void OpenBCI_Radios_Class::configureDevice(void) {
         //    rx and tx, where:
         //      rx = GPIO3
         //      tx = GPIO2
-        Serial.begin(115200, 3, 2);
+        Serial.begin(OPENBCI_BAUD_RATE_DEFAULT, 3, 2);
         // END: To run host normally
     }
 
@@ -188,7 +188,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
 
     // Open the Serial connection
-    Serial.begin(115200);
+    Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
 
     isHost = true;
     packetInTXRadioBuffer = false;
@@ -402,7 +402,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 4)) {
+    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 3)) {
         return true;
     } else {
         return false;
@@ -430,6 +430,11 @@ boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
 void OpenBCI_Radios_Class::printChannelNumber(char c) {
     Serial.print("Channel number: 0x"); Serial.write(c);
 }
+
+void OpenBCI_Radios_Class::printBaudRateChangeTo(int b) {
+    Serial.print("Switch your baud rate to ");
+    Serial.print(b);
+};
 
 void OpenBCI_Radios_Class::printCommsTimeout(void) {
     Serial.print("Communications timeout - Device failed to poll Host");
@@ -490,31 +495,66 @@ void OpenBCI_Radios_Class::processCommsFailure(void) {
  *  it may contain actionable queries to the OpenBCI Radio system.
  */
 void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
-    // Switch on the first byte of the first packet.
-    switch (bufferSerial.packetBuffer->data[1]) {
-        case OPENBCI_HOST_CHANNEL_SET:
-            printValidatedCommsTimeout();
-            break;
-        case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
-            if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[2])) {
-                printSuccess();
+    // The first byte needs to match the command key to act on it
+    if (bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+        // Switch on the first byte of the first packet.
+        switch (bufferSerial.packetBuffer->data[2]) {
+            case OPENBCI_HOST_CMD_CHANNEL_SET:
+                printValidatedCommsTimeout();
+                break;
+            case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
+                if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[3])) {
+                    printSuccess();
+                    printChannelNumber(getChannelNumber());
+                    printEOT();
+                } else {
+                    printFailure();
+                    Serial.print("Verify channel number is less than 25");
+                    printEOT();
+                }
+                break;
+            case OPENBCI_HOST_CMD_CHANNEL_GET:
+            Serial.println("Taco");
+                printFailure();
+                Serial.print("Host on ");
                 printChannelNumber(getChannelNumber());
                 printEOT();
-            } else {
-                printFailure();
-                Serial.print("Verify channel number is less than 25");
+                break;
+            case OPENBCI_HOST_CMD_BAUD_DEFAULT:
+                printSuccess();
+                printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
                 printEOT();
-            }
-            break;
-        case OPENBCI_HOST_CHANNEL_GET:
-            printFailure();
-            Serial.print("Host on ");
-            printChannelNumber(getChannelNumber());
-            printEOT();
-            break;
-        default:
-            printValidatedCommsTimeout();
-            break;
+                // Close the current serial connection
+                Serial.end();
+                // Open the Serial connection
+                Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+                break;
+            case OPENBCI_HOST_CMD_BAUD_FAST:
+                printSuccess();
+                printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+                printEOT();
+                // Close the current serial connection
+                Serial.end();
+                // Open the Serial connection
+                Serial.begin(OPENBCI_BAUD_RATE_FAST);
+                break;
+            case OPENBCI_HOST_CMD_POLL_TIME_GET:
+                printFailure();
+                Serial.print("Could not get poll time");
+                printEOT();
+                break;
+            case OPENBCI_HOST_CMD_SYS_UP:
+                // We were not able to get polled by the Device
+                printFailure();
+                Serial.print("System is Down");
+                printEOT();
+                break;
+            default:
+                printValidatedCommsTimeout();
+                break;
+        }
+    } else {
+        printValidatedCommsTimeout();
     }
     // Always clear the serial buffer
     bufferCleanSerial(1);
@@ -530,9 +570,9 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
 byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
-    if (currentPacketBuffer->positionWrite == 2) {
-        return processOutboundBufferCharSingle(currentPacketBuffer->data[1]);
-    } else if (currentPacketBuffer->positionWrite == 3) {
+    if (currentPacketBuffer->positionWrite == 3) {
+        return processOutboundBufferCharSingle(currentPacketBuffer->data);
+    } else if (currentPacketBuffer->positionWrite == 4) {
         return processOutboundBufferCharDouble(currentPacketBuffer->data);
     } else {
         return ACTION_RADIO_SEND_NORMAL;
@@ -549,54 +589,59 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentP
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
-    switch (buffer[1]) {
-        // Is the first byte equal to the channel change request?
-        case OPENBCI_HOST_CHANNEL_SET:
-            // Make sure the channel is within bounds (<25)
-            if (buffer[2] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
-                // Save requested new channel number
-                radioChannel = (uint32_t)buffer[2];
-                // Save the previous channel number
-                previousRadioChannel = getChannelNumber();
-                // Send a channel change request to the device
-                singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
-                // DEBUG PRINT
-                if (verbosePrintouts) {
-                    Serial.print("N_CHAN: "); Serial.println((uint32_t)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[2]);
+    // The first byte needs to match the command key to act on it
+    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+        switch (buffer[2]) {
+            // Is the first byte equal to the channel change request?
+            case OPENBCI_HOST_CMD_CHANNEL_SET:
+                // Make sure the channel is within bounds (<25)
+                if (buffer[3] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+                    // Save requested new channel number
+                    radioChannel = (uint32_t)buffer[3];
+                    // Save the previous channel number
+                    previousRadioChannel = getChannelNumber();
+                    // Send a channel change request to the device
+                    singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
+                    // DEBUG PRINT
+                    if (verbosePrintouts) {
+                        Serial.print("N_CHAN: "); Serial.println((uint32_t)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[2]);
+                    }
+                    // Clear the serial buffer
+                    bufferCleanSerial(1);
+                    // Send a single char message
+                    return ACTION_RADIO_SEND_SINGLE_CHAR;
+                } else {
+                    // Clear the serial buffer
+                    bufferCleanSerial(1);
+                    // Send back error message to the PC/Driver
+                    Serial.print("Failure: invalid channel number$$$");
+                    // Don't send a single char message
+                    return ACTION_RADIO_SEND_NONE;
                 }
+            case OPENBCI_HOST_CMD_POLL_TIME_SET:
+                // Save the new poll time
+                pollTime = (uint32_t)buffer[3];
+                // Send a time change request to the device
+                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
                 // Clear the serial buffer
                 bufferCleanSerial(1);
-                // Send a single char message
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
-            } else {
-                // Clear the serial buffer
-                bufferCleanSerial(1);
-                // Send back error message to the PC/Driver
-                Serial.print("Failure: invalid channel number$$$");
-                // Don't send a single char message
-                return ACTION_RADIO_SEND_NONE;
-            }
-        case OPENBCI_HOST_POLL_TIME_SET:
-            // Save the new poll time
-            pollTime = (uint32_t)buffer[2];
-            // Send a time change request to the device
-            singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
-            // Clear the serial buffer
-            bufferCleanSerial(1);
-            return ACTION_RADIO_SEND_SINGLE_CHAR;
-        case OPENBCI_HOST_CHANNEL_SET_OVERIDE:
-            if (radio.setChannelNumber((uint32_t)buffer[2])) {
-                printSuccess();
-                Serial.print("Host override - ");
-                printChannelNumber(getChannelNumber());
-                printEOT();
-            } else {
-                printFailure();
-                Serial.print("Verify channel number is less than 25");
-                printEOT();
-            }
-        default:
-            return ACTION_RADIO_SEND_NORMAL;
+            case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
+                if (radio.setChannelNumber((uint32_t)buffer[3])) {
+                    printSuccess();
+                    Serial.print("Host override - ");
+                    printChannelNumber(getChannelNumber());
+                    printEOT();
+                } else {
+                    printFailure();
+                    Serial.print("Verify channel number is less than 25");
+                    printEOT();
+                }
+            default:
+                return ACTION_RADIO_SEND_NORMAL;
+        }
+    } else {
+        return ACTION_RADIO_SEND_NORMAL;
     }
 }
 
@@ -609,26 +654,65 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
-byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
-    // Decode the char
-    switch (aChar) {
-        // Is the byte the command for time sync set?
-        case OPENBCI_HOST_TIME_SYNC:
-            // Send a comma back to the PC/Driver
-            Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
-            return ACTION_RADIO_SEND_NORMAL;
-        // Is the byte the command for a host channel number?
-        case OPENBCI_HOST_CHANNEL_GET:
-            // Send the channel number back to the driver
-            printSuccess();
-            Serial.print("Host and device on ");
-            printChannelNumber(getChannelNumber());
-            printEOT();
-            // Clear the serial buffer
-            bufferCleanSerial(1);
-            return ACTION_RADIO_SEND_NONE;
-        default:
-            return ACTION_RADIO_SEND_NORMAL;
+byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer) {
+    // The first byte needs to match the command key to act on it
+    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+        // Decode the char
+        switch (buffer[2]) {
+            // Is the byte the command for time sync set?
+            case OPENBCI_HOST_TIME_SYNC:
+                // Send a comma back to the PC/Driver
+                Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
+                return ACTION_RADIO_SEND_NORMAL;
+            // Is the byte the command for a host channel number?
+            case OPENBCI_HOST_CMD_CHANNEL_GET:
+                // Send the channel number back to the driver
+                printSuccess();
+                Serial.print("Host and device on ");
+                printChannelNumber(getChannelNumber());
+                printEOT();
+                // Clear the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
+            case OPENBCI_HOST_CMD_BAUD_DEFAULT:
+                printSuccess();
+                printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
+                printEOT();
+                // Close the current serial connection
+                Serial.end();
+                // Open the Serial connection
+                Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+                // Clear the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
+            case OPENBCI_HOST_CMD_BAUD_FAST:
+                printSuccess();
+                printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+                printEOT();
+                // Close the current serial connection
+                Serial.end();
+                // Open the Serial connection
+                Serial.begin(OPENBCI_BAUD_RATE_FAST);
+                // Clear the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
+            case OPENBCI_HOST_CMD_SYS_UP:
+                printSuccess();
+                printEOT();
+                // Clear the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
+            case OPENBCI_HOST_CMD_POLL_TIME_GET:
+                // Send a time change request to the device
+                singleCharMsg[0] = (char)OPENBCI_HOST_CMD_POLL_TIME_GET;
+                // Clean the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_SINGLE_CHAR;
+            default:
+                return ACTION_RADIO_SEND_NORMAL;
+        }
+    } else {
+        return ACTION_RADIO_SEND_NORMAL;
     }
 }
 
@@ -1569,6 +1653,26 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
                 pollRefresh();
                 return false;
 
+            case ORPM_CHANGE_POLL_TIME_GET:
+                // If there are no packets to send
+                storeCharToSerialBuffer('S');
+                storeCharToSerialBuffer('u');
+                storeCharToSerialBuffer('c');
+                storeCharToSerialBuffer('c');
+                storeCharToSerialBuffer('e');
+                storeCharToSerialBuffer('s');
+                storeCharToSerialBuffer('s');
+                storeCharToSerialBuffer(':');
+                storeCharToSerialBuffer(' ');
+                storeCharToSerialBuffer('0');
+                storeCharToSerialBuffer('x');
+                storeCharToSerialBuffer((char)getPollTime());
+                storeCharToSerialBuffer('$');
+                storeCharToSerialBuffer('$');
+                storeCharToSerialBuffer('$');
+                pollRefresh();
+                return true;
+
             case ORPM_INVALID_CODE_RECEIVED:
                 // Working theory
                 return false;
@@ -1724,12 +1828,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
-        Serial.write(0xA0);
-        for (int i = 1; i < len; i++) {
-            Serial.write(data[i]);
-        }
-        Serial.write(outputGetStopByteFromByteId(data[0]));
-        // bufferAddStreamPacket(data,len);
+        bufferAddStreamPacket(data,len);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }

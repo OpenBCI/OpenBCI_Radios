@@ -1,0 +1,475 @@
+OpenBCI Endurance Test
+Push The World LLC
+START!
+Date and time: 2016-07-05 17:53:50
+
+Summary:
+	Total Packets: 0
+		Good Packets: 0
+		Bad Packets: 0
+	Date and time: 2016-07-05 17:53:53
+
+
+
+Summary:
+	Total Packets: 15000
+		Good Packets: 15000
+		Bad Packets: 0
+	Date and time: 2016-07-05 17:54:52
+
+err: expected 136 got 137 at 2016-07-05 17:55:23
+err: expected 118 got 120 at 2016-07-05 17:55:51
+
+
+Summary:
+	Total Packets: 30000
+		Good Packets: 29998
+		Bad Packets: 2
+	Date and time: 2016-07-05 17:55:52
+
+err: expected 243 got 244 at 2016-07-05 17:56:34
+err: expected 245 got 247 at 2016-07-05 17:56:36
+err: expected 221 got 223 at 2016-07-05 17:56:43
+err: expected 216 got 217 at 2016-07-05 17:56:44
+
+
+Summary:
+	Total Packets: 45000
+		Good Packets: 44994
+		Bad Packets: 6
+	Date and time: 2016-07-05 17:56:52
+
+
+
+Summary:
+	Total Packets: 60000
+		Good Packets: 59994
+		Bad Packets: 6
+	Date and time: 2016-07-05 17:57:52
+
+
+
+Summary:
+	Total Packets: 75000
+		Good Packets: 74994
+		Bad Packets: 6
+	Date and time: 2016-07-05 17:58:52
+
+err: expected 145 got 148 at 2016-07-05 17:58:53
+
+
+Summary:
+	Total Packets: 90000
+		Good Packets: 89993
+		Bad Packets: 7
+	Date and time: 2016-07-05 17:59:52
+
+
+
+Summary:
+	Total Packets: 105000
+		Good Packets: 104993
+		Bad Packets: 7
+	Date and time: 2016-07-05 18:00:52
+
+
+
+Summary:
+	Total Packets: 120000
+		Good Packets: 119993
+		Bad Packets: 7
+	Date and time: 2016-07-05 18:01:52
+
+
+
+Summary:
+	Total Packets: 135000
+		Good Packets: 134993
+		Bad Packets: 7
+	Date and time: 2016-07-05 18:02:51
+
+err: expected 73 got 74 at 2016-07-05 18:02:52
+err: expected 99 got 100 at 2016-07-05 18:03:13
+
+
+Summary:
+	Total Packets: 150000
+		Good Packets: 149991
+		Bad Packets: 9
+	Date and time: 2016-07-05 18:03:52
+
+err: expected 25 got 26 at 2016-07-05 18:04:42
+
+
+Summary:
+	Total Packets: 165000
+		Good Packets: 164990
+		Bad Packets: 10
+	Date and time: 2016-07-05 18:04:51
+
+err: expected 179 got 180 at 2016-07-05 18:05:24
+
+
+Summary:
+	Total Packets: 180000
+		Good Packets: 179989
+		Bad Packets: 11
+	Date and time: 2016-07-05 18:05:51
+
+
+
+Summary:
+	Total Packets: 195000
+		Good Packets: 194989
+		Bad Packets: 11
+	Date and time: 2016-07-05 18:06:51
+
+
+
+Summary:
+	Total Packets: 210000
+		Good Packets: 209989
+		Bad Packets: 11
+	Date and time: 2016-07-05 18:07:51
+
+err: expected 242 got 243 at 2016-07-05 18:08:33
+
+
+Summary:
+	Total Packets: 225000
+		Good Packets: 224988
+		Bad Packets: 12
+	Date and time: 2016-07-05 18:08:51
+
+
+
+Summary:
+	Total Packets: 240000
+		Good Packets: 239988
+		Bad Packets: 12
+	Date and time: 2016-07-05 18:09:51
+
+err: expected 207 got 208 at 2016-07-05 18:10:25
+err: expected 103 got 104 at 2016-07-05 18:10:25
+err: expected 181 got 182 at 2016-07-05 18:10:26
+err: expected 226 got 228 at 2016-07-05 18:10:26
+err: expected 187 got 188 at 2016-07-05 18:10:27
+err: expected 137 got 138 at 2016-07-05 18:10:36
+err: expected 100 got 101 at 2016-07-05 18:10:47
+err: expected 3 got 4 at 2016-07-05 18:10:48
+err: expected 46 got 47 at 2016-07-05 18:10:50
+
+
+Summary:
+	Total Packets: 255000
+		Good Packets: 254979
+		Bad Packets: 21
+	Date and time: 2016-07-05 18:10:51
+
+err: expected 34 got 35 at 2016-07-05 18:10:55
+err: expected 206 got 207 at 2016-07-05 18:10:56
+err: expected 67 got 68 at 2016-07-05 18:10:59
+err: expected 138 got 139 at 2016-07-05 18:11:03
+err: expected 183 got 184 at 2016-07-05 18:11:04
+err: expected 241 got 242 at 2016-07-05 18:11:04
+
+
+Summary:
+	Total Packets: 270000
+		Good Packets: 269973
+		Bad Packets: 27
+	Date and time: 2016-07-05 18:11:51
+
+err: expected 193 got 194 at 2016-07-05 18:12:42
+
+
+Summary:
+	Total Packets: 285000
+		Good Packets: 284972
+		Bad Packets: 28
+	Date and time: 2016-07-05 18:12:50
+
+err: expected 97 got 98 at 2016-07-05 18:13:41
+
+
+Summary:
+	Total Packets: 300000
+		Good Packets: 299971
+		Bad Packets: 29
+	Date and time: 2016-07-05 18:13:50
+
+err: expected 73 got 75 at 2016-07-05 18:14:15
+
+
+Summary:
+	Total Packets: 315000
+		Good Packets: 314970
+		Bad Packets: 30
+	Date and time: 2016-07-05 18:14:51
+
+err: expected 8 got 9 at 2016-07-05 18:15:10
+
+
+Summary:
+	Total Packets: 330000
+		Good Packets: 329969
+		Bad Packets: 31
+	Date and time: 2016-07-05 18:15:50
+
+
+
+Summary:
+	Total Packets: 345000
+		Good Packets: 344969
+		Bad Packets: 31
+	Date and time: 2016-07-05 18:16:50
+
+
+
+Summary:
+	Total Packets: 360000
+		Good Packets: 359969
+		Bad Packets: 31
+	Date and time: 2016-07-05 18:17:50
+
+
+
+Summary:
+	Total Packets: 375000
+		Good Packets: 374969
+		Bad Packets: 31
+	Date and time: 2016-07-05 18:18:50
+
+
+
+Summary:
+	Total Packets: 390000
+		Good Packets: 389969
+		Bad Packets: 31
+	Date and time: 2016-07-05 18:19:50
+
+err: expected 168 got 169 at 2016-07-05 18:20:13
+err: expected 28 got 29 at 2016-07-05 18:20:19
+err: expected 30 got 31 at 2016-07-05 18:20:21
+err: expected 71 got 72 at 2016-07-05 18:20:22
+err: expected 77 got 78 at 2016-07-05 18:20:36
+err: expected 227 got 229 at 2016-07-05 18:20:37
+err: expected 24 got 26 at 2016-07-05 18:20:39
+err: expected 62 got 63 at 2016-07-05 18:20:39
+err: expected 219 got 220 at 2016-07-05 18:20:40
+err: expected 243 got 245 at 2016-07-05 18:20:41
+err: expected 255 got 0 at 2016-07-05 18:20:41
+err: expected 3 got 6 at 2016-07-05 18:20:42
+err: expected 10 got 11 at 2016-07-05 18:20:42
+err: expected 195 got 196 at 2016-07-05 18:20:42
+err: expected 140 got 141 at 2016-07-05 18:20:43
+err: expected 177 got 178 at 2016-07-05 18:20:43
+err: expected 196 got 197 at 2016-07-05 18:20:44
+err: expected 10 got 12 at 2016-07-05 18:20:45
+err: expected 88 got 92 at 2016-07-05 18:20:45
+err: expected 220 got 224 at 2016-07-05 18:20:46
+err: expected 157 got 159 at 2016-07-05 18:20:46
+err: expected 186 got 187 at 2016-07-05 18:20:46
+err: expected 220 got 222 at 2016-07-05 18:20:47
+err: expected 69 got 71 at 2016-07-05 18:20:47
+err: expected 144 got 146 at 2016-07-05 18:20:47
+err: expected 211 got 213 at 2016-07-05 18:20:48
+
+
+Summary:
+	Total Packets: 405000
+		Good Packets: 404943
+		Bad Packets: 57
+	Date and time: 2016-07-05 18:20:50
+
+err: expected 245 got 248 at 2016-07-05 18:21:21
+err: expected 112 got 114 at 2016-07-05 18:21:26
+err: expected 196 got 197 at 2016-07-05 18:21:26
+err: expected 203 got 204 at 2016-07-05 18:21:27
+err: expected 117 got 118 at 2016-07-05 18:21:28
+err: expected 180 got 181 at 2016-07-05 18:21:28
+err: expected 125 got 126 at 2016-07-05 18:21:29
+err: expected 156 got 160 at 2016-07-05 18:21:30
+err: expected 169 got 171 at 2016-07-05 18:21:30
+err: expected 34 got 35 at 2016-07-05 18:21:31
+err: expected 93 got 95 at 2016-07-05 18:21:31
+err: expected 120 got 122 at 2016-07-05 18:21:32
+err: expected 221 got 223 at 2016-07-05 18:21:32
+err: expected 232 got 234 at 2016-07-05 18:21:32
+err: expected 235 got 236 at 2016-07-05 18:21:32
+err: expected 6 got 9 at 2016-07-05 18:21:32
+err: expected 27 got 28 at 2016-07-05 18:21:33
+err: expected 184 got 188 at 2016-07-05 18:21:35
+err: expected 10 got 13 at 2016-07-05 18:21:36
+err: expected 160 got 162 at 2016-07-05 18:21:36
+
+
+Summary:
+	Total Packets: 420000
+		Good Packets: 419923
+		Bad Packets: 77
+	Date and time: 2016-07-05 18:21:50
+
+err: expected 202 got 203 at 2016-07-05 18:21:52
+err: expected 220 got 221 at 2016-07-05 18:22:10
+err: expected 41 got 44 at 2016-07-05 18:22:49
+
+
+Summary:
+	Total Packets: 435000
+		Good Packets: 434920
+		Bad Packets: 80
+	Date and time: 2016-07-05 18:22:50
+
+err: expected 53 got 54 at 2016-07-05 18:22:57
+
+
+Summary:
+	Total Packets: 450000
+		Good Packets: 449919
+		Bad Packets: 81
+	Date and time: 2016-07-05 18:23:50
+
+
+
+Summary:
+	Total Packets: 465000
+		Good Packets: 464919
+		Bad Packets: 81
+	Date and time: 2016-07-05 18:24:50
+
+err: expected 52 got 53 at 2016-07-05 18:25:18
+err: expected 147 got 150 at 2016-07-05 18:25:28
+err: expected 186 got 188 at 2016-07-05 18:25:29
+err: expected 100 got 101 at 2016-07-05 18:25:38
+err: expected 40 got 42 at 2016-07-05 18:25:42
+
+
+Summary:
+	Total Packets: 480000
+		Good Packets: 479914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:25:50
+
+
+
+Summary:
+	Total Packets: 495000
+		Good Packets: 494914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:26:50
+
+
+
+Summary:
+	Total Packets: 510000
+		Good Packets: 509914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:27:50
+
+
+
+Summary:
+	Total Packets: 525000
+		Good Packets: 524914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:28:49
+
+
+
+Summary:
+	Total Packets: 540000
+		Good Packets: 539914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:29:49
+
+
+
+Summary:
+	Total Packets: 555000
+		Good Packets: 554914
+		Bad Packets: 86
+	Date and time: 2016-07-05 18:30:49
+
+err: expected 19 got 20 at 2016-07-05 18:31:28
+err: expected 43 got 44 at 2016-07-05 18:31:28
+err: expected 201 got 202 at 2016-07-05 18:31:33
+
+
+Summary:
+	Total Packets: 570000
+		Good Packets: 569911
+		Bad Packets: 89
+	Date and time: 2016-07-05 18:31:49
+
+
+
+Summary:
+	Total Packets: 585000
+		Good Packets: 584911
+		Bad Packets: 89
+	Date and time: 2016-07-05 18:32:49
+
+err: expected 12 got 13 at 2016-07-05 18:33:45
+
+
+Summary:
+	Total Packets: 600000
+		Good Packets: 599910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:33:49
+
+
+
+Summary:
+	Total Packets: 615000
+		Good Packets: 614910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:34:49
+
+
+
+Summary:
+	Total Packets: 630000
+		Good Packets: 629910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:35:49
+
+
+
+Summary:
+	Total Packets: 645000
+		Good Packets: 644910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:36:49
+
+
+
+Summary:
+	Total Packets: 660000
+		Good Packets: 659910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:37:49
+
+
+
+Summary:
+	Total Packets: 675000
+		Good Packets: 674910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:38:48
+
+
+
+Summary:
+	Total Packets: 690000
+		Good Packets: 689910
+		Bad Packets: 90
+	Date and time: 2016-07-05 18:39:48
+
+err: expected 51 got 52 at 2016-07-05 18:39:55
+err: expected 99 got 101 at 2016-07-05 18:39:57
+err: expected 228 got 229 at 2016-07-05 18:39:58
+err: expected 245 got 246 at 2016-07-05 18:39:59
+err: expected 31 got 32 at 2016-07-05 18:40:02
+err: expected 178 got 179 at 2016-07-05 18:40:11

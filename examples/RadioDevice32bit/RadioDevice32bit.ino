@@ -77,7 +77,7 @@ void loop() {
                     radio.sendPacketToHost();
                     radio.ackCounter++;
                 } else {
-                    Serial.println("Err: dropping packet");
+                    // Serial.println("Err: dropping packet");
                 }
 
             }
