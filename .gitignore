@@ -8,3 +8,4 @@ gtest/
 # JavaScript Tests
 npm-debug.log
 node_modules/
+test/js/results/

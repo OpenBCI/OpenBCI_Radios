@@ -5,7 +5,7 @@ var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var ourBoard = new OpenBCIBoard({verbose:true});
+var ourBoard = new OpenBCIBoard({verbose:true, baudRate: 230400});
 
 var portNames = {
     host: '/dev/cu.usbserial-DB00JAKZ'
@@ -19,13 +19,13 @@ var sampleRecievedCounter = 0;
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
         ourBoard.on('ready',function() {
-                // ourBoard.streamStart();
-                ourBoard.syncClocksStart().catch(err => console.log('sync err',err));
+                ourBoard.streamStart();
+                // ourBoard.syncClocksStart().catch(err => console.log('sync err',err));
             });
-        ourBoard.on('synced',() => {
-            process.exit();
-
-        })
+        // ourBoard.on('synced',() => {
+        //     process.exit();
+        //
+        // })
         ourBoard.on('rawDataPacket', rawDataPacket => {
             console.log('rawDataPacket',rawDataPacket);
         })
@@ -42,7 +42,7 @@ var startHost = () => {
             } else {
                 console.log(`err: expected ${sampleRecievedCounter} got ${sample.sampleNumber} `);
                 badPackets++;
-                if (badPackets > 5) {
+                if (badPackets > 1) {
                     process.exit();
                 }
                 sampleRecievedCounter = sample.sampleNumber + 1;

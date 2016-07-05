@@ -146,7 +146,7 @@ void OpenBCI_Radios_Class::configureDevice(void) {
         pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
         pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
         digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
-        Serial.begin(115200);
+        Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
         // END: To run host as device
     } else {
         // BEGIN: To run host normally
@@ -155,7 +155,7 @@ void OpenBCI_Radios_Class::configureDevice(void) {
         //    rx and tx, where:
         //      rx = GPIO3
         //      tx = GPIO2
-        Serial.begin(115200, 3, 2);
+        Serial.begin(OPENBCI_BAUD_RATE_DEFAULT, 3, 2);
         // END: To run host normally
     }
 
@@ -188,7 +188,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
 
     // Open the Serial connection
-    Serial.begin(115200);
+    Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
 
     isHost = true;
     packetInTXRadioBuffer = false;
@@ -431,6 +431,11 @@ void OpenBCI_Radios_Class::printChannelNumber(char c) {
     Serial.print("Channel number: 0x"); Serial.write(c);
 }
 
+void OpenBCI_Radios_Class::printBaudRateChangeTo(int b) {
+    Serial.print("Switch your baud rate to ");
+    Serial.print(b);
+};
+
 void OpenBCI_Radios_Class::printCommsTimeout(void) {
     Serial.print("Communications timeout - Device failed to poll Host");
 }
@@ -511,6 +516,24 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
             Serial.print("Host on ");
             printChannelNumber(getChannelNumber());
             printEOT();
+            break;
+        case OPENBCI_HOST_BAUD_DEFAULT:
+            printSuccess();
+            printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
+            printEOT();
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+            break;
+        case OPENBCI_HOST_BAUD_FAST:
+            printSuccess();
+            printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+            printEOT();
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_FAST);
             break;
         default:
             printValidatedCommsTimeout();
@@ -624,6 +647,28 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char aChar) {
             Serial.print("Host and device on ");
             printChannelNumber(getChannelNumber());
             printEOT();
+            // Clear the serial buffer
+            bufferCleanSerial(1);
+            return ACTION_RADIO_SEND_NONE;
+        case OPENBCI_HOST_BAUD_DEFAULT:
+            printSuccess();
+            printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
+            printEOT();
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+            // Clear the serial buffer
+            bufferCleanSerial(1);
+            return ACTION_RADIO_SEND_NONE;
+        case OPENBCI_HOST_BAUD_FAST:
+            printSuccess();
+            printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+            printEOT();
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_FAST);
             // Clear the serial buffer
             bufferCleanSerial(1);
             return ACTION_RADIO_SEND_NONE;
