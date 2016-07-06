@@ -537,7 +537,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 // Open the Serial connection
                 Serial.begin(OPENBCI_BAUD_RATE_FAST);
                 break;
-            case OPENBCI_HOST_POLL_TIME_GET:
+            case OPENBCI_HOST_CMD_POLL_TIME_GET:
                 printFailure();
                 Serial.print("Could not get poll time");
                 printEOT();
@@ -664,7 +664,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 Serial.write(OPENBCI_HOST_TIME_SYNC_ACK);
                 return ACTION_RADIO_SEND_NORMAL;
             // Is the byte the command for a host channel number?
-            case OPENBCI_HOST_CHANNEL_GET:
+            case OPENBCI_HOST_CMD_CHANNEL_GET:
                 // Send the channel number back to the driver
                 printSuccess();
                 Serial.print("Host and device on ");
@@ -673,7 +673,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
-            case OPENBCI_HOST_BAUD_DEFAULT:
+            case OPENBCI_HOST_CMD_BAUD_DEFAULT:
                 printSuccess();
                 printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
                 printEOT();
@@ -684,7 +684,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
-            case OPENBCI_HOST_BAUD_FAST:
+            case OPENBCI_HOST_CMD_BAUD_FAST:
                 printSuccess();
                 printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
                 printEOT();
@@ -1654,15 +1654,21 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 
             case ORPM_CHANGE_POLL_TIME_GET:
                 // If there are no packets to send
-                char tempMsg[] = "Success: Poll Time 0x2$$$"; // length 23
-                tempMsg[21] = (char)getPollTime();
-                for (int i = 0; i < 25; i++) {
-                    if (i == 21) {
-                        storeCharToSerialBuffer((char)getPollTime());
-                    } else {
-                        storeCharToSerialBuffer(tempMsg[i]);
-                    }
-                }
+                storeCharToSerialBuffer('S');
+                storeCharToSerialBuffer('u');
+                storeCharToSerialBuffer('c');
+                storeCharToSerialBuffer('c');
+                storeCharToSerialBuffer('e');
+                storeCharToSerialBuffer('s');
+                storeCharToSerialBuffer('s');
+                storeCharToSerialBuffer(':');
+                storeCharToSerialBuffer(' ');
+                storeCharToSerialBuffer('0');
+                storeCharToSerialBuffer('x');
+                storeCharToSerialBuffer((char)getPollTime());
+                storeCharToSerialBuffer('$');
+                storeCharToSerialBuffer('$');
+                storeCharToSerialBuffer('$');
                 pollRefresh();
                 return true;
 
