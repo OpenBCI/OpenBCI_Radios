@@ -539,7 +539,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 break;
             case OPENBCI_HOST_POLL_TIME_GET:
                 printFailure();
-                Serial.print("Could not get poll time.");
+                Serial.print("Could not get poll time");
                 printEOT();
                 break;
             case OPENBCI_HOST_CMD_SYS_UP:
@@ -1654,20 +1654,17 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 
             case ORPM_CHANGE_POLL_TIME_GET:
                 // If there are no packets to send
-                if (bufferSerial.numberOfPacketsToSend == 0) {
-                    char tempMsg[] = "Success: Poll Time 2$$$"; // length 23
-                    tempMsg[19] = (char)getPollTime();
-                    for (int i = 0; i < 23; i++) {
-                        if (i == 19) {
-                            storeCharToSerialBuffer((char)getPollTime());
-                        } else {
-                            storeCharToSerialBuffer(tempMsg[i]);
-                        }
+                char tempMsg[] = "Success: Poll Time 0x2$$$"; // length 23
+                tempMsg[21] = (char)getPollTime();
+                for (int i = 0; i < 25; i++) {
+                    if (i == 21) {
+                        storeCharToSerialBuffer((char)getPollTime());
+                    } else {
+                        storeCharToSerialBuffer(tempMsg[i]);
                     }
-                    pollRefresh();
-                    return true;
                 }
-                return false;
+                pollRefresh();
+                return true;
 
             case ORPM_INVALID_CODE_RECEIVED:
                 // Working theory
