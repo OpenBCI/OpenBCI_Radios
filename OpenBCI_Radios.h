@@ -123,7 +123,7 @@ public:
     boolean     processHostRadioCharData(device_t, volatile char *, int);
     byte        processOutboundBuffer(volatile PacketBuffer *);
     byte        processOutboundBufferCharDouble(volatile char *);
-    byte        processOutboundBufferCharSingle(char);
+    byte        processOutboundBufferCharSingle(volatile char *);
     boolean     processRadioCharDevice(char);
     boolean     processRadioCharHost(device_t, char);
     void        resetPic32(void);

@@ -1,8 +1,8 @@
 var fs = require('fs');
-var openBCIBoard = require('openbci');//.OpenBCIBoard;
+var openBCIBoard = require('openbci');
 var k = openBCIBoard.OpenBCIConstants;
 var ourBoard = new openBCIBoard.OpenBCIBoard({baudRate:230400,verbose:true});
-var wstream = fs.createWriteStream('enduranceTest1.5mHighBaud.txt');
+var wstream = fs.createWriteStream('results/enduranceTest.txt');
 
 var portNames = {
     host: '/dev/cu.usbserial-DB00JAKZ'
