@@ -2,7 +2,7 @@ var fs = require('fs');
 var openBCIBoard = require('openbci');
 var k = openBCIBoard.OpenBCIConstants;
 var ourBoard = new openBCIBoard.OpenBCIBoard({baudRate:230400,verbose:true});
-var wstream = fs.createWriteStream('results/enduranceTest.txt');
+var wstream = fs.createWriteStream('enduranceTest.txt');
 
 var portNames = {
     host: '/dev/cu.usbserial-DB00JAKZ'
@@ -27,7 +27,7 @@ var startHost = () => {
                 ourBoard.streamStart();
             });
         ourBoard.on('sample',function(sample) {
-            if (rawSampleCount % 15000 === 0) {
+            if (rawSampleCount % 1500 === 0) {
                 wstream.write(`\n\nSummary:\n\tTotal Packets: ${rawSampleCount}\n\t\tGood Packets: ${goodPackets}\n\t\tBad Packets: ${badPackets}\n\t`);
                 writeOutDateAndTime();
                 wstream.write(`\n\n`);

@@ -60,7 +60,7 @@ void loop() {
 
     // Is there new data from the PC/Driver?
     // While loop to read successive bytes
-    while (radio.didPCSendDataToHost()) {
+    if (radio.didPCSendDataToHost()) {
         char newChar = Serial.read();
         // Save the last time serial data was read to now
         radio.lastTimeSerialRead = micros();
@@ -80,7 +80,7 @@ void loop() {
     }
 
     // Has more than 3 * pollTime passed since last contact from Device?
-    if (radio.commsFailureTimeout()) {
+    if (radio.commsFailureTimeout() && (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS))) {
         radio.processCommsFailure();
     }
 }

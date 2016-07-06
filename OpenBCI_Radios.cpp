@@ -402,7 +402,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 4)) {
+    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 3)) {
         return true;
     } else {
         return false;
@@ -498,7 +498,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
     // The first byte needs to match the command key to act on it
     if (bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Switch on the first byte of the first packet.
-        switch (bufferSerial.packetBuffer->data[1]) {
+        switch (bufferSerial.packetBuffer->data[2]) {
             case OPENBCI_HOST_CMD_CHANNEL_SET:
                 printValidatedCommsTimeout();
                 break;
@@ -514,6 +514,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 }
                 break;
             case OPENBCI_HOST_CMD_CHANNEL_GET:
+            Serial.println("Taco");
                 printFailure();
                 Serial.print("Host on ");
                 printChannelNumber(getChannelNumber());
@@ -626,7 +627,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
-                if (radio.setChannelNumber((uint32_t)buffer[2])) {
+                if (radio.setChannelNumber((uint32_t)buffer[3])) {
                     printSuccess();
                     Serial.print("Host override - ");
                     printChannelNumber(getChannelNumber());
@@ -1827,12 +1828,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
-        Serial.write(0xA0);
-        for (int i = 1; i < len; i++) {
-            Serial.write(data[i]);
-        }
-        Serial.write(outputGetStopByteFromByteId(data[0]));
-        // bufferAddStreamPacket(data,len);
+        bufferAddStreamPacket(data,len);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }
