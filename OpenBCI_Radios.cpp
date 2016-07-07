@@ -522,8 +522,9 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 break;
             case OPENBCI_HOST_CMD_BAUD_DEFAULT:
                 printSuccess();
-                printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
+                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_DEFAULT);
                 printEOT();
+                delay(1); // Delay for serial to finish
                 // Close the current serial connection
                 Serial.end();
                 // Open the Serial connection
@@ -531,8 +532,9 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                 break;
             case OPENBCI_HOST_CMD_BAUD_FAST:
                 printSuccess();
-                printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_FAST);
                 printEOT();
+                delay(1); // Delay for serial to finish
                 // Close the current serial connection
                 Serial.end();
                 // Open the Serial connection
@@ -676,8 +678,9 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_BAUD_DEFAULT:
                 printSuccess();
-                printBaudRateChangeTo(OPENBCI_BAUD_RATE_DEFAULT);
+                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_DEFAULT);
                 printEOT();
+                delay(1); // Delay for serial to finish
                 // Close the current serial connection
                 Serial.end();
                 // Open the Serial connection
@@ -687,8 +690,9 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_BAUD_FAST:
                 printSuccess();
-                printBaudRateChangeTo(OPENBCI_BAUD_RATE_FAST);
+                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_FAST);
                 printEOT();
+                delay(1); // Delay for serial to finish
                 // Close the current serial connection
                 Serial.end();
                 // Open the Serial connection
@@ -698,13 +702,14 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_SYS_UP:
                 printSuccess();
+                Serial.print("System is Up");
                 printEOT();
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_POLL_TIME_GET:
                 // Send a time change request to the device
-                singleCharMsg[0] = (char)OPENBCI_HOST_CMD_POLL_TIME_GET;
+                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_GET;
                 // Clean the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
@@ -721,11 +726,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
  */
 void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
-    // When do we process the outbound buffer?
-    // SOME RADIO PACKETS NEVER GET SENT! WHAT DO WE DO THEN?
-
     // Build byteId
-    // char byteIdMake(boolean isStreamPacket, int packetNumber, char *data, int length)
     int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
 
     byte radioAction = ACTION_RADIO_SEND_NORMAL;
