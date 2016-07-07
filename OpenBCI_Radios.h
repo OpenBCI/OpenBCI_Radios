@@ -60,11 +60,11 @@ public:
         int     previousPacketNumber;
     } BufferRadio;
 
+// SHARED
     OpenBCI_Radios_Class();
     boolean     begin(uint8_t);
     boolean     begin(uint8_t, uint32_t);
     boolean     beginDebug(uint8_t, uint32_t);
-    char        byteIdGetCheckSum(char);
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
@@ -83,8 +83,6 @@ public:
     void        bufferResetStreamPacketBuffer(void);
     char        byteIdMake(boolean, int, volatile char *, int);
     byte        byteIdMakeStreamPacketType(void);
-    char        checkSumMake(volatile char *, int);
-    boolean     checkSumsAreEqual(volatile char *, int);
     boolean     commsFailureTimeout(void);
     void        configure(uint8_t,uint32_t);
     void        configureDevice(void);
@@ -143,54 +141,49 @@ public:
     boolean     thereIsDataInSerialBuffer(void);
     void        writeBufferToSerial(char *,int);
     void        writeTheHostsRadioBufferToThePC(void);
-    void        writeStreamPacket(volatile char *);
 
-    // VARIABLES
-    volatile StreamPacketBuffer streamPacketBuffer;
-    volatile BufferRadio bufferRadio;
-    volatile Buffer bufferSerial;
-    // volatile Buffer bufferStreamPackets;
-
+    //////////////////////
+    // SHARED VARIABLES //
+    //////////////////////
+    // CUSTOMS
+    BufferRadio bufferRadio;
+    Buffer bufferSerial;
+    PacketBuffer *currentPacketBufferSerial;
+    // BOOLEANS
     boolean debugMode;
-    boolean isDevice;
-    boolean isHost;
     volatile boolean gotAllRadioPackets;
+    // CHARS
+    char singleCharMsg[1];
+
+    StreamPacketBuffer streamPacketBuffer;
     volatile boolean isWaitingForNewChannelNumber;
-    volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTime;
+    volatile unsigned long timeOfLastPoll;
+
+    volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTimeConfirmation;
-    boolean verbosePrintouts;
-
-    char    singleCharMsg[1];
-    volatile char ringBuffer[OPENBCI_BUFFER_LENGTH];
-
+    char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
-
     int ringBufferRead;
-    volatile int lastPacketSent;
     volatile int ringBufferWrite;
     volatile int ringBufferNumBytes;
 
-    volatile PacketBuffer *currentPacketBufferSerial;
-    volatile PacketBuffer *currentPacketBufferStreamPacket;
 
     STREAM_STATE curStreamState;
 
     uint8_t radioMode;
     volatile uint8_t ackCounter;
 
-    unsigned long lastTimeNewSerialDataWasAvailable;
     unsigned long lastTimeHostHeardFromDevice;
     volatile unsigned long lastTimeSerialRead;
-    unsigned long timeWeGot0xFXFromPic;
-    volatile unsigned long timeOfLastPoll;
+
 
     uint32_t radioChannel;
     uint32_t previousRadioChannel;
     uint32_t pollTime;
 };
 
-// Very important, major key to success
+// Very important, major key to success #christmas
 extern OpenBCI_Radios_Class radio;
 
 #endif // OPENBCI_RADIO_H
