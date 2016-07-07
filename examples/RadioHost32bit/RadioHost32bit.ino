@@ -19,7 +19,10 @@
 * This software is provided as-is with no promise of workability
 * Use at your own risk, wysiwyg.
 *
-* Made by Push The World LLC 2016
+* Written by Push The World LLC 2016 inspired by Joel Murphy, Leif Percifield
+*  and Conor Russomanno. You should have recieved a copy of the license when
+*  you downloaded from github. Free to use and share. This code presented for
+*  use as-is.
 */
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
@@ -79,10 +82,11 @@ void loop() {
         radio.sendPacketToDevice(DEVICE0);
     }
 
-    // Has more than 3 * pollTime passed since last contact from Device?
-    if (radio.commsFailureTimeout() && (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS))) {
+    // Has more than 500ms passed since last contact from Device?
+    if (radio.commsFailureTimeout() && (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS))){
         radio.processCommsFailure();
     }
+
 }
 
 /**

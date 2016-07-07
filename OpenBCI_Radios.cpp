@@ -31,6 +31,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     isDevice = false;
     lastPacketSent = 0;
     ackCounter = 0;
+    lastTimeHostHeardFromDevice = 0;
 }
 
 /**
@@ -164,10 +165,6 @@ void OpenBCI_Radios_Class::configureDevice(void) {
 
     bufferResetStreamPacketBuffer();
 
-    // TODO: Implement init hand shaking
-    // char msg[1];
-    // msg[0] = ORPM_PACKET_INIT & 0xFF;
-    // RFduinoGZLL.sendToHost(msg,1);
     pollRefresh();
 
 }
@@ -248,7 +245,9 @@ boolean OpenBCI_Radios_Class::needToSetPollTime(void) {
 }
 
 void OpenBCI_Radios_Class::revertToPreviousChannelNumber(void) {
+    RFduinoGZLL.end();
     RFduinoGZLL.channel = previousRadioChannel;
+    RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
 }
 
 /**
@@ -402,11 +401,7 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    if (millis() > lastTimeHostHeardFromDevice + (pollTime * 3)) {
-        return true;
-    } else {
-        return false;
-    }
+    return millis() > (lastTimeHostHeardFromDevice + 500);
 }
 
 /**
@@ -428,7 +423,7 @@ boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
 }
 
 void OpenBCI_Radios_Class::printChannelNumber(char c) {
-    Serial.print("Channel number: 0x"); Serial.write(c);
+    Serial.print("Channel number: "); Serial.print((int)c); Serial.write(c);
 }
 
 void OpenBCI_Radios_Class::printBaudRateChangeTo(int b) {
@@ -449,7 +444,7 @@ void OpenBCI_Radios_Class::printFailure(void) {
 }
 
 void OpenBCI_Radios_Class::printPollTime(char p) {
-    Serial.print("Poll time: "); Serial.write(p);
+    Serial.print("Poll time: "); Serial.print((int)p); Serial.write(p);
 }
 
 void OpenBCI_Radios_Class::printSuccess(void) {
@@ -496,25 +491,28 @@ void OpenBCI_Radios_Class::processCommsFailure(void) {
  */
 void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
     // The first byte needs to match the command key to act on it
-    if (bufferSerial.packetBuffer->data[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+    if (bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_KEY] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Switch on the first byte of the first packet.
-        switch (bufferSerial.packetBuffer->data[2]) {
+        switch (bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_CODE]) {
             case OPENBCI_HOST_CMD_CHANNEL_SET:
                 printValidatedCommsTimeout();
                 break;
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
-                if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[3])) {
-                    printSuccess();
-                    printChannelNumber(getChannelNumber());
-                    printEOT();
-                } else {
-                    printFailure();
-                    Serial.print("Verify channel number is less than 25");
-                    printEOT();
-                }
+                    if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
+                        RFduinoGZLL.end();
+                        RFduinoGZLL.channel = getChannelNumber();
+                        RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+                        printSuccess();
+                        Serial.print("Host override - ");
+                        printChannelNumber(getChannelNumber());
+                        printEOT();
+                    } else {
+                        printFailure();
+                        Serial.print("Verify channel number is less than 25");
+                        printEOT();
+                    }
                 break;
             case OPENBCI_HOST_CMD_CHANNEL_GET:
-            Serial.println("Taco");
                 printFailure();
                 Serial.print("Host on ");
                 printChannelNumber(getChannelNumber());
@@ -622,14 +620,21 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 }
             case OPENBCI_HOST_CMD_POLL_TIME_SET:
                 // Save the new poll time
-                pollTime = (uint32_t)buffer[3];
+                pollTime = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
                 // Send a time change request to the device
                 singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
-                if (radio.setChannelNumber((uint32_t)buffer[3])) {
+                // printFailure();
+                // Serial.print("Can't override host with Device connected");
+                // printEOT();
+                if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
+                    radioChannel = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
+                    RFduinoGZLL.end();
+                    RFduinoGZLL.channel = getChannelNumber();
+                    RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
                     printSuccess();
                     Serial.print("Host override - ");
                     printChannelNumber(getChannelNumber());
@@ -639,6 +644,8 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                     Serial.print("Verify channel number is less than 25");
                     printEOT();
                 }
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
             default:
                 return ACTION_RADIO_SEND_NORMAL;
         }
@@ -873,10 +880,6 @@ void OpenBCI_Radios_Class::sendTheDevicesFirstPacketToTheHost(void) {
         // Add the byteId to the packet
         bufferSerial.packetBuffer->data[0] = byteId;
 
-        // // TODO: REMOVE THIS SHIT!
-        // if (bufferSerial.packetBuffer->data[1] == 0x00) {
-        //     Serial.write(getChannelNumber());
-        // }
         // Send back some data
         RFduinoGZLL.sendToHost((char *)bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
 
@@ -1532,7 +1535,9 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
                 isWaitingForNewChannelNumberConfirmation = true;
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
                 packetInTXRadioBuffer = true;
+                RFduinoGZLL.end();
                 RFduinoGZLL.channel = radioChannel;
+                RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
             } else {
                 // Tell device to switch to the previous channel number
                 radioChannel = getChannelNumber();
@@ -1587,7 +1592,10 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
         boolean success = setChannelNumber((uint32_t)newChar);
         if (success) {
             // Change Device radio channel
+            RFduinoGZLL.end();
             RFduinoGZLL.channel = (uint32_t)newChar;
+            RFduinoGZLL.begin(RFDUINOGZLL_ROLE_DEVICE);
+
             // Poll the host, which should have swapped over now...
             pollHost();
         }
@@ -1702,8 +1710,6 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     //  1. If we recieve a packet with packetNumber equal to 0, then we can set
     //  a flag to write the radio buffer.
 
-    // TODO: Answer the question: Where should the radio buffer be cleared?
-
     boolean gotLastPacket = false;
     boolean goodToAddPacketToRadioBuffer = true;
     boolean firstPacket = false;
@@ -1731,10 +1737,6 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
         // Mark this as the first packet
         firstPacket = true;
 
-    // If you are getting a packet that has the same packet number, check to
-    //  make sure we are not getting the same
-    // } else if (packetNumber == bufferRadio.previousPacketNumber) {
-        // TODO: Implement this
     } else {
         if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
             // This is the first of multiple packets we are recieving
