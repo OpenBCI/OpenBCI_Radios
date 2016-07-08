@@ -74,19 +74,30 @@ void loop() {
         }
     }
 
-    // Is there data waiting to be sent out to the host?
-    //  If there is code that shall be sent to device, then we want to move it
-    //  into the TX buffer right away, because it will be sent the next time the
-    //  device contacts the Host!
-    if (radio.hostPacketToSend()) {
-        radio.sendPacketToDevice(DEVICE0);
+    if (radio.serialWriteTimeOut()) {
+        // Is the time the Device contacted the host greater than 0? This is
+        //  true if the Device has NEVER contacted the Host
+        if (radio.lastTimeHostHeardFromDevice > 0) {
+            // Is a packet in the TX buffer
+            if (radio.packetInTXRadioBuffer == false) {
+                //packets in the serial buffer?
+                if (radio.packetsInSerialBuffer()) {
+                    // process with a send to device
+                    radio.sendPacketToDevice(DEVICE0);
+                }
+            } else {
+                // Comms time out?
+                if (radio.commsFailureTimeout()) {
+                    radio.processCommsFailure();
+                }
+            }
+        } else { // lastTimeHostHeardFromDevice has not been changed
+            // comms time out?
+            if (radio.commsFailureTimeout()){
+                radio.processCommsFailure();
+            }
+        }
     }
-
-    // Has more than 500ms passed since last contact from Device?
-    if (radio.commsFailureTimeout() && (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS))){
-        radio.processCommsFailure();
-    }
-
 }
 
 /**
@@ -105,6 +116,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         radio.packetInTXRadioBuffer = false;
     }
 
+    // Send a time sync ack to driver?
+    if (radio.sendSerialAck) {
+        radio.bufferAddTimeSyncSentAck();
+    }
+
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
@@ -121,6 +137,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     } else {
         // Condition
         if (radio.isWaitingForNewChannelNumberConfirmation) {
+            RFduinoGZLL.end();
+            RFduinoGZLL.channel = radio.getChannelNumber();
+            RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
             radio.printSuccess();
             radio.printChannelNumber(radio.getChannelNumber());
             radio.printEOT();
@@ -143,7 +162,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
 
     // Is the send data packet flag set to true
-    if (sendDataPacket) {
+    if (sendDataPacket && !radio.processingSendToDevice) {
         radio.sendPacketToDevice(device);
     }
 }

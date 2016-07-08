@@ -69,6 +69,7 @@ public:
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
     void        bufferAddStreamPacket(volatile char *, int);
+    void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
     void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *, int );
@@ -104,6 +105,7 @@ public:
     void        pollHost(void);
     boolean     pollNow(void);
     boolean     packetToSend(void);
+    boolean     packetsInSerialBuffer(void);
     void        pollRefresh(void);
     void        pushRadioBuffer(void);
     void        printBaudRateChangeTo(int);
@@ -134,6 +136,7 @@ public:
     void        sendStreamPackets(void);
     boolean     sendStreamPacketToTheHost(void);
     void        sendTheDevicesFirstPacketToTheHost(void);
+    boolean     serialWriteTimeOut(void);
     void        setByteIdForPacketBuffer(int);
     boolean     setChannelNumber(uint32_t);
     boolean     setPollTime(uint32_t);
@@ -154,6 +157,7 @@ public:
     volatile boolean gotAllRadioPackets;
     // CHARS
     char singleCharMsg[1];
+    char singlePayLoad[1];
 
     StreamPacketBuffer streamPacketBuffer;
     volatile boolean isWaitingForNewChannelNumber;
@@ -162,6 +166,8 @@ public:
 
     volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTimeConfirmation;
+    volatile boolean sendSerialAck;
+    volatile boolean processingSendToDevice;
     char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
     int ringBufferRead;
