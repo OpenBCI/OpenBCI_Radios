@@ -6,8 +6,10 @@
  * Use the RFRST, RFRX, RFTX, and GND on the board to connect to USB<>Serial device
  * Your USB<>Serial device must connect RFRST with DTR through 0.1uF capacitor (sorry)
  *
- * Made by AJ Keller, Spring 2016
- * Free to use and share. This code presented as-is.
+ * Written by Push The World LLC 2016 inspired by Joel Murphy, Leif Percifield
+ *  and Conor Russomanno. You should have recieved a copy of the license when
+ *  you downloaded from github. Free to use and share. This code presented for
+ *  use as-is.
 */
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
