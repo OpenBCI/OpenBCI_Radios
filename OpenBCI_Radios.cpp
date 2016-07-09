@@ -184,6 +184,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     ringBufferNumBytes = 0;
     sendSerialAck = false;
     processingSendToDevice = false;
+    channelNumberSaveAttempted = false;
 
 }
 
@@ -446,6 +447,7 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
  *  more than 3 * pollTime.
  */
 void OpenBCI_Radios_Class::processCommsFailure(void) {
+    // Serial.println("processCommsFailure");
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
         revertToPreviousChannelNumber();
@@ -579,7 +581,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
             // Is the first byte equal to the channel change request?
             case OPENBCI_HOST_CMD_CHANNEL_SET:
                 // Make sure the channel is within bounds (<25)
-                if (buffer[3] < RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+                if (buffer[3] <= RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
                     // Save requested new channel number
                     radioChannel = (uint32_t)buffer[3];
                     // Save the previous channel number
@@ -1390,6 +1392,7 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
                 // send back the radio channel
                 singleCharMsg[0] = (char)radioChannel;
                 isWaitingForNewChannelNumberConfirmation = true;
+                channelNumberSaveAttempted = false;
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
                 packetInTXRadioBuffer = true;
 
@@ -1448,10 +1451,12 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
         if (success) {
             // Poll the host, which will swap after this...
             pollHost();
+            delay(30);
             // Change Device radio channel
             RFduinoGZLL.end();
             RFduinoGZLL.channel = (uint32_t)newChar;
             RFduinoGZLL.begin(RFDUINOGZLL_ROLE_DEVICE);
+
         }
         return false;
 
