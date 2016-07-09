@@ -164,6 +164,7 @@ public:
     volatile boolean isWaitingForNewPollTime;
     volatile unsigned long timeOfLastPoll;
 
+    boolean channelNumberSaveAttempted;
     volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTimeConfirmation;
     volatile boolean sendSerialAck;

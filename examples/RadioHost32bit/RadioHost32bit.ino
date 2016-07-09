@@ -88,7 +88,16 @@ void loop() {
             } else {
                 // Comms time out?
                 if (radio.commsFailureTimeout()) {
-                    radio.processCommsFailure();
+                    if (radio.isWaitingForNewChannelNumberConfirmation && !radio.channelNumberSaveAttempted) {
+                        // Serial.print(radio.getChannelNumber()); Serial.print(" -> "); Serial.println(RFduinoGZLL.channel);
+                        RFduinoGZLL.end();
+                        RFduinoGZLL.channel = radio.getChannelNumber();
+                        RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+                        radio.lastTimeHostHeardFromDevice = millis();
+                    } else {
+                        radio.processCommsFailure();
+                    }
+
                 }
             }
         } else { // lastTimeHostHeardFromDevice has not been changed
@@ -115,7 +124,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     if (radio.packetInTXRadioBuffer) {
         radio.packetInTXRadioBuffer = false;
     }
-
     // Send a time sync ack to driver?
     if (radio.sendSerialAck) {
         radio.bufferAddTimeSyncSentAck();
@@ -137,9 +145,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     } else {
         // Condition
         if (radio.isWaitingForNewChannelNumberConfirmation) {
-            RFduinoGZLL.end();
-            RFduinoGZLL.channel = radio.getChannelNumber();
-            RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+            if (!radio.channelNumberSaveAttempted) {
+                RFduinoGZLL.end();
+                RFduinoGZLL.channel = radio.getChannelNumber();
+                RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+            }
             radio.printSuccess();
             radio.printChannelNumber(radio.getChannelNumber());
             radio.printEOT();

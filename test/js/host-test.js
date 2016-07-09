@@ -5,7 +5,7 @@ var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var ourBoard = new OpenBCIBoard({verbose:true, baudRate: 230400});
+var ourBoard = new OpenBCIBoard({verbose:true});
 
 var portNames = {
     host: '/dev/cu.usbserial-DB00JAKZ'
