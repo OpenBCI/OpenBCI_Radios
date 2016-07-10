@@ -135,7 +135,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
     // If system is not up, set it up!
     radio.systemUp = true;
-    
+
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
