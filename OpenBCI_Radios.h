@@ -110,9 +110,11 @@ public:
     void        pushRadioBuffer(void);
     void        printBaudRateChangeTo(int);
     void        printChannelNumber(char);
+    void        printChannelNumberVerify(void);
     void        printCommsTimeout(void);
     void        printEOT(void);
     void        printFailure(void);
+    void        printMessageToDriver(uint8_t);
     void        printPollTime(char);
     void        printSuccess(void);
     void        printValidatedCommsTimeout(void);
@@ -169,6 +171,8 @@ public:
     volatile boolean isWaitingForNewPollTimeConfirmation;
     volatile boolean sendSerialAck;
     volatile boolean processingSendToDevice;
+    volatile boolean printMessageToDriverFlag;
+    volatile boolean systemUp;
     char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
     int ringBufferRead;
@@ -179,6 +183,7 @@ public:
     STREAM_STATE curStreamState;
 
     uint8_t radioMode;
+    volatile uint8_t msgToPrint;
     volatile uint8_t ackCounter;
 
     unsigned long lastTimeHostHeardFromDevice;

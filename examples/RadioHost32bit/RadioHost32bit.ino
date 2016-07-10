@@ -89,11 +89,11 @@ void loop() {
                 // Comms time out?
                 if (radio.commsFailureTimeout()) {
                     if (radio.isWaitingForNewChannelNumberConfirmation && !radio.channelNumberSaveAttempted) {
-                        // Serial.print(radio.getChannelNumber()); Serial.print(" -> "); Serial.println(RFduinoGZLL.channel);
                         RFduinoGZLL.end();
                         RFduinoGZLL.channel = radio.getChannelNumber();
                         RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
                         radio.lastTimeHostHeardFromDevice = millis();
+                        radio.channelNumberSaveAttempted = true;
                     } else {
                         radio.processCommsFailure();
                     }
@@ -106,6 +106,11 @@ void loop() {
                 radio.processCommsFailure();
             }
         }
+    }
+
+    if (radio.printMessageToDriverFlag) {
+        radio.printMessageToDriverFlag = false;
+        radio.printMessageToDriver(radio.msgToPrint);
     }
 }
 
@@ -128,7 +133,9 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     if (radio.sendSerialAck) {
         radio.bufferAddTimeSyncSentAck();
     }
-
+    // If system is not up, set it up!
+    radio.systemUp = true;
+    
     // Reset the last time heard from host timer
     radio.lastTimeHostHeardFromDevice = millis();
     // Set send data packet flag to false
@@ -150,19 +157,16 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 RFduinoGZLL.channel = radio.getChannelNumber();
                 RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
             }
-            radio.printSuccess();
-            radio.printChannelNumber(radio.getChannelNumber());
-            radio.printEOT();
+            radio.msgToPrint = OPENBCI_HOST_MSG_CHAN_GET_SUCCESS;
+            radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewChannelNumberConfirmation = false;
         } else if (radio.isWaitingForNewPollTimeConfirmation) {
-            radio.printSuccess();
-            radio.printPollTime(radio.getPollTime());
-            radio.printEOT();
+            radio.msgToPrint = OPENBCI_HOST_MSG_POLL_TIME;
+            radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewPollTimeConfirmation = false;
         }
         // Are there packets waiting to be sent and was the Serial port read
         //  more then 3 ms ago?
-
         sendDataPacket = radio.hostPacketToSend();
         if (sendDataPacket == false) {
             if (radio.bufferSerial.numberOfPacketsSent > 0) {
