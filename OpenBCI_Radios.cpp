@@ -1000,6 +1000,7 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
         default:
             // Reset the state
             curStreamState = STREAM_STATE_INIT;
+            break;
 
     }
     return newChar;
