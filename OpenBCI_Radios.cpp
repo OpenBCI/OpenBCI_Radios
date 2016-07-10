@@ -660,7 +660,6 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
             // Is the byte the command for time sync set?
             case OPENBCI_HOST_TIME_SYNC:
                 // Send a comma back to the PC/Driver
-                Serial.println("yo");
                 sendSerialAck = true;
                 return ACTION_RADIO_SEND_NORMAL;
             // Is the byte the command for a host channel number?
