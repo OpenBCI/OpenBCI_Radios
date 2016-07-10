@@ -52,6 +52,7 @@ public:
         char        typeByte;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         int         bytesIn;
+        boolean     full;
     } StreamPacketBuffer;
 
     typedef struct {
@@ -68,7 +69,7 @@ public:
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
-    void        bufferAddStreamPacket(volatile char *, int);
+    void        bufferAddStreamPacket(StreamPacketBuffer *buf);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
@@ -99,6 +100,7 @@ public:
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char);
     void        ledFeedBackForPassThru(void);
+    void        moveStreamPacketToTempBuffer(volatile char *data);
     boolean     needToSetChannelNumber(void);
     boolean     needToSetPollTime(void);
     byte        outputGetStopByteFromByteId(char);
@@ -110,9 +112,11 @@ public:
     void        pushRadioBuffer(void);
     void        printBaudRateChangeTo(int);
     void        printChannelNumber(char);
+    void        printChannelNumberVerify(void);
     void        printCommsTimeout(void);
     void        printEOT(void);
     void        printFailure(void);
+    void        printMessageToDriver(uint8_t);
     void        printPollTime(char);
     void        printSuccess(void);
     void        printValidatedCommsTimeout(void);
@@ -123,7 +127,8 @@ public:
     boolean     processHostRadioCharData(device_t, volatile char *, int);
     byte        processOutboundBuffer(volatile PacketBuffer *);
     byte        processOutboundBufferCharDouble(volatile char *);
-    byte        processOutboundBufferCharSingle(volatile char *);
+    byte        processOutboundBufferCharSingle(char);
+    byte        processOutboundBufferCharTriple(volatile char *);
     boolean     processRadioCharDevice(char);
     boolean     processRadioCharHost(device_t, char);
     void        resetPic32(void);
@@ -160,6 +165,9 @@ public:
     char singlePayLoad[1];
 
     StreamPacketBuffer streamPacketBuffer;
+    StreamPacketBuffer streamPacketBuffer1;
+    StreamPacketBuffer streamPacketBuffer2;
+    StreamPacketBuffer streamPacketBuffer3;
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewPollTime;
     volatile unsigned long timeOfLastPoll;
@@ -169,16 +177,18 @@ public:
     volatile boolean isWaitingForNewPollTimeConfirmation;
     volatile boolean sendSerialAck;
     volatile boolean processingSendToDevice;
+    volatile boolean printMessageToDriverFlag;
+    volatile boolean systemUp;
     char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
     int ringBufferRead;
-    volatile int ringBufferWrite;
-    volatile int ringBufferNumBytes;
-
+    int ringBufferWrite;
+    int ringBufferNumBytes;
 
     STREAM_STATE curStreamState;
 
     uint8_t radioMode;
+    volatile uint8_t msgToPrint;
     volatile uint8_t ackCounter;
 
     unsigned long lastTimeHostHeardFromDevice;

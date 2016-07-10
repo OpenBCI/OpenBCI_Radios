@@ -40,6 +40,7 @@
 #define OPENBCI_PIN_DEVICE_PCG 5
 // Pins used by the Host
 #define OPENBCI_PIN_HOST_LED 2
+#define OPENBCI_PIN_HOST_TIME 3
 #define OPENBCI_PIN_HOST_RESET 6
 
 // roles for the RFduinoGZLL
@@ -115,5 +116,18 @@
 #define OPENBCI_HOST_PRIVATE_POS_KEY 1
 #define OPENBCI_HOST_PRIVATE_POS_CODE 2
 #define OPENBCI_HOST_PRIVATE_POS_PAYLOAD 3
+
+// Messages to print
+#define OPENBCI_HOST_MSG_COMMS_DOWN         0
+#define OPENBCI_HOST_MSG_BAUD_FAST          1
+#define OPENBCI_HOST_MSG_BAUD_DEFAULT       2
+#define OPENBCI_HOST_MSG_SYS_UP             3
+#define OPENBCI_HOST_MSG_SYS_DOWN           4
+#define OPENBCI_HOST_MSG_CHAN               5
+#define OPENBCI_HOST_MSG_CHAN_OVERRIDE      6
+#define OPENBCI_HOST_MSG_CHAN_VERIFY        7
+#define OPENBCI_HOST_MSG_CHAN_GET_FAILURE   8
+#define OPENBCI_HOST_MSG_CHAN_GET_SUCCESS   9
+#define OPENBCI_HOST_MSG_POLL_TIME          10
 
 #endif
