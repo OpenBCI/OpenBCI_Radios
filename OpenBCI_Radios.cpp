@@ -612,12 +612,34 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  */
 byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
-    if (currentPacketBuffer->positionWrite == 3) {
-        return processOutboundBufferCharSingle(currentPacketBuffer->data);
-    } else if (currentPacketBuffer->positionWrite == 4) {
+    if (currentPacketBuffer->positionWrite == 2) {
+        return processOutboundBufferCharSingle(currentPacketBuffer->data[1]);
+    } else if (currentPacketBuffer->positionWrite == 3) {
         return processOutboundBufferCharDouble(currentPacketBuffer->data);
+    } else if (currentPacketBuffer->positionWrite == 4) {
+        return processOutboundBufferCharTriple(currentPacketBuffer->data);
     } else {
         return ACTION_RADIO_SEND_NORMAL;
+    }
+}
+
+/**
+ * @description Called by the Host's on_recieve function if the out bound buffer
+ *      has a single char in it.
+ * @param c {char} - The char in the outbound buffer.
+ * @return {byte} - The action to be taken after exit:
+ *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
+ *                      ACTION_RADIO_SEND_NONE - Take no action
+ *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ */
+byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char c) {
+    switch (c) {
+        case OPENBCI_HOST_TIME_SYNC:
+            // Send a comma back to the PC/Driver
+            sendSerialAck = true;
+            return ACTION_RADIO_SEND_NORMAL;
+        default:
+            return ACTION_RADIO_SEND_NORMAL;
     }
 }
 
@@ -633,74 +655,12 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentP
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
     // The first byte needs to match the command key to act on it
     if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
-        switch (buffer[2]) {
-            // Is the first byte equal to the channel change request?
-            case OPENBCI_HOST_CMD_CHANNEL_SET:
-                // Make sure the channel is within bounds (<25)
-                if (buffer[3] <= RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
-                    // Save requested new channel number
-                    radioChannel = (uint32_t)buffer[3];
-                    // Save the previous channel number
-                    previousRadioChannel = getChannelNumber();
-                    // Send a channel change request to the device
-                    singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
-                    // Clear the serial buffer
-                    bufferCleanSerial(1);
-                    // Send a single char message
-                    return ACTION_RADIO_SEND_SINGLE_CHAR;
-                } else {
-                    // Clear the serial buffer
-                    bufferCleanSerial(1);
-                    // Send back error message to the PC/Driver
-                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
-                    printMessageToDriverFlag = true;
-                    // Don't send a single char message
-                    return ACTION_RADIO_SEND_NONE;
-                }
-            case OPENBCI_HOST_CMD_POLL_TIME_SET:
-                // Save the new poll time
-                pollTime = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
-                // Send a time change request to the device
-                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
-                // Clear the serial buffer
-                bufferCleanSerial(1);
-                return ACTION_RADIO_SEND_SINGLE_CHAR;
-            case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
-                if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
-                    msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
-                    printMessageToDriverFlag = true;
-                    systemUp = false;
-                } else {
-                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
-                    printMessageToDriverFlag = true;
-                }
-                bufferCleanSerial(1);
-                return ACTION_RADIO_SEND_NONE;
-            default:
-                return ACTION_RADIO_SEND_NORMAL;
-        }
-    } else {
-        return ACTION_RADIO_SEND_NORMAL;
-    }
-}
-
-/**
- * @description Called by the Host's on_recieve function if the out bound buffer
- *      has a single char in it.
- * @param aChar {char} - The char in the outbound buffer.
- * @return {byte} - The action to be taken after exit:
- *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
- *                      ACTION_RADIO_SEND_NONE - Take no action
- *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
- */
-byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer) {
-    // The first byte needs to match the command key to act on it
-    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Decode the char
         switch (buffer[2]) {
             // Is the byte the command for time sync set?
             case OPENBCI_HOST_TIME_SYNC:
                 // Send a comma back to the PC/Driver
+                Serial.println("yo");
                 sendSerialAck = true;
                 return ACTION_RADIO_SEND_NORMAL;
             // Is the byte the command for a host channel number?
@@ -746,6 +706,69 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 // Clean the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
+            default:
+                return ACTION_RADIO_SEND_NORMAL;
+        }
+    } else {
+        return ACTION_RADIO_SEND_NORMAL;
+    }
+}
+
+/**
+ * @description Called by the Host's on_recieve function if the out bound buffer
+ *      has three chars in it.
+ * @param buffer {char *} - The char buffer
+ * @return {byte} - The action to be taken after exit:
+ *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
+ *                      ACTION_RADIO_SEND_NONE - Take no action
+ *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ */
+byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer) {
+    // The first byte needs to match the command key to act on it
+    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+        switch (buffer[2]) {
+            // Is the first byte equal to the channel change request?
+            case OPENBCI_HOST_CMD_CHANNEL_SET:
+                // Make sure the channel is within bounds (<25)
+                if (buffer[3] <= RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
+                    // Save requested new channel number
+                    radioChannel = (uint32_t)buffer[3];
+                    // Save the previous channel number
+                    previousRadioChannel = getChannelNumber();
+                    // Send a channel change request to the device
+                    singleCharMsg[0] = (char)ORPM_CHANGE_CHANNEL_HOST_REQUEST;
+                    // Clear the serial buffer
+                    bufferCleanSerial(1);
+                    // Send a single char message
+                    return ACTION_RADIO_SEND_SINGLE_CHAR;
+                } else {
+                    // Clear the serial buffer
+                    bufferCleanSerial(1);
+                    // Send back error message to the PC/Driver
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
+                    printMessageToDriverFlag = true;
+                    // Don't send a single char message
+                    return ACTION_RADIO_SEND_NONE;
+                }
+            case OPENBCI_HOST_CMD_POLL_TIME_SET:
+                // Save the new poll time
+                pollTime = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
+                // Send a time change request to the device
+                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
+                // Clear the serial buffer
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_SINGLE_CHAR;
+            case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
+                if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
+                    printMessageToDriverFlag = true;
+                    systemUp = false;
+                } else {
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
+                    printMessageToDriverFlag = true;
+                }
+                bufferCleanSerial(1);
+                return ACTION_RADIO_SEND_NONE;
             default:
                 return ACTION_RADIO_SEND_NORMAL;
         }
