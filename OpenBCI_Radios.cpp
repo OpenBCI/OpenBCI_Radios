@@ -29,6 +29,7 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
     ackCounter = 0;
     lastTimeHostHeardFromDevice = 0;
     lastTimeSerialRead = 0;
+    systemUp = false;
 }
 
 /**
@@ -185,6 +186,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     sendSerialAck = false;
     processingSendToDevice = false;
     channelNumberSaveAttempted = false;
+    printMessageToDriverFlag = false;
 
 }
 
@@ -411,6 +413,10 @@ void OpenBCI_Radios_Class::printChannelNumber(char c) {
     Serial.print("Channel number: "); Serial.print((int)c); Serial.write(c);
 }
 
+void OpenBCI_Radios_Class::printChannelNumberVerify(void) {
+    Serial.print("Verify channel number is less than 25");
+}
+
 void OpenBCI_Radios_Class::printBaudRateChangeTo(int b) {
     Serial.print("Switch your baud rate to ");
     Serial.print(b);
@@ -440,6 +446,81 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
     printFailure();
     printCommsTimeout();
     printEOT();
+}
+
+void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
+    switch (code) {
+        case OPENBCI_HOST_MSG_COMMS_DOWN:
+            printValidatedCommsTimeout();
+            break;
+        case OPENBCI_HOST_MSG_SYS_UP:
+            printSuccess();
+            Serial.print("System is Up");
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_SYS_DOWN:
+            printFailure();
+            Serial.print("System is Down");
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_BAUD_FAST:
+            printSuccess();
+            printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_FAST);
+            printEOT();
+            delay(2);
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_FAST);
+            break;
+        case OPENBCI_HOST_MSG_BAUD_DEFAULT:
+            printSuccess();
+            printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_DEFAULT);
+            printEOT();
+            delay(2);
+            // Close the current serial connection
+            Serial.end();
+            // Open the Serial connection
+            Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+            break;
+        case OPENBCI_HOST_MSG_CHAN:
+            printValidatedCommsTimeout();
+            break;
+        case OPENBCI_HOST_MSG_CHAN_OVERRIDE:
+            radioChannel = getChannelNumber();
+            RFduinoGZLL.end();
+            RFduinoGZLL.channel = getChannelNumber();
+            RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+            printSuccess();
+            Serial.print("Host override - ");
+            printChannelNumber(getChannelNumber());
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_CHAN_VERIFY:
+            printFailure();
+            printChannelNumberVerify();
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_CHAN_GET_FAILURE:
+            printFailure();
+            Serial.print("Host on ");
+            printChannelNumber(getChannelNumber());
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_CHAN_GET_SUCCESS:
+            printSuccess();
+            Serial.print("Host and Device on ");
+            printChannelNumber(getChannelNumber());
+            printEOT();
+            break;
+        case OPENBCI_HOST_MSG_POLL_TIME:
+            radio.printSuccess();
+            radio.printPollTime(radio.getPollTime());
+            radio.printEOT();
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -481,66 +562,41 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
         // Switch on the first byte of the first packet.
         switch (bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_CODE]) {
             case OPENBCI_HOST_CMD_CHANNEL_SET:
-                printValidatedCommsTimeout();
+                printMessageToDriver(OPENBCI_HOST_MSG_COMMS_DOWN);
                 break;
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
                     if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
-                        RFduinoGZLL.end();
-                        RFduinoGZLL.channel = getChannelNumber();
-                        RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
-                        printSuccess();
-                        Serial.print("Host override - ");
-                        printChannelNumber(getChannelNumber());
-                        printEOT();
+                        msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
+                        printMessageToDriverFlag = true;
+                        systemUp = false;
                     } else {
-                        printFailure();
-                        Serial.print("Verify channel number is less than 25");
-                        printEOT();
+                        printMessageToDriver(OPENBCI_HOST_MSG_CHAN_VERIFY);
                     }
                 break;
             case OPENBCI_HOST_CMD_CHANNEL_GET:
-                printFailure();
-                Serial.print("Host on ");
-                printChannelNumber(getChannelNumber());
-                printEOT();
+                printMessageToDriver(OPENBCI_HOST_MSG_CHAN_GET_FAILURE);
                 break;
             case OPENBCI_HOST_CMD_BAUD_DEFAULT:
-                printSuccess();
-                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_DEFAULT);
-                printEOT();
-                delay(1); // Delay for serial to finish
-                // Close the current serial connection
-                Serial.end();
-                // Open the Serial connection
-                Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+                msgToPrint = OPENBCI_HOST_MSG_BAUD_DEFAULT;
+                printMessageToDriverFlag = true;
                 break;
             case OPENBCI_HOST_CMD_BAUD_FAST:
-                printSuccess();
-                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_FAST);
-                printEOT();
-                delay(1); // Delay for serial to finish
-                // Close the current serial connection
-                Serial.end();
-                // Open the Serial connection
-                Serial.begin(OPENBCI_BAUD_RATE_FAST);
+                msgToPrint = OPENBCI_HOST_MSG_BAUD_FAST;
+                printMessageToDriverFlag = true;
                 break;
             case OPENBCI_HOST_CMD_POLL_TIME_GET:
-                printFailure();
-                Serial.print("Could not get poll time");
-                printEOT();
+                printMessageToDriver(OPENBCI_HOST_MSG_COMMS_DOWN);
                 break;
             case OPENBCI_HOST_CMD_SYS_UP:
                 // We were not able to get polled by the Device
-                printFailure();
-                Serial.print("System is Down");
-                printEOT();
+                printMessageToDriver(OPENBCI_HOST_MSG_SYS_DOWN);
                 break;
             default:
-                printValidatedCommsTimeout();
+                printMessageToDriver(OPENBCI_HOST_MSG_COMMS_DOWN);
                 break;
         }
     } else {
-        printValidatedCommsTimeout();
+        printMessageToDriver(OPENBCI_HOST_MSG_COMMS_DOWN);
     }
     // Always clear the serial buffer
     bufferCleanSerial(1);
@@ -596,7 +652,8 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                     // Clear the serial buffer
                     bufferCleanSerial(1);
                     // Send back error message to the PC/Driver
-                    Serial.print("Failure: invalid channel number$$$");
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
+                    printMessageToDriverFlag = true;
                     // Don't send a single char message
                     return ACTION_RADIO_SEND_NONE;
                 }
@@ -610,18 +667,12 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 return ACTION_RADIO_SEND_SINGLE_CHAR;
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
                 if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
-                    radioChannel = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
-                    RFduinoGZLL.end();
-                    RFduinoGZLL.channel = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
-                    RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
-                    printSuccess();
-                    Serial.print("Host override - ");
-                    printChannelNumber(getChannelNumber());
-                    printEOT();
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
+                    printMessageToDriverFlag = true;
+                    systemUp = false;
                 } else {
-                    printFailure();
-                    Serial.print("Verify channel number is less than 25");
-                    printEOT();
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
+                    printMessageToDriverFlag = true;
                 }
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
@@ -654,47 +705,37 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(volatile char *buffer
                 return ACTION_RADIO_SEND_NORMAL;
             // Is the byte the command for a host channel number?
             case OPENBCI_HOST_CMD_CHANNEL_GET:
-                // Send the channel number back to the driver
-                printSuccess();
-                Serial.print("Host and device on ");
-                printChannelNumber(getChannelNumber());
-                printEOT();
+                if (systemUp) {
+                    // Send the channel number back to the driver
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_GET_SUCCESS;
+                    printMessageToDriverFlag = true;
+                } else {
+                    // Send the channel number back to the driver
+                    msgToPrint = OPENBCI_HOST_MSG_CHAN_GET_FAILURE;
+                    printMessageToDriverFlag = true;
+                }
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_BAUD_DEFAULT:
-                printSuccess();
-                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_DEFAULT);
-                printEOT();
-                delay(1); // Delay for serial to finish
-                // Close the current serial connection
-                Serial.end();
-                // Open the Serial connection
-                Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
+                msgToPrint = OPENBCI_HOST_MSG_BAUD_DEFAULT;
+                printMessageToDriverFlag = true;
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_BAUD_FAST:
-                printSuccess();
-                printBaudRateChangeTo((int)OPENBCI_BAUD_RATE_FAST);
-                printEOT();
-                delay(1); // Delay for serial to finish
-                // Close the current serial connection
-                Serial.end();
-                // Open the Serial connection
-                Serial.begin(OPENBCI_BAUD_RATE_FAST);
+                msgToPrint = OPENBCI_HOST_MSG_BAUD_FAST;
+                printMessageToDriverFlag = true;
                 // Clear the serial buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_SYS_UP:
-                if (commsFailureTimeout()) {
-                    printFailure();
-                    Serial.print("System is Down");
-                    printEOT();
+                if (systemUp) {
+                    msgToPrint = OPENBCI_HOST_MSG_SYS_UP;
+                    printMessageToDriverFlag = true;
                 } else {
-                    printSuccess();
-                    Serial.print("System is Up");
-                    printEOT();
+                    msgToPrint = OPENBCI_HOST_MSG_SYS_DOWN;
+                    printMessageToDriverFlag = true;
                 }
                 // Clear the serial buffer
                 bufferCleanSerial(1);
