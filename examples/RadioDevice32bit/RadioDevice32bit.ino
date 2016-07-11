@@ -65,9 +65,8 @@ void loop() {
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
                     radio.sendStreamPacketToTheHost();
                 } else {
-                    // packet loss incur
+                    // packet loss incur... never seems to happen
                 }
-
             }
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the

@@ -187,6 +187,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     processingSendToDevice = false;
     channelNumberSaveAttempted = false;
     printMessageToDriverFlag = false;
+    streamPacketBufferFull = false;
 
 }
 
@@ -907,6 +908,9 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
     pollRefresh();
 
     bufferSerial.numberOfPacketsSent++;
+
+    // Reset the stream buffer
+    bufferResetStreamPacketBuffer();
 }
 
 /**
@@ -1135,28 +1139,38 @@ void OpenBCI_Radios_Class::writeBufferToSerial(char *buffer, int length) {
     }
 }
 
+void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
+    streamPacketBuffer.typeByte = outputGetStopByteFromByteId(data[0]);
+    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+        streamPacketBuffer.data[i] = data[i+1];
+    }
+    streamPacketBufferFull = true;
+}
+
 /**
  * @description Moves bytes into bufferStreamPackets from on_recieve
  * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
  * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::bufferAddStreamPacket(volatile char *data, int length) {
-
-    ringBuffer[ringBufferWrite] = 0xA0;
-    ringBufferWrite++;
-    int count = 1;
-    while (count < length) {
-        if (ringBufferWrite >= OPENBCI_BUFFER_LENGTH) {
-            ringBufferWrite = 0;
-        }
-        ringBuffer[ringBufferWrite] = data[count];
+void OpenBCI_Radios_Class::bufferAddStreamPacket(void) {
+    if (ringBufferWrite < (OPENBCI_BUFFER_LENGTH - OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES)) {
+        ringBuffer[ringBufferWrite] = 0xA0;
         ringBufferWrite++;
-        count++;
+        for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+            ringBuffer[ringBufferWrite] = streamPacketBuffer.data[i];
+            ringBufferWrite++;
+        }
+        ringBuffer[ringBufferWrite] = streamPacketBuffer.typeByte;
+        ringBufferWrite++;
+
+        streamPacketBufferFull = false;
+    } else {
+        // Overflowed
+        ringBufferWrite = 0;
+        streamPacketBufferFull = false;
     }
-    ringBuffer[ringBufferWrite] = outputGetStopByteFromByteId(data[0]);
-    ringBufferWrite++;
-    ringBufferNumBytes += OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES;
+
 
 }
 
@@ -1742,7 +1756,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
-        bufferAddStreamPacket(data,len);
+        moveStreamPacketToTempBuffer(data);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }
