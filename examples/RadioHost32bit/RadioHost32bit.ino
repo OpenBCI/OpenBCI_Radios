@@ -27,8 +27,6 @@
 #include <RFduinoGZLL.h>
 #include "OpenBCI_Radios.h"
 
-// OpenBCI_Radios_Class radio = OpenBCI_Radio_Class();
-
 void setup() {
     // If you forgot your channel numbers, then force a reset by uncommenting
     //  the line below. This will force a reflash of the non-volitile memory space.
@@ -41,15 +39,17 @@ void setup() {
 
 void loop() {
 
+    if (radio.streamPacketBufferFull) {
+        radio.bufferAddStreamPacket();
+    }
+
     // Is there a stream packet waiting to get sent to the PC
-    while (radio.ringBufferNumBytes > 0) {
-        Serial.write(radio.ringBuffer[radio.ringBufferRead]);
-        radio.ringBufferRead++;
-        if (radio.ringBufferRead >= OPENBCI_BUFFER_LENGTH) {
-            radio.ringBufferRead = 0;
+    if (radio.ringBufferWrite > 0) {
+        for (int i = 0; i < radio.ringBufferWrite; i++) {
+            Serial.write(radio.ringBuffer[i]);
         }
-        radio.ringBufferNumBytes--;
-     }
+        radio.ringBufferWrite = 0;
+    } 
 
     // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {

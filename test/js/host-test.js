@@ -42,7 +42,7 @@ var startHost = () => {
             } else {
                 console.log(`err: expected ${sampleRecievedCounter} got ${sample.sampleNumber} `);
                 badPackets++;
-                if (badPackets > 1) {
+                if (badPackets > 5) {
                     process.exit();
                 }
                 sampleRecievedCounter = sample.sampleNumber + 1;

@@ -68,7 +68,7 @@ public:
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
-    void        bufferAddStreamPacket(volatile char *, int);
+    void        bufferAddStreamPacket(void);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
@@ -99,6 +99,7 @@ public:
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char);
     void        ledFeedBackForPassThru(void);
+    void        moveStreamPacketToTempBuffer(volatile char *data);
     boolean     needToSetChannelNumber(void);
     boolean     needToSetPollTime(void);
     byte        outputGetStopByteFromByteId(char);
@@ -177,8 +178,9 @@ public:
     char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
     int ringBufferRead;
-    volatile int ringBufferWrite;
-    volatile int ringBufferNumBytes;
+    int ringBufferWrite;
+    int ringBufferNumBytes;
+    volatile boolean streamPacketBufferFull;
 
 
     STREAM_STATE curStreamState;
