@@ -30,9 +30,9 @@ var startHost = () => {
         //     process.exit();
         //
         // })
-        ourBoard.on('rawDataPacket', rawDataPacket => {
-            console.log('rawDataPacket',rawDataPacket);
-        })
+        // ourBoard.on('rawDataPacket', rawDataPacket => {
+        //     console.log('rawDataPacket',rawDataPacket);
+        // })
         ourBoard.on('sample',function(sample) {
             rawSampleCount++;
             // console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
@@ -48,9 +48,6 @@ var startHost = () => {
                 badPackets++;
                 if (badPackets > 5) {
                     ourBoard.streamStop()
-                        .then(() => {
-                            return ourBoard.radioBaudRateSet('default');
-                        })
                         .then(() => {
                             return ourBoard.disconnect()
                         })

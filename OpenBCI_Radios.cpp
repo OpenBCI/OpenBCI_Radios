@@ -1769,6 +1769,11 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
+        // Serial.write(0xA0);
+        // for (int i = 1; i < len; i++) {
+        //     Serial.write(data[i]);
+        // }
+        // Serial.write(outputGetStopByteFromByteId(data[0]));
         moveStreamPacketToTempBuffer(data);
         // Check to see if there is a packet to send back
         return hostPacketToSend();
