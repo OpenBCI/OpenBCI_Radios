@@ -39,10 +39,16 @@ void setup() {
 
 void loop() {
 
-    if (radio.streamPacketBufferFull) {
-        radio.bufferAddStreamPacket();
+    // Check the stream packet buffers for data
+    if (radio.streamPacketBuffer1.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer1);
     }
-
+    if (radio.streamPacketBuffer2.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer2);
+    }
+    if (radio.streamPacketBuffer3.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer3);
+    }
     // Is there a stream packet waiting to get sent to the PC
     if (radio.ringBufferWrite > 0) {
         for (int i = 0; i < radio.ringBufferWrite; i++) {

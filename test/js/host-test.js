@@ -7,7 +7,7 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({verbose:true, baudRate:921600});
 
 var portNames = {
-    host: '/dev/cu.usbserial-DB00J5PF'
+    host: '/dev/cu.usbserial-DB00JAKZ'
 }
 
 var badPackets = 0;
@@ -18,6 +18,7 @@ var sampleRecievedCounter = 0;
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
         ourBoard.on('ready',function() {
+            console.log(`YOOOOO`);
             ourBoard.streamStart();
                 // ourBoard.radioBaudRateSet('fast')
                 //     .then(() => {
