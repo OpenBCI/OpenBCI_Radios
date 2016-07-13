@@ -5,7 +5,10 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard,
     }),
     fs = require('fs'),
     wstreamSample = fs.createWriteStream('timeSyncTest-samples.txt'),
-    wstreamSent = fs.createWriteStream('timeSyncTest-sentTimes.txt');
+    sys = require('sys'),
+    exec = require('child_process').exec;
+
+var child;
 
 var portNames = {
     host: '/dev/cu.usbserial-DB00JAKZ'
@@ -23,69 +26,67 @@ var cycleTimeMS = 500;
 var isCycleHigh = false;
 var cycleCount = 0;
 
-var writeOutDate = () => {
-    wstream.write(`${new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')}`);
+console.log("__dir__",__dir__);
+
+
+var endKindly = () => {
+    if (ourBoard.connected) {
+        ourBoard.disconnect()
+            .then(() => {
+                process.exit();
+            })
+            .catch(err => {
+                $log.error(err);
+                process.exit();
+            });
+    } else {
+        process.exit();
+    }
 }
-var writeOutDateAndTime = () => {
-    wstream.write(`Date and time: `);
-    writeOutDate();
+
+var startRubyScreenFlasher = () => {
+    child = exec('ruby taco',
+        (error, stdout, stderr) => {
+            console.log(`stdout: ${stdout}`);
+            console.log(`stderr: ${stderr}`);
+            if (error !== null) {
+                console.log(`exec error: ${error}`);
+            }
+    });
 }
 
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
         ourBoard.on('ready',function() {
-                ourBoard.streamStart();
-                // ourBoard.syncClocksStart().catch(err => console.log('sync err',err));
+                ourBoard.streamStart()
+                    .catch(err => {
+                        endKindly();
+                    })
             });
-        // ourBoard.on('rawDataPacket', rawDataPacket => {
-        //     console.log('rawDataPacket',rawDataPacket);
-        // })
+
         var timeSyncActivated = false;
         ourBoard.on('sample',function(sample) {
             // If we are not sycned, then do that
             if (timeSyncActivated === false) {
                 timeSyncActivated = true;
                 ourBoard.syncClocks().then(() => {
-                    console.log('starting variable');
-                    setInterval(() => {
-                        if (isCycleHigh) {
-                            // write low
-                            ourBoard._writeAndDrain(new Buffer([0xF0,0x08])).then(() => {
-                                var timeSent = ourBoard.sntpNow();
-                                wstreamSent.write(`low,${timeSent}\n`);
-                                timeSentLowArray.push(timeSent);
-                            });
-                            isCycleHigh = false;
-                        } else {
-                            // write high
-                            ourBoard._writeAndDrain(new Buffer([0xF0,0x09])).then(() => {
-                                var timeSent = ourBoard.sntpNow();
-                                wstreamSent.write(`high,${timeSent}\n`);
-                                timeSentHighArray.push(timeSent);
-                            });
-                            isCycleHigh = true;
-                        }
-                    }, 500);
+                    // Jump for joy?
                 }).catch(err => {
-                    process.exit(err);
+                    endKindly();
                 });
             }
-            rawSampleCount++;
-            // console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
-            if (sample.timeStamp) {
-                // console.log(sample.timeStamp);
-                wstreamSample.write(`${sample.auxData.readInt16BE()},${sample.timeStamp}\n`);
+            if (sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
+                wstreamSample.write(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}\n`);
+                rawSampleCount++;
+                if (rawSampleCount >= totalSamplesToGet) {
+                    endKindly();
+                }
             }
-
-            if (rawSampleCount >= totalSamplesToGet) {
-                process.exit();
-            }
-
         });
     })
 }
 
-startHost();
+// startHost();
 
 process.on('exit', (code) => {
     if (ourBoard) {
