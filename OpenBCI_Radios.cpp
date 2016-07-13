@@ -188,6 +188,7 @@ void OpenBCI_Radios_Class::configureHost(void) {
     channelNumberSaveAttempted = false;
     printMessageToDriverFlag = false;
     streamPacketBufferFull = false;
+    systemUp = false;
 
 }
 
@@ -496,6 +497,7 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
             Serial.print("Host override - ");
             printChannelNumber(getChannelNumber());
             printEOT();
+            systemUp = false;
             break;
         case OPENBCI_HOST_MSG_CHAN_VERIFY:
             printFailure();
@@ -507,6 +509,7 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
             Serial.print("Host on ");
             printChannelNumber(getChannelNumber());
             printEOT();
+            systemUp = false;
             break;
         case OPENBCI_HOST_MSG_CHAN_GET_SUCCESS:
             printSuccess();
@@ -569,7 +572,6 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
                     if (setChannelNumber((uint32_t)bufferSerial.packetBuffer->data[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
                         msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
                         printMessageToDriverFlag = true;
-                        systemUp = false;
                     } else {
                         printMessageToDriver(OPENBCI_HOST_MSG_CHAN_VERIFY);
                     }
@@ -762,7 +764,6 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer
                 if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
                     msgToPrint = OPENBCI_HOST_MSG_CHAN_OVERRIDE;
                     printMessageToDriverFlag = true;
-                    systemUp = false;
                 } else {
                     msgToPrint = OPENBCI_HOST_MSG_CHAN_VERIFY;
                     printMessageToDriverFlag = true;
