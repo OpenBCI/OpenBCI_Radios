@@ -390,6 +390,11 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
  * @description The first line of defense against a system that has lost it's device
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
+    if (millis() > (lastTimeHostHeardFromDevice + 255)) {
+
+    } else {
+
+    }
     return millis() > (lastTimeHostHeardFromDevice + 500);
 }
 
@@ -532,6 +537,7 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
  *  more than 3 * pollTime.
  */
 void OpenBCI_Radios_Class::processCommsFailure(void) {
+    systemUp = false;
     // Serial.println("processCommsFailure");
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
@@ -703,11 +709,17 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_POLL_TIME_GET:
-                // Send a time change request to the device
-                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_GET;
-                // Clean the serial buffer
-                bufferCleanSerial(1);
-                return ACTION_RADIO_SEND_SINGLE_CHAR;
+                if (systemUp) {
+                    // Send a time change request to the device
+                    singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_GET;
+                    // Clean the serial buffer
+                    bufferCleanSerial(1);
+                    return ACTION_RADIO_SEND_SINGLE_CHAR;
+                } else {
+                    // Clean the serial buffer
+                    bufferCleanSerial(1);
+                    return ACTION_RADIO_SEND_NONE;
+                }
             default:
                 return ACTION_RADIO_SEND_NORMAL;
         }

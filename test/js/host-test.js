@@ -1,4 +1,3 @@
-var serialPort = require('serialport');
 var bufferEqual = require('buffer-equal');
 var StreamSearch = require('streamsearch');
 var chai = require('chai')
@@ -19,7 +18,12 @@ var sampleRecievedCounter = 0;
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
         ourBoard.on('ready',function() {
-                ourBoard.streamStart();
+            ourBoard.streamStart();
+                // ourBoard.radioBaudRateSet('fast')
+                //     .then(() => {
+                //
+                //     })
+
                 // ourBoard.syncClocksStart().catch(err => console.log('sync err',err));
             });
         // ourBoard.on('synced',() => {
@@ -43,7 +47,20 @@ var startHost = () => {
                 console.log(`err: expected ${sampleRecievedCounter} got ${sample.sampleNumber} `);
                 badPackets++;
                 if (badPackets > 5) {
-                    process.exit();
+                    ourBoard.streamStop()
+                        .then(() => {
+                            return ourBoard.radioBaudRateSet('default');
+                        })
+                        .then(() => {
+                            return ourBoard.disconnect()
+                        })
+                        .then(() => {
+                            process.exit();
+                        })
+                        .catch(err => {
+                            process.exit(1);
+                        })
+
                 }
                 sampleRecievedCounter = sample.sampleNumber + 1;
             }

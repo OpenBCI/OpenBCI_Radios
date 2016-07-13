@@ -49,7 +49,7 @@ void loop() {
             Serial.write(radio.ringBuffer[i]);
         }
         radio.ringBufferWrite = 0;
-    } 
+    }
 
     // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {
@@ -72,6 +72,11 @@ void loop() {
         if (!success) {
             Serial.print("Failure: Input too large!$$$");
         }
+    }
+
+    // Set system to down if we experience a comms timout
+    if (radio.commsFailureTimeout()) {
+        radio.systemUp = false;
     }
 
     if (radio.serialWriteTimeOut()) {
@@ -102,7 +107,7 @@ void loop() {
             }
         } else { // lastTimeHostHeardFromDevice has not been changed
             // comms time out?
-            if (radio.commsFailureTimeout()){
+            if (radio.commsFailureTimeout()) {
                 radio.processCommsFailure();
             }
         }
