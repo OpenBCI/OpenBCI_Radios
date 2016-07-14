@@ -389,15 +389,11 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
 }
 
 /**
- * @description The first line of defense against a system that has lost it's device
+ * @description The first line of defense against a system that has lost it's
+ *  device. The timeout is 15ms longer than the longest polltime (255) possible.
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    if (millis() > (lastTimeHostHeardFromDevice + 255)) {
-
-    } else {
-
-    }
-    return millis() > (lastTimeHostHeardFromDevice + 500);
+    return millis() > (lastTimeHostHeardFromDevice + 270);
 }
 
 /**
