@@ -52,6 +52,7 @@ public:
         char        typeByte;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         int         bytesIn;
+        boolean     full;
     } StreamPacketBuffer;
 
     typedef struct {
@@ -68,7 +69,7 @@ public:
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
-    void        bufferAddStreamPacket(void);
+    void        bufferAddStreamPacket(StreamPacketBuffer *buf);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
@@ -164,6 +165,9 @@ public:
     char singlePayLoad[1];
 
     StreamPacketBuffer streamPacketBuffer;
+    StreamPacketBuffer streamPacketBuffer1;
+    StreamPacketBuffer streamPacketBuffer2;
+    StreamPacketBuffer streamPacketBuffer3;
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewPollTime;
     volatile unsigned long timeOfLastPoll;
@@ -180,8 +184,6 @@ public:
     int ringBufferRead;
     int ringBufferWrite;
     int ringBufferNumBytes;
-    volatile boolean streamPacketBufferFull;
-
 
     STREAM_STATE curStreamState;
 

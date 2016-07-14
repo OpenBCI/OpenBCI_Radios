@@ -9,7 +9,6 @@
   "author": "AJ Keller",
   "license": "ISC",
   "dependencies": {
-    "serialport": "^3.1.2",
     "streamsearch": "^0.1.2"
   },
   "devDependencies": {

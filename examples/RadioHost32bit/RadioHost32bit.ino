@@ -39,17 +39,23 @@ void setup() {
 
 void loop() {
 
-    if (radio.streamPacketBufferFull) {
-        radio.bufferAddStreamPacket();
+    // Check the stream packet buffers for data
+    if (radio.streamPacketBuffer1.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer1);
     }
-
+    if (radio.streamPacketBuffer2.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer2);
+    }
+    if (radio.streamPacketBuffer3.full) {
+        radio.bufferAddStreamPacket(&radio.streamPacketBuffer3);
+    }
     // Is there a stream packet waiting to get sent to the PC
     if (radio.ringBufferWrite > 0) {
         for (int i = 0; i < radio.ringBufferWrite; i++) {
             Serial.write(radio.ringBuffer[i]);
         }
         radio.ringBufferWrite = 0;
-    } 
+    }
 
     // Is there data in the radio buffer ready to be sent to the Driver?
     if (radio.gotAllRadioPackets) {
@@ -72,6 +78,11 @@ void loop() {
         if (!success) {
             Serial.print("Failure: Input too large!$$$");
         }
+    }
+
+    // Set system to down if we experience a comms timout
+    if (radio.commsFailureTimeout()) {
+        radio.systemUp = false;
     }
 
     if (radio.serialWriteTimeOut()) {
@@ -102,7 +113,7 @@ void loop() {
             }
         } else { // lastTimeHostHeardFromDevice has not been changed
             // comms time out?
-            if (radio.commsFailureTimeout()){
+            if (radio.commsFailureTimeout()) {
                 radio.processCommsFailure();
             }
         }

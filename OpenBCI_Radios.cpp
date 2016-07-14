@@ -187,7 +187,9 @@ void OpenBCI_Radios_Class::configureHost(void) {
     processingSendToDevice = false;
     channelNumberSaveAttempted = false;
     printMessageToDriverFlag = false;
-    streamPacketBufferFull = false;
+    streamPacketBuffer1.full = false;
+    streamPacketBuffer2.full = false;
+    streamPacketBuffer3.full = false;
     systemUp = false;
 
 }
@@ -387,10 +389,11 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
 }
 
 /**
- * @description The first line of defense against a system that has lost it's device
+ * @description The first line of defense against a system that has lost it's
+ *  device. The timeout is 15ms longer than the longest polltime (255) possible.
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    return millis() > (lastTimeHostHeardFromDevice + 500);
+    return millis() > (lastTimeHostHeardFromDevice + 270);
 }
 
 /**
@@ -532,6 +535,7 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
  *  more than 3 * pollTime.
  */
 void OpenBCI_Radios_Class::processCommsFailure(void) {
+    systemUp = false;
     // Serial.println("processCommsFailure");
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
@@ -703,11 +707,17 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
                 bufferCleanSerial(1);
                 return ACTION_RADIO_SEND_NONE;
             case OPENBCI_HOST_CMD_POLL_TIME_GET:
-                // Send a time change request to the device
-                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_GET;
-                // Clean the serial buffer
-                bufferCleanSerial(1);
-                return ACTION_RADIO_SEND_SINGLE_CHAR;
+                if (systemUp) {
+                    // Send a time change request to the device
+                    singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_GET;
+                    // Clean the serial buffer
+                    bufferCleanSerial(1);
+                    return ACTION_RADIO_SEND_SINGLE_CHAR;
+                } else {
+                    // Clean the serial buffer
+                    bufferCleanSerial(1);
+                    return ACTION_RADIO_SEND_NONE;
+                }
             default:
                 return ACTION_RADIO_SEND_NORMAL;
         }
@@ -1141,11 +1151,25 @@ void OpenBCI_Radios_Class::writeBufferToSerial(char *buffer, int length) {
 }
 
 void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
-    streamPacketBuffer.typeByte = outputGetStopByteFromByteId(data[0]);
-    for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-        streamPacketBuffer.data[i] = data[i+1];
-    }
-    streamPacketBufferFull = true;
+    if (!streamPacketBuffer1.full) {
+        streamPacketBuffer1.typeByte = outputGetStopByteFromByteId(data[0]);
+        for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+            streamPacketBuffer1.data[i] = data[i+1];
+        }
+        streamPacketBuffer1.full = true;
+    } else if (!streamPacketBuffer2.full) {
+        streamPacketBuffer2.typeByte = outputGetStopByteFromByteId(data[0]);
+        for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+            streamPacketBuffer2.data[i] = data[i+1];
+        }
+        streamPacketBuffer2.full = true;
+    } else if (!streamPacketBuffer2.full) {
+        streamPacketBuffer3.typeByte = outputGetStopByteFromByteId(data[0]);
+        for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
+            streamPacketBuffer3.data[i] = data[i+1];
+        }
+        streamPacketBuffer3.full = true;
+    } // else you in trouble!
 }
 
 /**
@@ -1154,22 +1178,21 @@ void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
  * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::bufferAddStreamPacket(void) {
+void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
     if (ringBufferWrite < (OPENBCI_BUFFER_LENGTH - OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES)) {
         ringBuffer[ringBufferWrite] = 0xA0;
         ringBufferWrite++;
         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-            ringBuffer[ringBufferWrite] = streamPacketBuffer.data[i];
+            ringBuffer[ringBufferWrite] = buf->data[i];
             ringBufferWrite++;
         }
-        ringBuffer[ringBufferWrite] = streamPacketBuffer.typeByte;
+        ringBuffer[ringBufferWrite] = buf->typeByte;
         ringBufferWrite++;
 
-        streamPacketBufferFull = false;
+        buf->full = false;
     } else {
         // Overflowed
-        ringBufferWrite = 0;
-        streamPacketBufferFull = false;
+        buf->full = false;
     }
 
 
@@ -1662,6 +1685,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     // When in debug mode, state which packetNumber we just recieved
     if (byteIdGetIsStream(data[0])) {
         // Serial.println("Got stream packet!");
+        RFduinoGZLL.sendToHost((const char*)data,len);
         // Check to see if there is a packet to send back
         return packetToSend();
     }
@@ -1743,6 +1767,21 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
 }
 
 boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile char *data, int len) {
+
+    if (byteIdGetIsStream(data[0])) {
+        // We don't actually read to serial port yet, we simply move it
+        //  into a buffer in an effort to not write to the Serial port
+        //  from an ISR.
+        // Serial.write(0xA0);
+        // for (int i = 1; i < len; i++) {
+        //     Serial.write(data[i]);
+        // }
+        // Serial.write(outputGetStopByteFromByteId(data[0]));
+        moveStreamPacketToTempBuffer(data);
+        // Check to see if there is a packet to send back
+        return hostPacketToSend();
+    }
+
     // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
     // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
     boolean gotLastPacket = false;
@@ -1751,16 +1790,6 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
 
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
-
-    if (byteIdGetIsStream(data[0])) {
-        // Serial.println("Got stream packet!");
-        // We don't actually read to serial port yet, we simply move it
-        //  into a buffer in an effort to not write to the Serial port
-        //  from an ISR.
-        moveStreamPacketToTempBuffer(data);
-        // Check to see if there is a packet to send back
-        return hostPacketToSend();
-    }
 
     // This first statment asks if this is a last packet and the previous
     //  packet was 0 too, this is in an effort to get to the point in the
