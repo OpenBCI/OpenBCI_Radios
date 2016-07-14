@@ -7,7 +7,7 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({verbose:true, baudRate:921600});
 
 var portNames = {
-    host: '/dev/cu.usbserial-DB00JAKZ'
+    host: '/dev/tty.usbserial-DB00JAKZ'
 }
 
 var badPackets = 0;

@@ -1689,6 +1689,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     // When in debug mode, state which packetNumber we just recieved
     if (byteIdGetIsStream(data[0])) {
         // Serial.println("Got stream packet!");
+        RFduinoGZLL.sendToHost((const char*)data,len);
         // Check to see if there is a packet to send back
         return packetToSend();
     }
@@ -1770,17 +1771,8 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
 }
 
 boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile char *data, int len) {
-    // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
-    // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
-    boolean gotLastPacket = false;
-    boolean goodToAddPacketToRadioBuffer = true;
-    boolean firstPacket = false;
-
-    // The packetNumber is embedded in the first byte, the byteId
-    int packetNumber = byteIdGetPacketNumber(data[0]);
 
     if (byteIdGetIsStream(data[0])) {
-        // Serial.println("Got stream packet!");
         // We don't actually read to serial port yet, we simply move it
         //  into a buffer in an effort to not write to the Serial port
         //  from an ISR.
@@ -1793,6 +1785,15 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         // Check to see if there is a packet to send back
         return hostPacketToSend();
     }
+
+    // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
+    // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
+    boolean gotLastPacket = false;
+    boolean goodToAddPacketToRadioBuffer = true;
+    boolean firstPacket = false;
+
+    // The packetNumber is embedded in the first byte, the byteId
+    int packetNumber = byteIdGetPacketNumber(data[0]);
 
     // This first statment asks if this is a last packet and the previous
     //  packet was 0 too, this is in an effort to get to the point in the
