@@ -1685,7 +1685,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     // When in debug mode, state which packetNumber we just recieved
     if (byteIdGetIsStream(data[0])) {
         // Serial.println("Got stream packet!");
-        // RFduinoGZLL.sendToHost((const char*)data,len);
+        RFduinoGZLL.sendToHost((const char*)data,len);
         // Check to see if there is a packet to send back
         return packetToSend();
     }
