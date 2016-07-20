@@ -172,6 +172,9 @@ void OpenBCI_Radios_Class::configureHost(void) {
     // Configure pins
     pinMode(OPENBCI_PIN_HOST_RESET,INPUT);
     pinMode(OPENBCI_PIN_HOST_LED,OUTPUT);
+    // pinMode(OPENBCI_PIN_HOST_TIME,OUTPUT);
+    //
+    // digitalWrite(OPENBCI_PIN_HOST_TIME,LOW);
 
     // Turn LED on
     digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
@@ -645,6 +648,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char c) {
             // Send a comma back to the PC/Driver
             sendSerialAck = true;
             return ACTION_RADIO_SEND_NORMAL;
+
         default:
             return ACTION_RADIO_SEND_NORMAL;
     }
