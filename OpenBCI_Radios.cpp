@@ -4,11 +4,9 @@ Let us define two over arching operating modes / paradigms: Host and Device, whe
 * Host is connected to PC via USB VCP (FTDI).
 * Device is connectedd to uC (PIC32MX250F128B with UDB32-MX2-DIP).
 
-These displays use I2C to communicate, 2 pins are required to
-interface
 OpenBCI invests time and resources providing this open source code,
 please support OpenBCI and open-source hardware by purchasing
-products from OpenBCI!
+products from OpenBCI or donating on our downloads page!
 
 Written by AJ Keller of Push The World LLC but much credit must also go to
 Joel Murphy who with Conor Russomanno and Leif Percifield created the
@@ -34,10 +32,10 @@ OpenBCI_Radios_Class::OpenBCI_Radios_Class() {
 
 /**
 * @description The function that the radio will call in setup()
-* @param: mode [unint8_t] - The mode the radio shall operate in
+* @param: mode {unint8_t} - The mode the radio shall operate in
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radios_Class::begin(uint8_t mode) {
+void OpenBCI_Radios_Class::begin(uint8_t mode) {
     // Save global radio mode
     radioMode = mode;
 
@@ -47,13 +45,13 @@ boolean OpenBCI_Radios_Class::begin(uint8_t mode) {
 
 /**
 * @description The function that the radio will call in setup()
-* @param: mode [unint8_t] - The mode the radio shall operate in
-* @param: channelNumber [int8_t] - The channelNumber the RFduinoGZLL will
+* @param: mode {unint8_t} - The mode the radio shall operate in
+* @param: channelNumber {uint32_t} - The channelNumber the RFduinoGZLL will
 *           use to communicate with the other RFduinoGZLL.
 *           NOTE: Must be from 0 - 25
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radios_Class::begin(uint8_t mode, uint32_t channelNumber) {
+void OpenBCI_Radios_Class::begin(uint8_t mode, uint32_t channelNumber) {
     // Save global radio mode
     radioMode = mode;
     // Restrict the channel to 0-25 inclusively
@@ -67,15 +65,15 @@ boolean OpenBCI_Radios_Class::begin(uint8_t mode, uint32_t channelNumber) {
 
 /**
 * @description Puts into debug mode and then call other function
-* @param: mode [unint8_t] - The mode the radio shall operate in
-* @param: channelNumber [int8_t] - The channelNumber the RFduinoGZLL will
+* @param: mode {unint8_t} - The mode the radio shall operate in
+* @param: channelNumber {int8_t} - The channelNumber the RFduinoGZLL will
 *           use to communicate with the other RFduinoGZLL.
 *           NOTE: Must be from 0 - 25
 * @author AJ Keller (@pushtheworldllc)
 */
-boolean OpenBCI_Radios_Class::beginDebug(uint8_t mode, uint32_t channelNumber) {
+void OpenBCI_Radios_Class::beginDebug(uint8_t mode, uint32_t channelNumber) {
     debugMode = true;
-    return begin(mode,channelNumber);
+    begin(mode,channelNumber);
 }
 
 
