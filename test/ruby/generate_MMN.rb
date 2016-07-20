@@ -31,7 +31,7 @@ class GameWindow < Gosu::Window
                   @color = 0xffffffff
                   @odd = 0
               end
-              @timestamp << [Time.now().to_f, @odd]
+              @timestamp << [(Time.now().to_f * 1000).floor, @odd]
           end
       else
           @color = 0x00000000

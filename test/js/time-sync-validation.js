@@ -5,8 +5,9 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard,
     }),
     fs = require('fs'),
     wstreamSample = fs.createWriteStream('timeSyncTest-samples.txt'),
-    sys = require('sys'),
-    exec = require('child_process').exec;
+    util = require('util'),
+    exec = require('child_process').exec,
+    robot = require("robotjs");
 
 var child;
 
@@ -26,8 +27,6 @@ var cycleTimeMS = 500;
 var isCycleHigh = false;
 var cycleCount = 0;
 
-console.log("__dir__",__dir__);
-
 
 var endKindly = () => {
     if (ourBoard.connected) {
@@ -45,7 +44,7 @@ var endKindly = () => {
 }
 
 var startRubyScreenFlasher = () => {
-    child = exec('ruby taco',
+    child = exec('ruby ~/Documents/Arduino/libraries/OpenBCI_Radios/test/ruby/generate_MMN.rb',
         (error, stdout, stderr) => {
             console.log(`stdout: ${stdout}`);
             console.log(`stderr: ${stderr}`);
@@ -53,12 +52,16 @@ var startRubyScreenFlasher = () => {
                 console.log(`exec error: ${error}`);
             }
     });
-}
+};
 
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
         ourBoard.on('ready',function() {
                 ourBoard.streamStart()
+                    .then(() => {
+                        // Start the screen flasher program
+                        startRubyScreenFlasher();
+                    })
                     .catch(err => {
                         endKindly();
                     })
@@ -89,6 +92,8 @@ var startHost = () => {
 // startHost();
 
 process.on('exit', (code) => {
+    // Close the ruby screen flasher program
+    robot.keyTap("escape");
     if (ourBoard) {
         if (ourBoard.connected) {
             ourBoard.disconnect().then(() => {
