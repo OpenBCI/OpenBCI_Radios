@@ -20,7 +20,7 @@ var writeHeaderDataLog = () => {
 }
 
 const sampleRate = 250;
-var runTimeSec = 10; //seconds
+var runTimeSec = 60; //seconds
 var totalSamplesToGet = sampleRate * runTimeSec;
 var rawSampleCount = 0;
 var sampleRecievedCounter = 0;

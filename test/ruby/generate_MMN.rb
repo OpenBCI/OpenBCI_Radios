@@ -6,8 +6,8 @@ class GameWindow < Gosu::Window
     super 600, 600
     self.caption = "SSVEP generator"
     @frame = 0
-    @stimfreq = 10 # in number of frame
-    @stimlenght = 10
+    @stimfreq = 30 # in number of frame
+    @stimlenght = 4
 
     @prob = 85
     @stimcount = 0
@@ -25,7 +25,7 @@ class GameWindow < Gosu::Window
           if ((@frame) % (@stimfreq))==0
               @stimcount += 1
               if 100*rand > @prob
-                  @color = 0xff000000
+                  @color = 0xffffffff
                   @odd = 1
               else
                   @color = 0xffffffff
