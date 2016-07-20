@@ -4,7 +4,7 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard,
         timeSync: true // Sync up with NTP servers in constructor
     }),
     fs = require('fs'),
-    wstreamSample = fs.createWriteStream('timeSyncTest-samples.txt'),
+    wstreamSample = fs.createWriteStream('timeSyncTest-samples.csv'),
     util = require('util'),
     exec = require('child_process').exec,
     robot = require("robotjs");
@@ -12,7 +12,11 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard,
 var child;
 
 var portNames = {
-    host: '/dev/cu.usbserial-DB00JAKZ'
+    host: '/dev/cu.usbserial-DJ00DN7Z'
+}
+
+var writeHeaderDataLog = () => {
+    wstreamSample.write(`Time Stamp,Sensor Value,Board Time\n`);
 }
 
 const sampleRate = 250;
@@ -53,10 +57,11 @@ var startRubyScreenFlasher = () => {
             }
     });
 };
-
+var timeSyncActivated = false;
+// startRubyScreenFlasher();
 var startHost = () => {
     ourBoard.connect(portNames.host).then(() => {
-        ourBoard.on('ready',function() {
+        ourBoard.on('ready',() => {
                 ourBoard.streamStart()
                     .then(() => {
                         // Start the screen flasher program
@@ -67,18 +72,20 @@ var startHost = () => {
                     })
             });
 
-        var timeSyncActivated = false;
-        ourBoard.on('sample',function(sample) {
+
+        ourBoard.on('sample',sample => {
             // If we are not sycned, then do that
             if (timeSyncActivated === false) {
                 timeSyncActivated = true;
                 ourBoard.syncClocks().then(() => {
                     // Jump for joy?
+
                 }).catch(err => {
                     endKindly();
                 });
             }
             if (sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
+                console.log(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}`);
                 wstreamSample.write(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}\n`);
                 rawSampleCount++;
                 if (rawSampleCount >= totalSamplesToGet) {
@@ -87,9 +94,14 @@ var startHost = () => {
             }
         });
     })
+    .catch(err => {
+        console.log(`connect ${err}`);
+        endKindly();
+    });
 }
 
-// startHost();
+writeHeaderDataLog();
+startHost();
 
 process.on('exit', (code) => {
     // Close the ruby screen flasher program
