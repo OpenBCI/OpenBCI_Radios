@@ -1,32 +1,19 @@
 [![Join the chat at https://gitter.im/OpenBCI/openbci-js-sdk](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OpenBCI/openbci-js-sdk?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # OpenBCI_Radios
-Libraries and firmware for OpenBCI Radio Modules
 
-## Updating
+Libraries and firmware for OpenBCI Radio Modules.
 
-Current release of OpenBCI uses RFduino radio modules
-http://www.rfduino.com/product/rfd22301-rfduino-ble-smt/index.html
-The RFduino libraries contained here are custom builds for OpenBCI specifically. You must use these libraries to modify or update the Host/Device firmware.
+## General Overview
 
-## WE RECOMMEND USING ARDUINO IDE VERSION 1.5.8
+The OpenBCI board has an on-board RFDuino radio module acting as a "Device". The OpenBCI system includes a USB dongle for the PC, which acts as the RFDuino "Host". The format of the OpenBCI data as seen on the PC is defined by a combination of the Arduino code on the OpenBCI board and of the RFDuino code running on the Host.
 
-After downloading the files in this repo, open the OpenBCI_RFduino_Library file and move the RFduino folder to the following location:
+For a general discussion of the OpenBCI Radio firmware please refer to software section on the learning pages on [openbci.com](http://www.openbci.com).
 
-on Mac, right click the Arduino 1.5.x IDE and select Show Contents.
-Then place the file in
+## Installation
 
-/Applications/Arduino.app/Contents/Resources/Java/hardware/arduino
+For [detailed installation and upload instructions](http://docs.openbci.com/tutorials/03-Upload_Code_to_OpenBCI_Dongle) please refer to our learning section on [openbci.com](http://www.openbci.com).
 
+# Reference Guide
 
-on Windows
-Place the file in
-
-C:\ProgramFiles (x86)\Arduino-1.5.x\hardware\arduino
-
-Install the FTDI drivers for your OS here [FTDI Drivers](www.ftdichip.com/drivers/vcp.htm)
-
-# OpenBCI_Donlge_PassThru
-The PassThru code is designed to be used when you want to re-program the Device radio on the OpenBCI board. If you don't have a 3.3V FTDI cable, or friend, you can use the OpenBCI Dongle instead.
-There is a tutorial that describes the process here
-http://docs.openbci.com/tutorials/03-Upload_Code_to_OpenBCI_Dongle
+## Functions
