@@ -1,10 +1,10 @@
 var OpenBCIBoard = require('openbci').OpenBCIBoard,
     ourBoard = new OpenBCIBoard({
-        verbose:true,
-        timeSync: true // Sync up with NTP servers in constructor
+        verbose:true
+        // timeSync: true // Sync up with NTP servers in constructor
     }),
     fs = require('fs'),
-    wstreamSample = fs.createWriteStream('timeSyncTest-samples.csv'),
+    wstreamSample = fs.createWriteStream('timeSyncTest-samples5SyncLocal5.csv'),
     util = require('util'),
     exec = require('child_process').exec,
     robot = require("robotjs");
@@ -20,7 +20,7 @@ var writeHeaderDataLog = () => {
 }
 
 const sampleRate = 250;
-var runTimeSec = 10; //seconds
+var runTimeSec = 60; //seconds
 var totalSamplesToGet = sampleRate * runTimeSec;
 var rawSampleCount = 0;
 var sampleRecievedCounter = 0;
@@ -30,6 +30,7 @@ var lastTimeSent = 0;
 var cycleTimeMS = 500;
 var isCycleHigh = false;
 var cycleCount = 0;
+var startLoggingSamples = false;
 
 
 var endKindly = () => {
@@ -57,6 +58,9 @@ var startRubyScreenFlasher = () => {
             }
     });
 };
+var timesSynced = 0;
+var timesToSync = 2;
+var timesToFailSync = 5;
 var timeSyncActivated = false;
 // startRubyScreenFlasher();
 var startHost = () => {
@@ -65,27 +69,77 @@ var startHost = () => {
                 ourBoard.streamStart()
                     .then(() => {
                         // Start the screen flasher program
-                        startRubyScreenFlasher();
+
                     })
                     .catch(err => {
                         endKindly();
                     })
             });
 
-
+        // ourBoard.on('synced',syncObj => {
+        //     if (syncObj.valid) {
+        //         timesSynced++;
+        //         if (timesSynced >= timesToSync) {
+        //             startRubyScreenFlasher();
+        //             startLoggingSamples = true;
+        //         } else {
+        //             ourBoard.syncClocks()
+        //                 .catch(err => {
+        //                     console.log(err);
+        //                     endKindly();
+        //                 })
+        //         }
+        //     } else {
+        //         console.log('bad sync');
+        //         timesSynced++;
+        //         if (timesSynced >= timesToFailSync) {
+        //             endKindly();
+        //         } else {
+        //             ourBoard.syncClocks()
+        //                 .catch(err => {
+        //                     console.log(err);
+        //                     endKindly();
+        //                 });
+        //         }
+        //     }
+        // })
         ourBoard.on('sample',sample => {
             // If we are not sycned, then do that
             if (timeSyncActivated === false) {
                 timeSyncActivated = true;
-                ourBoard.syncClocks().then(() => {
-                    // Jump for joy?
+                ourBoard.syncClocksFull()
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('first sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('2nd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('3rd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('4th sync done');
 
-                }).catch(err => {
-                    endKindly();
-                });
+                        }
+                        startRubyScreenFlasher();
+                        startLoggingSamples = true;
+                    })
+                    .catch(err => {
+                        endKindly();
+                    });
             }
-            if (sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
-                console.log(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}`);
+            if (startLoggingSamples && sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
+                // console.log(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}`);
                 wstreamSample.write(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}\n`);
                 rawSampleCount++;
                 if (rawSampleCount >= totalSamplesToGet) {

@@ -6,32 +6,52 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-radio	KEYWORD1
+bufferSerial    KEYWORD1
+radio           KEYWORD1
+ringBuffer      KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-begin							  							KEYWORD2
-didPCSendDataToHost					  						KEYWORD2
-didPicSendDeviceSerialData				  					KEYWORD2
-didPicSendDeviceAStreamPacket								KEYWORD2
-doesTheHostHaveAStreamPacketToSendToPC						KEYWORD2
-getSerialDataFromPCAndPutItInHostsSerialBuffer		  		KEYWORD2
-getSerialDataFromPicAndPutItInTheDevicesSerialBuffer 		KEYWORD2
-hasEnoughTimePassedToLaunchStreamPacket                     KEYWORD2
-isAStreamPacketWaitingForLaunch                             KEYWORD2
-isTheDevicesRadioBufferFilledWithAllThePacketsFromTheHost 	KEYWORD2
-isTheHostsRadioBufferFilledWithAllThePacketsFromTheDevice 	KEYWORD2
-sendStreamPacketToTheHost                                   KEYWORD2
-sendTheDevicesFirstPacketToTheHost 							KEYWORD2
-theLastTimeNewSerialDataWasAvailableWasLongEnough 			KEYWORD2
-writeTheDevicesRadioBufferToThePic 							KEYWORD2
-writeTheHostsRadioBufferToThePC				  				KEYWORD2
-writeTheHostsStreamPacketBufferToThePC						KEYWORD2
+begin                           KEYWORD2
+beginDebug                      KEYWORD2
+bufferAddStreamPacket           KEYWORD2
+bufferAddTimeSyncSentAck        KEYWORD2
+bufferCleanSerial               KEYWORD2
+bufferRadioClean                KEYWORD2
+bufferRadioFlush                KEYWORD2
+bufferRadioReset                KEYWORD2
+bufferResetStreamPacketBuffer   KEYWORD2
+commsFailureTimeout             KEYWORD2
+didPCSendDataToHost             KEYWORD2
+getChannelNumber                KEYWORD2
+gotAllRadioPackets              KEYWORD2
+hostPacketToSend                KEYWORD2
+isAStreamPacketWaitingForLaunch KEYWORD2
+ledFeedBackForPassThru          KEYWORD2
+packetToSend                    KEYWORD2
+packetsInSerialBuffer           KEYWORD2
+pollRefresh                     KEYWORD2
+printMessageToDriver            KEYWORD2
+processChar                     KEYWORD2
+processCommsFailure             KEYWORD2
+processRadioCharDevice          KEYWORD2
+processRadioCharHost            KEYWORD2
+processDeviceRadioCharData      KEYWORD2
+processHostRadioCharData        KEYWORD2
+resetPic32                      KEYWORD2
+sendPacketToDevice              KEYWORD2
+sendPacketToHost                KEYWORD2
+sendPollMessageToHost           KEYWORD2
+sendStreamPacketToTheHost       KEYWORD2
+serialWriteTimeOut              KEYWORD2
+storeCharToSerialBuffer         KEYWORD2
+thereIsDataInSerialBuffer       KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
-OPENBCI_MODE_DEVICE	LITERAL1
-OPENBCI_MODE_HOST	LITERAL1
-OPENBCI_MODE_PASS_THRU	LITERAL1
+OPENBCI_MODE_DEVICE	        LITERAL1
+OPENBCI_MODE_HOST           LITERAL1
+OPENBCI_MODE_PASS_THRU      LITERAL1
+ORPM_DEVICE_SERIAL_OVERFLOW LITERAL1
