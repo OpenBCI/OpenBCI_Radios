@@ -666,11 +666,6 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
     if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Decode the char
         switch (buffer[2]) {
-            // Is the byte the command for time sync set?
-            case OPENBCI_HOST_TIME_SYNC:
-                // Send a comma back to the PC/Driver
-                sendSerialAck = true;
-                return ACTION_RADIO_SEND_NORMAL;
             // Is the byte the command for a host channel number?
             case OPENBCI_HOST_CMD_CHANNEL_GET:
                 if (systemUp) {
