@@ -4,7 +4,7 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard,
         timeSync: true // Sync up with NTP servers in constructor
     }),
     fs = require('fs'),
-    wstreamSample = fs.createWriteStream('timeSyncTest-samples.csv'),
+    wstreamSample = fs.createWriteStream('timeSyncTest-samplesLocal3.csv'),
     util = require('util'),
     exec = require('child_process').exec,
     robot = require("robotjs");
@@ -30,6 +30,7 @@ var lastTimeSent = 0;
 var cycleTimeMS = 500;
 var isCycleHigh = false;
 var cycleCount = 0;
+var startLoggingSamples = false;
 
 
 var endKindly = () => {
@@ -65,7 +66,7 @@ var startHost = () => {
                 ourBoard.streamStart()
                     .then(() => {
                         // Start the screen flasher program
-                        startRubyScreenFlasher();
+
                     })
                     .catch(err => {
                         endKindly();
@@ -77,15 +78,40 @@ var startHost = () => {
             // If we are not sycned, then do that
             if (timeSyncActivated === false) {
                 timeSyncActivated = true;
-                ourBoard.syncClocks().then(() => {
-                    // Jump for joy?
+                ourBoard.syncClocks()
+                    .then(() => {
+                        // Jump for joy?
+                        setTimeout(() => {
+                            return ourBoard.syncClocks();
+                        }, 25);
 
-                }).catch(err => {
-                    endKindly();
-                });
+                    }).then(() => {
+                        // Jump for joy?
+                        setTimeout(() => {
+                            return ourBoard.syncClocks();
+                        }, 25);
+                    }).then(() => {
+                        // Jump for joy?
+                        setTimeout(() => {
+                            return ourBoard.syncClocks();
+                        }, 25);
+                    }).then(() => {
+                        // Jump for joy?
+                        setTimeout(() => {
+                            return ourBoard.syncClocks();
+                        }, 25);
+                    })
+                    .then(() => {
+                        // We have synced 5 times start everything up
+                        startRubyScreenFlasher();
+                        startLoggingSamples = true;
+                    })
+                    .catch(err => {
+                        endKindly();
+                    });
             }
-            if (sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
-                console.log(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}`);
+            if (startLoggingSamples && sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
+                // console.log(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}`);
                 wstreamSample.write(`${sample.timeStamp},${sample.auxData.readInt16BE()},${sample.boardTime}\n`);
                 rawSampleCount++;
                 if (rawSampleCount >= totalSamplesToGet) {
