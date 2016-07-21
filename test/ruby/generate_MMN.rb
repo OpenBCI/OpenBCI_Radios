@@ -47,7 +47,7 @@ class GameWindow < Gosu::Window
 
   def button_down(id)
       if id == Gosu::KbEscape
-          CSV.open("MMN_timestampLocal3.csv", "wb") do |csv|
+          CSV.open("MMN_timestamp5SyncLocal5.csv", "wb") do |csv|
 
               csv << ["timestamp", "target"]
               @timestamp.each do |t|

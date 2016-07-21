@@ -1,10 +1,10 @@
 var OpenBCIBoard = require('openbci').OpenBCIBoard,
     ourBoard = new OpenBCIBoard({
-        verbose:true,
-        timeSync: true // Sync up with NTP servers in constructor
+        verbose:true
+        // timeSync: true // Sync up with NTP servers in constructor
     }),
     fs = require('fs'),
-    wstreamSample = fs.createWriteStream('timeSyncTest-samplesLocal3.csv'),
+    wstreamSample = fs.createWriteStream('timeSyncTest-samples5SyncLocal5.csv'),
     util = require('util'),
     exec = require('child_process').exec,
     robot = require("robotjs");
@@ -58,6 +58,9 @@ var startRubyScreenFlasher = () => {
             }
     });
 };
+var timesSynced = 0;
+var timesToSync = 2;
+var timesToFailSync = 5;
 var timeSyncActivated = false;
 // startRubyScreenFlasher();
 var startHost = () => {
@@ -73,36 +76,61 @@ var startHost = () => {
                     })
             });
 
-
+        // ourBoard.on('synced',syncObj => {
+        //     if (syncObj.valid) {
+        //         timesSynced++;
+        //         if (timesSynced >= timesToSync) {
+        //             startRubyScreenFlasher();
+        //             startLoggingSamples = true;
+        //         } else {
+        //             ourBoard.syncClocks()
+        //                 .catch(err => {
+        //                     console.log(err);
+        //                     endKindly();
+        //                 })
+        //         }
+        //     } else {
+        //         console.log('bad sync');
+        //         timesSynced++;
+        //         if (timesSynced >= timesToFailSync) {
+        //             endKindly();
+        //         } else {
+        //             ourBoard.syncClocks()
+        //                 .catch(err => {
+        //                     console.log(err);
+        //                     endKindly();
+        //                 });
+        //         }
+        //     }
+        // })
         ourBoard.on('sample',sample => {
             // If we are not sycned, then do that
             if (timeSyncActivated === false) {
                 timeSyncActivated = true;
-                ourBoard.syncClocks()
-                    .then(() => {
-                        // Jump for joy?
-                        setTimeout(() => {
-                            return ourBoard.syncClocks();
-                        }, 25);
-
-                    }).then(() => {
-                        // Jump for joy?
-                        setTimeout(() => {
-                            return ourBoard.syncClocks();
-                        }, 25);
-                    }).then(() => {
-                        // Jump for joy?
-                        setTimeout(() => {
-                            return ourBoard.syncClocks();
-                        }, 25);
-                    }).then(() => {
-                        // Jump for joy?
-                        setTimeout(() => {
-                            return ourBoard.syncClocks();
-                        }, 25);
+                ourBoard.syncClocksFull()
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('first sync done');
+                        }
+                        return ourBoard.syncClocksFull();
                     })
-                    .then(() => {
-                        // We have synced 5 times start everything up
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('2nd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('3rd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('4th sync done');
+
+                        }
                         startRubyScreenFlasher();
                         startLoggingSamples = true;
                     })
