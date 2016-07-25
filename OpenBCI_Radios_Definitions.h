@@ -40,6 +40,7 @@
 #define OPENBCI_PIN_DEVICE_PCG 5
 // Pins used by the Host
 #define OPENBCI_PIN_HOST_LED 2
+#define OPENBCI_PIN_HOST_TIME 3
 #define OPENBCI_PIN_HOST_RESET 6
 
 // roles for the RFduinoGZLL
@@ -100,6 +101,8 @@
 #define OPENBCI_HOST_CMD_BAUD_DEFAULT 0x05
 #define OPENBCI_HOST_CMD_BAUD_FAST 0x06
 #define OPENBCI_HOST_CMD_SYS_UP 0x07
+#define OPENBCI_HOST_CMD_TIME_PIN_HIGH 0x08
+#define OPENBCI_HOST_CMD_TIME_PIN_LOW 0x09
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011

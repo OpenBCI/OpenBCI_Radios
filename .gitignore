@@ -9,3 +9,7 @@ gtest/
 npm-debug.log
 node_modules/
 test/js/results/
+*.csv
+
+# Python files
+.ipynb_checkpoints/

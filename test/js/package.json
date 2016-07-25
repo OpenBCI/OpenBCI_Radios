@@ -9,6 +9,8 @@
   "author": "AJ Keller",
   "license": "ISC",
   "dependencies": {
+    "openbci": "^1.0.1",
+    "robotjs": "^0.4.4",
     "streamsearch": "^0.1.2"
   },
   "devDependencies": {

@@ -63,9 +63,9 @@ public:
 
 // SHARED
     OpenBCI_Radios_Class();
-    boolean     begin(uint8_t);
-    boolean     begin(uint8_t, uint32_t);
-    boolean     beginDebug(uint8_t, uint32_t);
+    void        begin(uint8_t);
+    void        begin(uint8_t, uint32_t);
+    void        beginDebug(uint8_t, uint32_t);
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
