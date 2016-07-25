@@ -1,7 +1,6 @@
 var OpenBCIBoard = require('openbci').OpenBCIBoard,
     ourBoard = new OpenBCIBoard({
         verbose:true
-        // timeSync: true // Sync up with NTP servers in constructor
     }),
     fs = require('fs'),
     wstreamSample = fs.createWriteStream('Hardware_timestamp-samples1.csv'),
