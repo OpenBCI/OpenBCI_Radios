@@ -34,6 +34,20 @@ public:
         STREAM_STATE_READY,
         STREAM_STATE_TAIL
     };
+    typedef enum HOST_MESSAGE {
+        HOST_MESSAGE_SERIAL_ACK,
+        HOST_MESSAGE_COMMS_DOWN,
+        HOST_MESSAGE_BAUD_FAST,
+        HOST_MESSAGE_BAUD_DEFAULT,
+        HOST_MESSAGE_SYS_UP,
+        HOST_MESSAGE_SYS_DOWN,
+        HOST_MESSAGE_CHAN,
+        HOST_MESSAGE_CHAN_OVERRIDE,
+        HOST_MESSAGE_CHAN_VERIFY,
+        HOST_MESSAGE_CHAN_GET_FAILURE,
+        HOST_MESSAGE_CHAN_GET_SUCCESS,
+        HOST_MESSAGE_POLL_TIME
+    };
     // STRUCTS
     typedef struct {
       char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
@@ -52,13 +66,15 @@ public:
         char        typeByte;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         int         bytesIn;
-        boolean     full;
+        boolean     flushing;
     } StreamPacketBuffer;
 
     typedef struct {
-        char    data[OPENBCI_BUFFER_LENGTH];
+        boolean flushing;
+        boolean gotAllPackets;
+        char    data[OPENBCI_BUFFER_LENGTH_MULTI];
         int     positionWrite;
-        int     previousPacketNumber;
+        uint8_t previousPacketNumber;
     } BufferRadio;
 
 // SHARED
@@ -69,20 +85,34 @@ public:
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
-    void        bufferAddStreamPacket(StreamPacketBuffer *buf);
+    // void        bufferAddStreamPacket(StreamPacketBuffer *buf);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
-    void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *, int );
+    void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *, int);
     void        bufferCleanPacketBuffer(volatile PacketBuffer *,int);
     void        bufferCleanBuffer(volatile Buffer *, int);
     void        bufferCleanSerial(int);
     void        bufferCleanStreamPackets(int);
-    boolean     bufferRadioAddData(volatile char *, int, boolean);
-    void        bufferRadioClean(void);
-    void        bufferRadioFlush(void);
-    void        bufferRadioReset(void);
+    boolean     bufferRadioAddData(BufferRadio *, char *, int, boolean);
+    void        bufferRadioClean(BufferRadio *);
+    boolean     bufferRadioHasData(BufferRadio *);
+    void        bufferRadioFlush(BufferRadio *);
+    void        bufferRadioFlushBuffers(void);
+    boolean     bufferRadioLoadingMultiPacket(BufferRadio *buf);
+    byte        bufferRadioProcessPacket(char *data, int len);
+    void        bufferRadioProcessSingle(BufferRadio *buf);
+    boolean     bufferRadioReadyForNewPage(BufferRadio *buf);
+    void        bufferRadioReset(BufferRadio *);
+    boolean     bufferRadioSwitchToOtherBuffer(void);
     void        bufferResetStreamPacketBuffer(void);
+    boolean     bufferStreamAddData(char *);
+    void        bufferStreamFlush(StreamPacketBuffer *);
+    void        bufferStreamFlushBuffers(void);
+    boolean     bufferStreamReadyForNewPacket(StreamPacketBuffer *);
+    void        bufferStreamReset(void);
+    void        bufferStreamReset(StreamPacketBuffer *);
+    void        bufferStreamStoreData(StreamPacketBuffer *, char *);
     char        byteIdMake(boolean, int, volatile char *, int);
     byte        byteIdMakeStreamPacketType(void);
     boolean     commsFailureTimeout(void);
@@ -100,7 +130,7 @@ public:
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char);
     void        ledFeedBackForPassThru(void);
-    void        moveStreamPacketToTempBuffer(volatile char *data);
+    // void        moveStreamPacketToTempBuffer(volatile char *data);
     boolean     needToSetChannelNumber(void);
     boolean     needToSetPollTime(void);
     byte        outputGetStopByteFromByteId(char);
@@ -120,22 +150,22 @@ public:
     void        printPollTime(char);
     void        printSuccess(void);
     void        printValidatedCommsTimeout(void);
-    char        processChar(char);
+    char        processSerialCharDevice(char);
     void        processCommsFailure(void);
     void        processCommsFailureSinglePacket(void);
-    boolean     processDeviceRadioCharData(volatile char *, int);
-    boolean     processHostRadioCharData(device_t, volatile char *, int);
-    byte        processOutboundBuffer(volatile PacketBuffer *);
-    byte        processOutboundBufferCharDouble(volatile char *);
-    byte        processOutboundBufferCharSingle(char);
-    byte        processOutboundBufferCharTriple(volatile char *);
+    boolean     processDeviceRadioCharData(char *, int);
+    boolean     processHostRadioCharData(device_t, char *, int);
+    byte        processOutboundBuffer(PacketBuffer *);
+    byte        processOutboundBufferCharDouble(char *);
+    byte        processOutboundBufferCharTriple(char *);
+    boolean     processOutboundBufferForTimeSync(void);
     boolean     processRadioCharDevice(char);
     boolean     processRadioCharHost(device_t, char);
     void        resetPic32(void);
     boolean     revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
-    void        sendPacketToDevice(volatile device_t);
-    void        sendPacketToHost(void);
+    void        sendPacketToDevice(volatile device_t, boolean);
+    int         sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte);
     void        sendStreamPackets(void);
@@ -148,42 +178,36 @@ public:
     boolean     storeCharToSerialBuffer(char);
     boolean     thereIsDataInSerialBuffer(void);
     void        writeBufferToSerial(char *,int);
-    void        writeTheHostsRadioBufferToThePC(void);
 
     //////////////////////
     // SHARED VARIABLES //
     //////////////////////
     // CUSTOMS
-    BufferRadio bufferRadio;
+    BufferRadio bufferRadio[OPENBCI_NUMBER_RADIO_BUFFERS];
+    uint8_t currentRadioBufferNum;
+    BufferRadio *currentRadioBuffer;
     Buffer bufferSerial;
     PacketBuffer *currentPacketBufferSerial;
     // BOOLEANS
     boolean debugMode;
-    volatile boolean gotAllRadioPackets;
     // CHARS
     char singleCharMsg[1];
     char singlePayLoad[1];
 
-    StreamPacketBuffer streamPacketBuffer;
-    StreamPacketBuffer streamPacketBuffer1;
-    StreamPacketBuffer streamPacketBuffer2;
-    StreamPacketBuffer streamPacketBuffer3;
+    StreamPacketBuffer streamPacketBuffer[OPENBCI_NUMBER_STREAM_BUFFERS];
+    volatile boolean sendingMultiPacket;
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewPollTime;
     volatile unsigned long timeOfLastPoll;
+    unsigned long timeOfLastMultipacketSendToHost;
 
     boolean channelNumberSaveAttempted;
     volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTimeConfirmation;
     volatile boolean sendSerialAck;
-    volatile boolean processingSendToDevice;
     volatile boolean printMessageToDriverFlag;
     volatile boolean systemUp;
-    char ringBuffer[OPENBCI_BUFFER_LENGTH];
     volatile boolean packetInTXRadioBuffer;
-    int ringBufferRead;
-    int ringBufferWrite;
-    int ringBufferNumBytes;
 
     STREAM_STATE curStreamState;
 

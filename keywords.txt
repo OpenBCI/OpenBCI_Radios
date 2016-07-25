@@ -19,13 +19,15 @@ bufferAddStreamPacket           KEYWORD2
 bufferAddTimeSyncSentAck        KEYWORD2
 bufferCleanSerial               KEYWORD2
 bufferRadioClean                KEYWORD2
-bufferRadioFlush                KEYWORD2
+bufferRadioFlushBuffers         KEYWORD2
+bufferRadioProcessSingle        KEYWORD2
 bufferRadioReset                KEYWORD2
 bufferResetStreamPacketBuffer   KEYWORD2
 commsFailureTimeout             KEYWORD2
 didPCSendDataToHost             KEYWORD2
+flashNonVolatileMemory          KEYWORD2
 getChannelNumber                KEYWORD2
-gotAllRadioPackets              KEYWORD2
+getPollTime                     KEYWORD2
 hostPacketToSend                KEYWORD2
 isAStreamPacketWaitingForLaunch KEYWORD2
 ledFeedBackForPassThru          KEYWORD2
@@ -33,7 +35,7 @@ packetToSend                    KEYWORD2
 packetsInSerialBuffer           KEYWORD2
 pollRefresh                     KEYWORD2
 printMessageToDriver            KEYWORD2
-processChar                     KEYWORD2
+processSerialCharDevice         KEYWORD2
 processCommsFailure             KEYWORD2
 processRadioCharDevice          KEYWORD2
 processRadioCharHost            KEYWORD2
@@ -51,7 +53,18 @@ thereIsDataInSerialBuffer       KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-OPENBCI_MODE_DEVICE	        LITERAL1
-OPENBCI_MODE_HOST           LITERAL1
-OPENBCI_MODE_PASS_THRU      LITERAL1
-ORPM_DEVICE_SERIAL_OVERFLOW LITERAL1
+OPENBCI_MODE_DEVICE	                LITERAL1
+OPENBCI_MODE_HOST                   LITERAL1
+OPENBCI_MODE_PASS_THRU              LITERAL1
+ORPM_DEVICE_SERIAL_OVERFLOW         LITERAL1
+OPENBCI_HOST_MSG_COMMS_DOWN         LITERAL1
+OPENBCI_HOST_MSG_BAUD_FAST          LITERAL1
+OPENBCI_HOST_MSG_BAUD_DEFAULT       LITERAL1
+OPENBCI_HOST_MSG_SYS_UP             LITERAL1
+OPENBCI_HOST_MSG_SYS_DOWN           LITERAL1
+OPENBCI_HOST_MSG_CHAN               LITERAL1
+OPENBCI_HOST_MSG_CHAN_OVERRIDE      LITERAL1
+OPENBCI_HOST_MSG_CHAN_VERIFY        LITERAL1
+OPENBCI_HOST_MSG_CHAN_GET_FAILURE   LITERAL1
+OPENBCI_HOST_MSG_CHAN_GET_SUCCESS   LITERAL1
+OPENBCI_HOST_MSG_POLL_TIME          LITERAL1
