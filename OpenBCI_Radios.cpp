@@ -212,6 +212,7 @@ void OpenBCI_Radios_Class::configurePassThru(void) {
 /**
  * @description Gets the channel number from non-volatile flash memory
  * @returns {uint32_t} - The channel number from non-volatile memory
+ * @author AJ Keller (@pushtheworldllc)
  */
 uint32_t OpenBCI_Radios_Class::getChannelNumber(void) {
     return *ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
@@ -220,6 +221,7 @@ uint32_t OpenBCI_Radios_Class::getChannelNumber(void) {
 /**
  * @description Gets the poll time from non-volatile flash memory
  * @returns {uint32_t} - The poll time from non-volatile memory
+ * @author AJ Keller (@pushtheworldllc)
  */
 uint32_t OpenBCI_Radios_Class::getPollTime(void) {
     return *(ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR) + 1);
@@ -228,6 +230,7 @@ uint32_t OpenBCI_Radios_Class::getPollTime(void) {
 /**
  * @description Reads from memory to see if the channel number needs to be set
  * @return {boolean} True if the channel number needs to be set
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::needToSetChannelNumber(void) {
     return getChannelNumber() == 0xFFFFFFFF;
@@ -236,6 +239,7 @@ boolean OpenBCI_Radios_Class::needToSetChannelNumber(void) {
 /**
  * @description Reads from memory to see if the poll time needs to be set
  * @return {boolean} True if the poll time needs to be set
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::needToSetPollTime(void) {
     return getPollTime() == 0xFFFFFFFF;
@@ -250,6 +254,7 @@ void OpenBCI_Radios_Class::revertToPreviousChannelNumber(void) {
 /**
  * @description Resets the poll time to the define OPENBCI_TIMEOUT_PACKET_POLL_MS
  * @return {boolean} - see `::setPollTime()`
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
     return setPollTime((uint32_t)OPENBCI_TIMEOUT_PACKET_POLL_MS);
@@ -262,6 +267,7 @@ boolean OpenBCI_Radios_Class::revertToDefaultPollTime(void) {
  *      than 25.
  * @return {boolean} - If the channel was successfully flashed to memory. False
  *      when the channel number is out of bounds.
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
     if (channelNumber > RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
@@ -301,6 +307,7 @@ boolean OpenBCI_Radios_Class::setChannelNumber(uint32_t channelNumber) {
  *  after power down
  * @param pollTime {uint32_t} - The new poll time to store to memory
  * @return {boolean} - If the pollTime was successfully set
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
 
@@ -333,9 +340,10 @@ boolean OpenBCI_Radios_Class::setPollTime(uint32_t pollTime) {
 }
 
 /**
- * @description Useful to call if the radios totally need to be reset.
- * @param pollTime {uint32_t} - The new poll time to store to memory
- * @return {boolean} - If the pollTime was successfully set
+ * @description Used to reset the non-volatile memory back to it's factory state so
+ *  the parameters in `begin()` will be accepted.
+ * @return {boolean} - `true` if the memory was successfully reset, `false` if not...
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::flashNonVolatileMemory(void) {
 
@@ -394,9 +402,11 @@ void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
 /**
  * @description The first line of defense against a system that has lost it's
  *  device. The timeout is 15ms longer than the longest polltime (255) possible.
+ * @returns {boolean} - `true` if enough time has passed since last poll.
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
-    return millis() > (lastTimeHostHeardFromDevice + 270);
+    return millis() > (lastTimeHostHeardFromDevice + OPENBCI_TIMEOUT_COMMS_MS);
 }
 
 /**
@@ -404,6 +414,7 @@ boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
  *  to check and there is no packet in the TX Radio Buffer, there are in fact
  *  packets to send and enough time has passed.
  * @returns {boolean} - True if there is a packet ready to send on the host
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
     return packetToSend() && (packetInTXRadioBuffer == false);
@@ -450,8 +461,8 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
 
 /**
  * @description Writes to the serial port a message that matches a specific code.
- *  The list of codes can be found in the `OpenBCI_Radios_Definitions.cpp`
- * @returns {uint8_t} - The code to print can be:
+ * @param {uint8_t} - The code to print Serial.write()
+ *  Possible options:
  *  `OPENBCI_HOST_MSG_COMMS_DOWN` - Print the comms down message
  *  `OPENBCI_HOST_MSG_BAUD_FAST` - Baud rate swtiched to 230400
  *  `OPENBCI_HOST_MSG_BAUD_DEFAULT` - Baud rate swtiched to 115200
@@ -460,9 +471,10 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
  *  `OPENBCI_HOST_MSG_CHAN` - Print the channel number message
  *  `OPENBCI_HOST_MSG_CHAN_OVERRIDE` - Print the host over ride message
  *  `OPENBCI_HOST_MSG_CHAN_VERIFY` - Print the need to verify the channel number you inputed message
- *  `OPENBCI_HOST_MSG_CHAN_GET_FAILURE` - 
- *  `OPENBCI_HOST_MSG_CHAN_GET_SUCCESS`
- *  `OPENBCI_HOST_MSG_POLL_TIME`
+ *  `OPENBCI_HOST_MSG_CHAN_GET_FAILURE` - The message to print when there is a comms timeout and to print just the Host channel number.
+ *  `OPENBCI_HOST_MSG_CHAN_GET_SUCCESS` - The message to print when the Host and Device are communicating.
+ *  `OPENBCI_HOST_MSG_POLL_TIME` - Prints the poll time when there is no comms.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
     switch (code) {
@@ -542,12 +554,12 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
 }
 
 /**
- * Used to process the the serial buffer if the device fails to poll the host
+ * @description Used to process the the serial buffer if the device fails to poll the host
  *  more than 3 * pollTime.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::processCommsFailure(void) {
     systemUp = false;
-    // Serial.println("processCommsFailure");
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
         revertToPreviousChannelNumber();
@@ -571,9 +583,11 @@ void OpenBCI_Radios_Class::processCommsFailure(void) {
 }
 
 /**
- * Used to process the the serial buffer if the device fails to poll the host
+ * @description Used to process the the serial buffer if the device fails to poll the host
  *  more than 3 * pollTime. The single packet condition should be parsed because
  *  it may contain actionable queries to the OpenBCI Radio system.
+ * @private
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
     // The first byte needs to match the command key to act on it
@@ -628,6 +642,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
     if (currentPacketBuffer->positionWrite == 2) {
@@ -649,6 +664,7 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentP
  *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char c) {
     switch (c) {
@@ -670,6 +686,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char c) {
  *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
     // The first byte needs to match the command key to act on it
@@ -741,6 +758,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
  *                      ACTION_RADIO_SEND_NORMAL - Send a packet like normal
  *                      ACTION_RADIO_SEND_NONE - Take no action
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer) {
     // The first byte needs to match the command key to act on it
@@ -797,6 +815,8 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer
 
 /**
  * @description Called from Host's on_recieve if a packet will be sent.
+ * @param `device` {device_t} - The device to send the packet to.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
     processingSendToDevice = true;
@@ -846,7 +866,7 @@ void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
 
 /**
 * @description Private function to handle a request to read serial as a device
-* @return Returns TRUE if there is data to read! FALSE if not...
+* @return {boolean} - `true` if there is data to read, `false` if not...
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::didPicSendDeviceSerialData(void) {
@@ -854,7 +874,10 @@ boolean OpenBCI_Radios_Class::didPicSendDeviceSerialData(void) {
 }
 
 /**
- * @description If there are
+ * @description If there are packets to be sent in the serial buffer.
+ * @return {boolean} - `true` if there are packets waiting to be sent from the
+ *  serial buffer, `false` if not...
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::thereIsDataInSerialBuffer(void) {
     return bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend;
@@ -862,6 +885,7 @@ boolean OpenBCI_Radios_Class::thereIsDataInSerialBuffer(void) {
 
 /**
  * @description Sends a null byte to the host
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::sendPollMessageToHost(void) {
     RFduinoGZLL.sendToHost(NULL,0);
@@ -870,6 +894,7 @@ void OpenBCI_Radios_Class::sendPollMessageToHost(void) {
 /**
  * @description Sends a one byte long message to the host
  * @param msg {byte} - A single byte to send to the host
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::sendRadioMessageToHost(byte msg) {
     RFduinoGZLL.sendToHost((const char*)msg,1);
@@ -910,6 +935,11 @@ void OpenBCI_Radios_Class::setByteIdForPacketBuffer(int packetNumber) {
     (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteId;
 }
 
+/**
+ * @description Called from Devices to send a packet to Host. Uses global
+ *  variables to send the correct packet.
+ * @author AJ Keller (@pushtheworldllc)
+ */
 void OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
@@ -934,7 +964,8 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 /**
  * @description Checks to see if the stream packet parser is in the STREAM_STATE_READY
  *  which means that a stream packet is ready to be sent to the Host.
- * @returns {boolean} if we have a packet waiting
+ * @returns {boolean} `true` if there is a packet waiting.
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
     return curStreamState == STREAM_STATE_READY;
@@ -942,18 +973,21 @@ boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
 
 /**
  * @description Test to see if a char follows the stream tail byte format
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::isATailByteChar(char newChar) {
     return (newChar >> 4) == 0xC;
 }
 
 /**
- * @description Send one char from the Serial port and this function will implement
- *  the serial read subroutine
+ * @description Process a char from the serial port on the Device. Stores the char
+ *  not only to the serial buffer but also tries enters the char into the stream
+ *  state machine.
  * @param newChar {char} - A new char to process
- * @param {char} - The char that was read in
+ * @returns {char} - The char that was read in
+ * @author AJ Keller (@pushtheworldllc)
  */
-char OpenBCI_Radios_Class::processChar(char newChar) {
+char OpenBCI_Radios_Class::processSerialCharDevice(char newChar) {
     // Always store to serial buffer
     boolean success = storeCharToSerialBuffer(newChar);
     // Verify we have not over flowed
@@ -1030,15 +1064,16 @@ char OpenBCI_Radios_Class::processChar(char newChar) {
 
 /**
  * @description Sends a soft reset command to the Pic 32 incase of an emergency.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::resetPic32(void) {
     Serial.write('v');
 }
 
 /**
- * @description Sends the contents of the `streamPacketBuffer`
- *                 to the HOST, sends as stream
- * @return {boolean} true when the packet has been sent
+ * @description Sends the contents of the `streamPacketBuffer` to the HOST,
+ *  sends as stream packet with the proper byteId.
+ * @returns {boolean} - `true` when the packet has been added to the TX buffer
  * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
@@ -1068,9 +1103,12 @@ boolean OpenBCI_Radios_Class::sendStreamPacketToTheHost(void) {
 }
 
 /**
- * @description Stores a char to the serial buffer
- * @param newChar {char} - The new char to store to the buffer
- * @return {boolean} - If the new char was added to the serial buffer
+ * @description Stores a char to the serial buffer. Used by both the Device and
+ *  the Host.
+ * @param newChar {char} - The new char to store to the serial buffer.
+ * @return {boolean} - `true` if the new char was added to the serial buffer,
+ *  `false` on serial buffer overflow.
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
     // Is the serial buffer overflowed?
@@ -1127,6 +1165,7 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
 
 /**
  * @description Used to flash the led to indicate to the user the device is in pass through mode.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::ledFeedBackForPassThru(void) {
     digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
@@ -1298,6 +1337,7 @@ void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
  *      buffer.
  * @return {boolean} - True if the data was added to the buffer, false if the
  *      buffer was overflowed.
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::bufferRadioAddData(volatile char *data, int len, boolean clearBuffer) {
     if (clearBuffer) {
@@ -1397,6 +1437,7 @@ char OpenBCI_Radios_Class::byteIdMake(boolean isStreamPacket, int packetNumber, 
 * @description Determines if this byteId is a stream byte
 * @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [int] the check sum
+* @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::byteIdGetIsStream(char byteId) {
     return byteId > 0x7F;
@@ -1406,6 +1447,7 @@ boolean OpenBCI_Radios_Class::byteIdGetIsStream(char byteId) {
 * @description Strips and gets the packet number from a byteId
 * @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [int] the packetNumber
+* @author AJ Keller (@pushtheworldllc)
 */
 int OpenBCI_Radios_Class::byteIdGetPacketNumber(char byteId) {
     return (int)((byteId & 0x78) >> 3);
@@ -1415,6 +1457,7 @@ int OpenBCI_Radios_Class::byteIdGetPacketNumber(char byteId) {
 * @description Strips and gets the packet number from a byteId
 * @param byteId [char] a byteId (see ::byteIdMake for description of bits)
 * @returns [byte] the packet type
+* @author AJ Keller (@pushtheworldllc)
 */
 byte OpenBCI_Radios_Class::byteIdGetStreamPacketType(char byteId) {
     return (byte)((byteId & 0x78) >> 3);
@@ -1423,6 +1466,7 @@ byte OpenBCI_Radios_Class::byteIdGetStreamPacketType(char byteId) {
 /**
 * @description Strips and gets the packet number from a byteId
 * @returns [byte] the packet type
+* @author AJ Keller (@pushtheworldllc)
 */
 byte OpenBCI_Radios_Class::byteIdMakeStreamPacketType(void) {
     return (byte)(streamPacketBuffer.typeByte & 0x0F);
@@ -1460,6 +1504,7 @@ void OpenBCI_Radios_Class::pollRefresh(void) {
  * @return - [byte] - A stop byte with 1100 as the MSBs with packet type in the
  *          four LSBs
  * @example byteId == 0b10111000 returns 0b11000111
+ * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::outputGetStopByteFromByteId(char byteId) {
     return byteIdGetStreamPacketType(byteId) | 0xC0;
@@ -1475,10 +1520,11 @@ OpenBCI_Radios_Class radio;
 /********************************************/
 
 /**
- * @description Used to process a single char message recieved on the host
- *      radio.
+ * @description Used to process a single char message recieved on the Host
+ *      radio aka a private radio message.
  * @param newChar {char} - The char to be read in
  * @return {boolean} - True if a packet should be sent from the serial buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar) {
 
@@ -1545,10 +1591,11 @@ boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar
 }
 
 /**
- * @description Used to process a single char message recieved on the device
- *      radio.
+ * @description Used to process a single char message received on the Device
+ *      radio aka a private radio message.
  * @param newChar {char} - The char to be read in
- * @return {boolean} - True if a packet should be sent from the serial buffer
+ * @return {boolean} - `true` if a packet should be sent from the serial buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
     if (isWaitingForNewChannelNumber) {
@@ -1655,6 +1702,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
  * @description Used to determine if there are packets in the serial buffer to be sent.
  * @returns {boolean} - True if there are packets in the buffer and enough time
  *  has passed
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::packetToSend(void) {
     return packetsInSerialBuffer() && serialWriteTimeOut();
@@ -1663,6 +1711,7 @@ boolean OpenBCI_Radios_Class::packetToSend(void) {
 /**
  * @description Used to determine if there are packets in the serial buffer to be sent.
  * @returns {boolean} - True if there are packets in the buffer
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::packetsInSerialBuffer(void) {
     return bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend;
@@ -1671,12 +1720,21 @@ boolean OpenBCI_Radios_Class::packetsInSerialBuffer(void) {
 /**
  * @description Used to see if enough time has passed since the last serial read. Useful to
  *  if a serial transmission from the PC/Driver has concluded
- * @returns {boolean} - True if enough time has passed
+ * @returns {boolean} - `true` if enough time has passed
+ * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::serialWriteTimeOut(void) {
     return micros() > (lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS);
 }
 
+/**
+ * @description Entered from RFduinoGZLL_onReceive if the Device receives a
+ *  packet of length greater than 1.
+ * @param `data` {volatile char *} - The data buffer to process.
+ * @param `len` {int} - The length of `data`
+ * @returns {boolean} - `true` if there is a packet to send to the Host.
+ * @author AJ Keller (@pushtheworldllc)
+ */
 boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, int len) {
     // We enter this if statement if we got a packet with length greater than
     //  1. If we recieve a packet with packetNumber equal to 0, then we can set
@@ -1773,6 +1831,15 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     }
 }
 
+/**
+ * @description Entered from RFduinoGZLL_onReceive if the Host receives a
+ *  packet of length greater than 1.
+ * @param `device` {device_t} - The device that sent a packet to the Host.
+ * @param `data` {volatile char *} - The data buffer to process.
+ * @param `len` {int} - The length of `data`
+ * @returns {boolean} - `true` if there is a packet to send to the Device.
+ * @author AJ Keller (@pushtheworldllc)
+ */
 boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile char *data, int len) {
 
     if (byteIdGetIsStream(data[0])) {

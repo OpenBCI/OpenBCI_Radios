@@ -33,7 +33,7 @@ packetToSend                    KEYWORD2
 packetsInSerialBuffer           KEYWORD2
 pollRefresh                     KEYWORD2
 printMessageToDriver            KEYWORD2
-processChar                     KEYWORD2
+processSerialCharDevice         KEYWORD2
 processCommsFailure             KEYWORD2
 processRadioCharDevice          KEYWORD2
 processRadioCharHost            KEYWORD2
