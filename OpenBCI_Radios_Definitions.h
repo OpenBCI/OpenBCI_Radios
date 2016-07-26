@@ -23,6 +23,7 @@
 #define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
 #define OPENBCI_TIMEOUT_PACKET_STREAM_uS 88 // Slightly longer than it takes to send a serial byte at 115200
 #define OPENBCI_TIMEOUT_PACKET_POLL_MS 80 // Poll time out length for sending null packet from device to host
+#define OPENBCI_TIMEOUT_COMMS_MS 270 // Comms failure time out length. Used only by Host.
 
 // Stream byte stuff
 #define OPENBCI_STREAM_BYTE_START 0xA0

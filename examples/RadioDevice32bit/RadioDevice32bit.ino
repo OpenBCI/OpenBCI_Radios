@@ -54,7 +54,7 @@ void loop() {
             // Mark the last serial as now;
             radio.lastTimeSerialRead = micros();
             // Get one char and process it
-            radio.processChar(newChar);
+            radio.processSerialCharDevice(newChar);
             // Reset the poll timer to prevent contacting the host mid read
             radio.pollRefresh();
         }
