@@ -71,11 +71,13 @@ void loop() {
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
-            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
+            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0 ) { 
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
-                    radio.sendPacketToHost();
+                    if (radio.sendPacketToHost() > 0) {
+                        radio.sendingMultiPacket = true;
+                    }
                     radio.ackCounter++;
                 } else {
                     // Serial.println("Err: dropping packet");
@@ -140,6 +142,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        radio.sendPacketToHost();
+        if (radio.sendPacketToHost() == 0 && radio.sendingMultiPacket) {
+            // The last packet was just sent, need to wait poll time before
+            //  starting to send another multipacket
+            radio.sendingMultiPacket = false;
+            radio.timeOfLastMultipacketSendToHost = millis();
+        }
     }
 }

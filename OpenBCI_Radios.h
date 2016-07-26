@@ -135,7 +135,7 @@ public:
     boolean     revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
     void        sendPacketToDevice(volatile device_t);
-    void        sendPacketToHost(void);
+    int         sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte);
     void        sendStreamPackets(void);
@@ -168,9 +168,11 @@ public:
     StreamPacketBuffer streamPacketBuffer1;
     StreamPacketBuffer streamPacketBuffer2;
     StreamPacketBuffer streamPacketBuffer3;
+    volatile boolean sendingMultiPacket;
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewPollTime;
     volatile unsigned long timeOfLastPoll;
+    unsigned long timeOfLastMultipacketSendToHost;
 
     boolean channelNumberSaveAttempted;
     volatile boolean isWaitingForNewChannelNumberConfirmation;

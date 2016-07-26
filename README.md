@@ -289,7 +289,11 @@ The device to send the packet to.
 
 ### sendPacketToHost()
 
-Called from Devices to send a packet to Host. Uses global variables to send the correct packet.                
+Called from Devices to send a packet to Host. Uses global variables to send the correct packet.
+
+**_Returns_** - {int}
+
+The packet number sent.               
 
 ### sendPollMessageToHost()
 

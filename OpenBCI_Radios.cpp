@@ -153,6 +153,9 @@ void OpenBCI_Radios_Class::configureDevice(void) {
         // END: To run host normally
     }
 
+    timeOfLastMultipacketSendToHost = millis();
+    sendingMultiPacket = false;
+
     bufferResetStreamPacketBuffer();
 
     pollRefresh();
@@ -937,9 +940,10 @@ void OpenBCI_Radios_Class::setByteIdForPacketBuffer(int packetNumber) {
 /**
  * @description Called from Devices to send a packet to Host. Uses global
  *  variables to send the correct packet.
+ * @returns {int} - The packet number sent.
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::sendPacketToHost(void) {
+int OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
 
@@ -958,6 +962,8 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 
     // Reset the stream buffer
     bufferResetStreamPacketBuffer();
+
+    return packetNumber;
 }
 
 /**
