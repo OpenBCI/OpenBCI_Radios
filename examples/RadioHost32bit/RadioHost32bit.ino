@@ -94,7 +94,7 @@ void loop() {
                 //packets in the serial buffer?
                 if (radio.packetsInSerialBuffer()) {
                     // process with a send to device
-                    radio.sendPacketToDevice(DEVICE0);
+                    radio.processOutboundBufferForTimeSync();
                 }
             } else {
                 // Comms time out?
@@ -188,6 +188,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket && !radio.processingSendToDevice) {
-        radio.sendPacketToDevice(device);
+        radio.sendPacketToDevice(device, false);
     }
 }

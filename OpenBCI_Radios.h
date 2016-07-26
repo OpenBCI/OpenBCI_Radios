@@ -127,14 +127,14 @@ public:
     boolean     processHostRadioCharData(device_t, volatile char *, int);
     byte        processOutboundBuffer(volatile PacketBuffer *);
     byte        processOutboundBufferCharDouble(volatile char *);
-    byte        processOutboundBufferCharSingle(char);
     byte        processOutboundBufferCharTriple(volatile char *);
+    boolean        processOutboundBufferForTimeSync(void);
     boolean     processRadioCharDevice(char);
     boolean     processRadioCharHost(device_t, char);
     void        resetPic32(void);
     boolean     revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
-    void        sendPacketToDevice(volatile device_t);
+    void        sendPacketToDevice(volatile device_t, boolean);
     int         sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte);

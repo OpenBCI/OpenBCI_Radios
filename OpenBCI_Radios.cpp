@@ -647,9 +647,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  * @author AJ Keller (@pushtheworldllc)
  */
 byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
-    if (currentPacketBuffer->positionWrite == 2) {
-        return processOutboundBufferCharSingle(currentPacketBuffer->data[1]);
-    } else if (currentPacketBuffer->positionWrite == 3) {
+    if (currentPacketBuffer->positionWrite == 3) {
         return processOutboundBufferCharDouble(currentPacketBuffer->data);
     } else if (currentPacketBuffer->positionWrite == 4) {
         return processOutboundBufferCharTriple(currentPacketBuffer->data);
@@ -668,16 +666,27 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentP
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  * @author AJ Keller (@pushtheworldllc)
  */
-byte OpenBCI_Radios_Class::processOutboundBufferCharSingle(char c) {
-    switch (c) {
-        case OPENBCI_HOST_TIME_SYNC:
+boolean OpenBCI_Radios_Class::processOutboundBufferForTimeSync(void) {
+    int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
+
+    if (bufferSerial.numberOfPacketsToSend == 1 && packetNumber == 0 && bufferSerial.packetBuffer->positionWrite == 2) {
+        if ((char)bufferSerial.packetBuffer->data[1] == (char)OPENBCI_HOST_TIME_SYNC) {
             // Send a comma back to the PC/Driver
             sendSerialAck = true;
-            return ACTION_RADIO_SEND_NORMAL;
-
-        default:
-            return ACTION_RADIO_SEND_NORMAL;
+            // Add the byteId to the packet
+            (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data[0] = byteIdMake(false,packetNumber,(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data + 1, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite - 1);
+            // Serial.print("Sending "); Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite); Serial.println(" bytes");
+            RFduinoGZLL.sendToDevice(DEVICE0,(char *)(bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->data, (bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite);
+            // Increment number of bytes sent
+            bufferSerial.numberOfPacketsSent++;
+            // Set flag
+            packetInTXRadioBuffer = true;
+            // Clear the buffer
+            bufferCleanSerial(1);
+            return true;
+        }
     }
+    return false;
 }
 
 /**
@@ -820,7 +829,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer
  * @param `device` {device_t} - The device to send the packet to.
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::sendPacketToDevice(device_t device) {
+void OpenBCI_Radios_Class::sendPacketToDevice(device_t device, boolean lockPacketSend) {
     processingSendToDevice = true;
     // Build byteId
     int packetNumber = bufferSerial.numberOfPacketsToSend - bufferSerial.numberOfPacketsSent - 1;
