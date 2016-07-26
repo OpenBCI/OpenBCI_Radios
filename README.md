@@ -63,23 +63,110 @@ The mode the radio shall operate in, can be:
 **_channelNumber_** - `uint32_t`
 
 The channelNumber the RFduinoGZLL will use to communicate with the other RFduinoGZLL. **NOTE** can only be from `0` to `25` inclusive.  Further, and this is really important `channelNumber` will only be _stored_ into memory on the first time this function is executed.                       
-### bufferAddStreamPacket           
-### bufferAddTimeSyncSentAck        
-### bufferCleanSerial               
-### bufferRadioClean                
-### bufferRadioFlush                
-### bufferRadioReset                
-### bufferResetStreamPacketBuffer   
-### commsFailureTimeout             
-### didPCSendDataToHost             
-### getChannelNumber                
-### gotAllRadioPackets              
-### hostPacketToSend                
-### isAStreamPacketWaitingForLaunch
-### ledFeedBackForPassThru          
-### packetToSend                    
-### packetsInSerialBuffer           
-### pollRefresh                     
+### bufferAddStreamPacket(buf)
+
+Moves bytes from StreamPacketBuffers to the main radio buffer.
+
+**_buf_** - `StreamPacketBuffer *`
+
+A buffer to read into the ring buffer
+
+### bufferAddTimeSyncSentAck()
+
+Adds a `,` to the main ring buffer. Used to ack that a time sync set command was sent.
+
+### bufferCleanSerial(numberOfPacketsToClean)
+
+Function to clean (clear/reset) the bufferSerial.
+
+**_numberOfPacketsToClean_** - `int`
+
+The number of packets you want to clean, for example, on init, we would clean all packets, but on cleaning from the RFduinoGZLL_onReceive() we would only clean the number of packets actually used.
+
+### bufferRadioClean()
+
+Used to fill the buffer with all zeros. Should be used as frequently as possible. This is very useful if you need to ensure that no bad data is sent over the serial port.
+
+### bufferRadioFlush()
+
+Called when all the packets have been received to flush the contents of the radio buffer to the serial port.
+
+### bufferRadioReset()
+
+Used to reset the flags and positions of the radio buffer.
+
+### bufferResetStreamPacketBuffer()
+
+Resets the stream packet buffer to default settings
+
+### commsFailureTimeout()
+
+The first line of defense against a system that has lost it's device. The timeout is 15ms longer than the longest poll time (255ms) possible.
+
+### didPCSendDataToHost()
+
+Private function to handle a request to read serial as a host
+
+**_Returns_** {boolean}
+
+`true` if there is data to read, `false` if not...
+
+### getChannelNumber()
+
+Gets the channel number from non-volatile flash memory
+
+**_Returns_** {uint32_t}
+
+The channel number from non-volatile memory
+
+### getPollTime()
+
+Gets the poll time from non-volatile flash memory
+
+**_Returns_** {uint32_t}
+
+The poll time from non-volatile memory
+
+### hostPacketToSend()
+
+Answers the question of if a packet is ready to be sent. need to check and there is no packet in the TX Radio Buffer, there are in fact packets to send and enough time has passed.       
+
+**_Returns_** {boolean}
+
+`true` if there is a packet ready to send on the Host
+
+### isAStreamPacketWaitingForLaunch()
+
+Checks to see if the stream packet parser is in the STREAM_STATE_READY which means that a stream packet is ready to be sent to the Host.
+
+**_Returns_** {boolean}
+
+`true` if there is a stream packet ready to send the Host
+
+### ledFeedBackForPassThru()
+
+Used to flash the led to indicate to the user the device is in pass through mode.
+
+### packetToSend()
+
+Used to determine if there are packets in the serial buffer to be sent.
+
+**_Returns_** {boolean}
+
+`true` if there are packets in the buffer and enough time has passed     
+
+### packetsInSerialBuffer()
+
+Used to determine if there are packets in the serial buffer to be sent.
+
+**_Returns_** {boolean}
+
+`true` if there are packets in the buffer
+
+### pollRefresh()
+
+Reset the time since the last packet was sent to HOST
+
 ### printMessageToDriver            
 ### processChar                     
 ### processCommsFailure             

@@ -210,14 +210,16 @@ void OpenBCI_Radios_Class::configurePassThru(void) {
 }
 
 /**
- * @description Returns the channel number from non-volitile flash memory
+ * @description Gets the channel number from non-volatile flash memory
+ * @returns {uint32_t} - The channel number from non-volatile memory
  */
 uint32_t OpenBCI_Radios_Class::getChannelNumber(void) {
     return *ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR);
 }
 
 /**
- * @description Returns the poll time from non-volitile flash memory
+ * @description Gets the poll time from non-volatile flash memory
+ * @returns {uint32_t} - The poll time from non-volatile memory
  */
 uint32_t OpenBCI_Radios_Class::getPollTime(void) {
     return *(ADDRESS_OF_PAGE(RFDUINOGZLL_FLASH_MEM_ADDR) + 1);
@@ -359,7 +361,7 @@ boolean OpenBCI_Radios_Class::flashNonVolatileMemory(void) {
 
 /**
 * @description Private function to handle a request to read serial as a host
-* @return boolean - TRUE if there is data to read! FALSE if not...
+* @return {Boolean} - TRUE if there is data to read! FALSE if not...
 * @author AJ Keller (@pushtheworldllc)
 */
 boolean OpenBCI_Radios_Class::didPCSendDataToHost(void) {
@@ -398,18 +400,10 @@ boolean OpenBCI_Radios_Class::commsFailureTimeout(void) {
 }
 
 /**
- * @description If the Host received a stream packet, then this will have data in it
- *      and number of packets to send will be greater than 0
- * @return {boolean} - If there are packets to send
- */
-// boolean OpenBCI_Radios_Class::hasStreamPacket(void) {
-//     return bufferStreamPackets.numberOfPacketsToSend > 0;
-// }
-
-/**
  * @descirption Answers the question of if a packet is ready to be sent. need
  *  to check and there is no packet in the TX Radio Buffer, there are in fact
  *  packets to send and enough time has passed.
+ * @returns {boolean} - True if there is a packet ready to send on the host
  */
 boolean OpenBCI_Radios_Class::hostPacketToSend(void) {
     return packetToSend() && (packetInTXRadioBuffer == false);
@@ -454,6 +448,22 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
     printEOT();
 }
 
+/**
+ * @description Writes to the serial port a message that matches a specific code.
+ *  The list of codes can be found in the `OpenBCI_Radios_Definitions.cpp`
+ * @returns {uint8_t} - The code to print can be:
+ *  `OPENBCI_HOST_MSG_COMMS_DOWN` - Print the comms down message
+ *  `OPENBCI_HOST_MSG_BAUD_FAST` - Baud rate swtiched to 230400
+ *  `OPENBCI_HOST_MSG_BAUD_DEFAULT` - Baud rate swtiched to 115200
+ *  `OPENBCI_HOST_MSG_SYS_UP` - Print the system up message
+ *  `OPENBCI_HOST_MSG_SYS_DOWN` - Print the system down message
+ *  `OPENBCI_HOST_MSG_CHAN` - Print the channel number message
+ *  `OPENBCI_HOST_MSG_CHAN_OVERRIDE` - Print the host over ride message
+ *  `OPENBCI_HOST_MSG_CHAN_VERIFY` - Print the need to verify the channel number you inputed message
+ *  `OPENBCI_HOST_MSG_CHAN_GET_FAILURE` - 
+ *  `OPENBCI_HOST_MSG_CHAN_GET_SUCCESS`
+ *  `OPENBCI_HOST_MSG_POLL_TIME`
+ */
 void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
     switch (code) {
         case OPENBCI_HOST_MSG_COMMS_DOWN:
@@ -922,9 +932,9 @@ void OpenBCI_Radios_Class::sendPacketToHost(void) {
 }
 
 /**
- * @description Checks to see if we have a packet waiting in the streamPacketBuffer
- *  waiting to be sent out
- * @return {bool} if we have a packet waiting
+ * @description Checks to see if the stream packet parser is in the STREAM_STATE_READY
+ *  which means that a stream packet is ready to be sent to the Host.
+ * @returns {boolean} if we have a packet waiting
  */
 boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
     return curStreamState == STREAM_STATE_READY;
@@ -1116,7 +1126,7 @@ boolean OpenBCI_Radios_Class::storeCharToSerialBuffer(char newChar) {
 /********************************************/
 
 /**
- * @description used to flash the led to indicate to the user the device is in pass through mode.
+ * @description Used to flash the led to indicate to the user the device is in pass through mode.
  */
 void OpenBCI_Radios_Class::ledFeedBackForPassThru(void) {
     digitalWrite(OPENBCI_PIN_HOST_LED,HIGH);
@@ -1170,9 +1180,8 @@ void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
 }
 
 /**
- * @description Moves bytes into bufferStreamPackets from on_recieve
- * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
- * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
+ * @description Moves bytes from StreamPacketBuffers to the main radio buffer.
+ * @param `buf` - {StreamPacketBuffer *} - A buffer to read into the ring buffer
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
@@ -1196,9 +1205,7 @@ void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
 }
 
 /**
- * @description Moves bytes into bufferStreamPackets from on_recieve
- * @param `data` - {char *} - Normally a buffer to read into bufferStreamPackets
- * @param `length` - {int} - Normally 32, but you know, who wants to read what we shouldnt be...
+ * @description Adds a `,` to the main ring buffer. Used to ack that a time sync set command was sent.
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferAddTimeSyncSentAck(void) {
@@ -1269,11 +1276,11 @@ void OpenBCI_Radios_Class::bufferCleanCompleteBuffer(volatile Buffer *buffer, in
 }
 
 /**
- * @description Private function to clean (clear/reset) the bufferSerial.
- * @param - `numberOfPacketsToClean` - [int] - The number of packets you want to
+ * @description Function to clean (clear/reset) the bufferSerial.
+ * @param - `numberOfPacketsToClean` - {int} - The number of packets you want to
  *      clean, for example, on init, we would clean all packets, but on cleaning
  *      from the RFduinoGZLL_onReceive() we would only clean the number of
- *      packets acutally used.
+ *      packets actually used.
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
@@ -1312,6 +1319,7 @@ boolean OpenBCI_Radios_Class::bufferRadioAddData(volatile char *data, int len, b
  * @description Used to fill the buffer with all zeros. Should be used as
  *      frequently as possible. This is very useful if you need to ensure that
  *      no bad data is sent over the serial port.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioClean(void) {
     bufferCleanChar(bufferRadio.data,OPENBCI_BUFFER_LENGTH);
@@ -1337,6 +1345,7 @@ void OpenBCI_Radios_Class::bufferRadioFlush(void) {
 
 /**
  * @description Used to reset the flags and positions of the radio buffer.
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioReset(void) {
     bufferRadio.positionWrite = 0;
@@ -1346,6 +1355,7 @@ void OpenBCI_Radios_Class::bufferRadioReset(void) {
 
 /**
  * @description Resets the stream packet buffer to default settings
+ * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferResetStreamPacketBuffer(void) {
     streamPacketBuffer.bytesIn = 0;
@@ -1437,7 +1447,7 @@ boolean OpenBCI_Radios_Class::pollNow(void) {
 }
 
 /**
-* @description Reset the time since last packent sent to HOST
+* @description Reset the time since last packent sent to HOST. Very important with polling.
 * @author AJ Keller (@pushtheworldllc)
 */
 void OpenBCI_Radios_Class::pollRefresh(void) {
@@ -1642,7 +1652,7 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 }
 
 /**
- * Used to determine if there are packets in the serial buffer to be sent.
+ * @description Used to determine if there are packets in the serial buffer to be sent.
  * @returns {boolean} - True if there are packets in the buffer and enough time
  *  has passed
  */
@@ -1651,15 +1661,15 @@ boolean OpenBCI_Radios_Class::packetToSend(void) {
 }
 
 /**
- * Used to determine if there are packets in the serial buffer to be sent.
- * @returns {boolean} - True if there are packets in the buffer;
+ * @description Used to determine if there are packets in the serial buffer to be sent.
+ * @returns {boolean} - True if there are packets in the buffer
  */
 boolean OpenBCI_Radios_Class::packetsInSerialBuffer(void) {
     return bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend;
 }
 
 /**
- * Used to see if enough time has passed since the last serial read. Useful to
+ * @description Used to see if enough time has passed since the last serial read. Useful to
  *  if a serial transmission from the PC/Driver has concluded
  * @returns {boolean} - True if enough time has passed
  */
