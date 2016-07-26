@@ -122,6 +122,7 @@ public:
     void        printValidatedCommsTimeout(void);
     char        processSerialCharDevice(char);
     void        processCommsFailure(void);
+    void        processCommsFailureSinglePacket(void);
     boolean     processDeviceRadioCharData(volatile char *, int);
     boolean     processHostRadioCharData(device_t, volatile char *, int);
     byte        processOutboundBuffer(volatile PacketBuffer *);
@@ -197,10 +198,6 @@ public:
     uint32_t radioChannel;
     uint32_t previousRadioChannel;
     uint32_t pollTime;
-
-private:
-    void processCommsFailureSinglePacket(void);
-
 };
 
 // Very important, major key to success #christmas

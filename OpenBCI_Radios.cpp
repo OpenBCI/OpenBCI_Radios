@@ -586,7 +586,6 @@ void OpenBCI_Radios_Class::processCommsFailure(void) {
  * @description Used to process the the serial buffer if the device fails to poll the host
  *  more than 3 * pollTime. The single packet condition should be parsed because
  *  it may contain actionable queries to the OpenBCI Radio system.
- * @private
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
