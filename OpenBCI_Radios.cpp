@@ -1390,8 +1390,8 @@ void OpenBCI_Radios_Class::bufferRadioFlush(BufferRadio *buf) {
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioFlushBuffers(void) {
-    bufferRadioProcessSingle(&bufferRadio);
-    bufferRadioProcessSingle(&bufferRadioBackUp);
+    bufferRadioProcessSingle(bufferRadio);
+    bufferRadioProcessSingle(bufferRadio + 1);
 }
 
 /**
@@ -1448,13 +1448,27 @@ void OpenBCI_Radios_Class::bufferRadioReset(BufferRadio *buf) {
     buf->previousPacketNumber = 0;
 }
 
-boolean OpenBCI_Radios_Class::bufferRadioUpdateCurrentBuffer(void) {
+/**
+ * @description Used to safely swap the global buffers!
+ * @returns {boolean} - `true` if the current radio buffer has been swapped,
+ *  `false` if the swap was not able to occur.
+ * @author AJ Keller (@pushtheworldllc)
+ */
+boolean OpenBCI_Radios_Class::bufferRadioSwitchToOtherBuffer(void) {
     // current radio buffer is set to the first one
-    if (&currentRadioBuffer == &bufferRadio) {
+    if (currentRadioBuffer == bufferRadio) {
         if (bufferRadioReadyForNewPage(bufferRadio + 1)) {
-
+            currentRadioBuffer++;
+            return true;
+        }
+    // current radio buffer is set to the second one
+    } else {
+        if (bufferRadioReadyForNewPage(bufferRadio + 1)) {
+            currentRadioBuffer--;
+            return true;
         }
     }
+    return false;
 }
 
 /**
@@ -1817,20 +1831,20 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     // This first statment asks if this is a last packet and the previous
     //  packet was 0 too, this is in an effort to get to the point in the
     //  program where we ask if this packet is a stream packet
-    if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
+    if (packetNumber == 0 && bufferRadio->previousPacketNumber == 0) {
         // This is a one packet message
         gotLastPacket = true;
 
     } else {
-        if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
+        if (packetNumber > 0 && bufferRadio->previousPacketNumber == 0) {
             // This is the first of multiple packets we are recieving
-            bufferRadio.previousPacketNumber = packetNumber;
+            bufferRadio->previousPacketNumber = packetNumber;
 
         } else {
             // This is not the first packet we are reciving of this page
-            if (bufferRadio.previousPacketNumber - packetNumber == 1) { // Normal...
+            if (bufferRadio->previousPacketNumber - packetNumber == 1) { // Normal...
                 // Update the global var
-                bufferRadio.previousPacketNumber = packetNumber;
+                bufferRadio->previousPacketNumber = packetNumber;
 
                 // Is this the last packet?
                 if (packetNumber == 0) {
@@ -1843,8 +1857,8 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
                 singleCharMsg[0] = ORPM_PACKET_MISSED & 0xFF;
 
                 // Clean the radio buffer. Resets the flags.
-                bufferRadioReset(&bufferRadio);
-                bufferRadioClean(&bufferRadio);
+                bufferRadioReset(bufferRadio);
+                bufferRadioClean(bufferRadio);
 
             }
         }
@@ -1858,7 +1872,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
         //  into a buffer called bufferRadio that is a 1 dimensional array
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
-        bufferRadioAddData(&bufferRadio,data+1,len-1,gotLastPacket);
+        bufferRadioAddData(bufferRadio,data+1,len-1,gotLastPacket);
 
         if (packetToSend()) {
             return true;
@@ -1908,107 +1922,99 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
 
-    // This first statment asks if this is a last packet and the previous
-    //  packet was 0 too, this is in an effort to get to the point in the
-    //  program where we ask if this packet is a stream packet
-
+    // Last packet
     if (packetNumber == 0) {
-        // We are pointing to a fresh radio buffer that has no data and is not
-        //  flushing.
-        if (bufferRadioReadyForNewPage(currentRadioBuffer)) {
-            // Add to the current radio buffer
+        // Current buffer has no data
+        if (!bufferRadioHasData(currentRadioBuffer)) {
+            // Take it! Mark Last
             bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
-        } else {
-            // is this a multi packet? Finish up this page, mark it as last.
-            if (bufferRadioLoadingMultiPacket(currentRadioBuffer)) {
-                bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
-            } else {
-                // current radio buffer is set to the first one
-                if (&currentRadioBuffer == &bufferRadio) {
-                    if (bufferRadioReadyForNewPage(bufferRadio + 1)) {
 
-                    }
+        // Current buffer has data
+        } else {
+            // Current buffer has all packets
+            if (currentRadioBuffer->gotAllPackets) {
+                // Can swtich to other buffer
+                if (bufferRadioSwitchToOtherBuffer()) {
+                    // Take it! Mark Last
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
+
+                // Cannot switch to other buffer
+                } else {
+                    // Reject it!
+                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+                    return false;
+                }
+            // Current buffer does not have all packets
+            } else {
+                // Previous packet number == packetNumber + 1
+                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
+                    // Take it! Mark last.
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
+
+                // Missed a packet
+                } else {
+                    // Reject it! Reset current buffer
+                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+
+                    // Reset the `currentRadioBuffer` state
+                    bufferRadioReset(currentRadioBuffer);
+                    return false;
                 }
             }
-            // is our other buffer available if this is not a multipacket?
         }
-
-
-    }
-
-    if (packetNumber == 0 && currentRadioBuffer.previousPacketNumber == 0) {
-        // This is a one packet message... we'll add it right away.
-        goodToAddPacketToRadioBuffer = false;
-
-        // Only one buffer can be flushed at a time... single threaded.
-        if (!bufferRadio.flushing && !bufferRadioHasData(&bufferRadio)) {
-            bufferRadioAddData(&bufferRadio,data+1,len-1,true);
-
-        } else if (!bufferRadioBackUp.flushing && !bufferRadioHasData(&bufferRadioBackUp)) {
-            bufferRadioAddData(&bufferRadioBackUp,data+1,len-1,true);
-
-        } else {
-            // A scenario for this problem is if bufferRadio is flushing and
-            //  bufferRadioBackUp has data in it waiting to get flushed, or vice
-            //  versa. In that case consider us entering a multi packet page
-            //  holding pattern, where we will tell the Device we missed this
-            //  packet and to restart the sending process.
-            singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-            return false;
-        }
-
+    // Not last packet
     } else {
-        if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
-            // This is the first of multiple packets we are recieving
-            bufferRadio.previousPacketNumber = packetNumber;
+        // Current buffer has no data
+        if (!bufferRadioHasData(currentRadioBuffer)) {
+            // Take it, not last
+            bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
 
-            // If the buffer is not flushing and not full
-            //  set it as the current buffer
-            if (!bufferRadio.flushing && !bufferRadioHasData(&bufferRadio)) {
-                currentRadioBuffer = &bufferRadio;
-            } else if (!bufferRadioBackUp.flushing && !bufferRadioHasData(&bufferRadioBackUp)) {
-                currentRadioBuffer = &bufferRadioBackUp;
-            } else {
-                // See if statement above for a detailed description of when this
-                //  event could occur. Anyway, tell the Device to start send again.
-                singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                return false;
-            }
+            // Update the previous packet number
+            currentRadioBuffer->previousPacketNumber = packetNumber;
 
+        // Current buffer has data
         } else {
-            // This is not the first packet we are reciving of this page so it's
-            //  safe to use the radio buffer `currentRadioBuffer` is pointing at.
-            if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) { // Normal...
-                // Update the previous packet number
-                currentRadioBuffer->previousPacketNumber = packetNumber;
+            // Current buffer has all packets
+            if (currentRadioBuffer->gotAllPackets) {
+                // Can switch to other buffer
+                if (bufferRadioSwitchToOtherBuffer()) {
+                    // Take it! Not last
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
 
-                // Is this the last packet?
-                if (packetNumber == 0) {
-                    gotLastPacket = true;
+                    // Update the previous packet number
+                    currentRadioBuffer->previousPacketNumber = packetNumber;
+
+                // Cannot switch to other buffer
+                } else {
+                    // Reject it!
+                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+                    return false;
                 }
-
+            // Current buffer does not have all packets
             } else {
-                goodToAddPacketToRadioBuffer = false;
-                // We missed a packet, send resend message
-                singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                // Previous packet number == packetNumber + 1
+                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
+                    // Take it! Not last.
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
 
-                // Reset the `currentRadioBuffer` state
-                bufferRadioReset(currentRadioBuffer);
-                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                return false;
+                    // Update the previous packet number
+                    currentRadioBuffer->previousPacketNumber = packetNumber;
+
+                // Missed a packet
+                } else {
+                    // Reject it! Reset current buffer
+                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+
+                    // Reset the `currentRadioBuffer` state
+                    bufferRadioReset(currentRadioBuffer);
+                    return false;
+                }
             }
         }
-    }
-
-    // goodToAddPacketToRadioBuffer is true if we have not recieved an error
-    //  message and this packet should be routed to either the Pic (if we're
-    //  the Device) or the Driver (if we are the Host)
-    if (goodToAddPacketToRadioBuffer) {
-        // This is not a stream packet and, be default, we will store it
-        //  into a buffer called bufferRadio that is a 1 dimensional array
-        bufferRadioAddData(currentRadioBuffer,data+1,len-1,gotLastPacket);
     }
 
     if (hostPacketToSend()) {

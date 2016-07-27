@@ -89,6 +89,7 @@ public:
     void        bufferRadioProcessSingle(BufferRadio *buf);
     boolean     bufferRadioReadyForNewPage(BufferRadio *buf);
     void        bufferRadioReset(BufferRadio *);
+    boolean     bufferRadioSwitchToOtherBuffer(void);
     void        bufferResetStreamPacketBuffer(void);
     char        byteIdMake(boolean, int, volatile char *, int);
     byte        byteIdMakeStreamPacketType(void);

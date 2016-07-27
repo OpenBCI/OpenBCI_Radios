@@ -25,6 +25,7 @@ bufferRadioReset                KEYWORD2
 bufferResetStreamPacketBuffer   KEYWORD2
 commsFailureTimeout             KEYWORD2
 didPCSendDataToHost             KEYWORD2
+flashNonVolatileMemory          KEYWORD2
 getChannelNumber                KEYWORD2
 getPollTime                     KEYWORD2
 hostPacketToSend                KEYWORD2
