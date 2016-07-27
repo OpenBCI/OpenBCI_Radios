@@ -91,6 +91,14 @@ Used to fill the buffer with all zeros. Should be used as frequently as possible
 
 Called when all the packets have been received to flush the contents of the radio buffer to the serial port.
 
+### bufferRadioHasData()
+
+Used to determine if there is data in the radio buffer. Most likely this data needs to be cleared.
+
+**_Returns_** {boolean}
+
+`true` if the radio buffer has data, `false` if not...
+
 ### bufferRadioReset()
 
 Used to reset the flags and positions of the radio buffer.

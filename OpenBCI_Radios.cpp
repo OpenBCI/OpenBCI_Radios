@@ -1398,6 +1398,15 @@ void OpenBCI_Radios_Class::bufferRadioFlush(void) {
 }
 
 /**
+ * @description Used to determine if there is data in the radio buffer. Most
+ *  likely this data needs to be cleared.
+ * @returns {boolean} - `true` if the radio buffer has data, `false` if not...
+ */
+boolean OpenBCI_Radios_Class::bufferRadioHasData(void) {
+    return bufferRadio.positionWrite > 0;
+}
+
+/**
  * @description Used to reset the flags and positions of the radio buffer.
  * @author AJ Keller (@pushtheworldllc)
  */
@@ -1885,8 +1894,6 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
     if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
         // This is a one packet message
         gotLastPacket = true;
-        // Mark this as the first packet
-        // firstPacket = true;
 
     } else {
         if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {

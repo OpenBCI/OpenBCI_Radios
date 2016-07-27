@@ -82,7 +82,16 @@ void loop() {
 
     // Set system to down if we experience a comms timout
     if (radio.commsFailureTimeout()) {
+        // Mark the system as down
         radio.systemUp = false;
+        // Check to see if data was left in the radio buffer from an incomplete
+        //  multi packet transfer.. i.e. a failed over the air upload
+        if (radio.bufferRadioHasData()) {
+            // Reset the radio buffer flags
+            radio.bufferRadioReset();
+            // Clean the buffer.. fill with zeros
+            radio.bufferRadioClean();
+        }
     }
 
     if (radio.serialWriteTimeOut()) {
@@ -108,7 +117,6 @@ void loop() {
                     } else {
                         radio.processCommsFailure();
                     }
-
                 }
             }
         } else { // lastTimeHostHeardFromDevice has not been changed

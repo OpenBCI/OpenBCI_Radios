@@ -80,6 +80,7 @@ public:
     void        bufferCleanStreamPackets(int);
     boolean     bufferRadioAddData(volatile char *, int, boolean);
     void        bufferRadioClean(void);
+    boolean     bufferRadioHasData(void);
     void        bufferRadioFlush(void);
     void        bufferRadioReset(void);
     void        bufferResetStreamPacketBuffer(void);
@@ -128,7 +129,7 @@ public:
     byte        processOutboundBuffer(volatile PacketBuffer *);
     byte        processOutboundBufferCharDouble(volatile char *);
     byte        processOutboundBufferCharTriple(volatile char *);
-    boolean        processOutboundBufferForTimeSync(void);
+    boolean     processOutboundBufferForTimeSync(void);
     boolean     processRadioCharDevice(char);
     boolean     processRadioCharHost(device_t, char);
     void        resetPic32(void);
