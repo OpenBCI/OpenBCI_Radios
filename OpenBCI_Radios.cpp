@@ -109,8 +109,11 @@ void OpenBCI_Radios_Class::configure(uint8_t mode, uint32_t channelNumber) {
         pollTime = getPollTime();
 
         // get the buffers ready
-        bufferRadioReset();
-        bufferRadioClean();
+        bufferRadioReset(&bufferRadio);
+        bufferRadioReset(&bufferRadioBackUp);
+        bufferRadioClean(&bufferRadio);
+        bufferRadioClean(&bufferRadioBackUp);
+        currentRadioBuffer = &bufferRadio;
         bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Diverge program execution based on Device or Host
@@ -380,25 +383,6 @@ boolean OpenBCI_Radios_Class::didPCSendDataToHost(void) {
     } else {
         return false;
     }
-}
-
-/**
-* @description Called when readRadio returns true. We always write the contents
-*                 of bufferRadio over Serial.
-* @author AJ Keller (@pushtheworldllc)
-*/
-void OpenBCI_Radios_Class::writeTheHostsRadioBufferToThePC(void) {
-    if (debugMode) {
-        for (int j = 0; j < bufferRadio.positionWrite; j++) {
-            Serial.print(bufferRadio.data[j]);
-        }
-        Serial.println();
-    } else {
-        for (int j = 0; j < bufferRadio.positionWrite; j++) {
-            Serial.write(bufferRadio.data[j]);
-        }
-    }
-    bufferRadioReset();
 }
 
 /**
@@ -1235,7 +1219,7 @@ void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
-    if (ringBufferWrite < (OPENBCI_BUFFER_LENGTH - OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES)) {
+    if (ringBufferWrite < (OPENBCI_BUFFER_LENGTH_STREAM - OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES)) {
         ringBuffer[ringBufferWrite] = 0xA0;
         ringBufferWrite++;
         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
@@ -1260,7 +1244,7 @@ void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
  */
 void OpenBCI_Radios_Class::bufferAddTimeSyncSentAck(void) {
 
-    if (ringBufferWrite >= OPENBCI_BUFFER_LENGTH) {
+    if (ringBufferWrite >= OPENBCI_BUFFER_LENGTH_STREAM) {
         ringBufferWrite = 0;
     }
     ringBuffer[ringBufferWrite] = (char)OPENBCI_HOST_TIME_SYNC_ACK;
@@ -1352,13 +1336,13 @@ void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
  */
 boolean OpenBCI_Radios_Class::bufferRadioAddData(BufferRadio *buf, volatile char *data, int len, boolean lastPacket) {
     if (lastPacket) {
-        buf.gotAllPackets = true;
+        buf->gotAllPackets = true;
     }
 
     for (int i = 0; i < len; i++) {
-        if (buf.positionWrite < OPENBCI_BUFFER_LENGTH) { // Check for to prevent overflow
-            buf.data[buf.positionWrite] = data[i];
-            buf.positionWrite++;
+        if (buf->positionWrite < OPENBCI_BUFFER_LENGTH_MULTI) { // Check for to prevent overflow
+            buf->data[buf->positionWrite] = data[i];
+            buf->positionWrite++;
         } else { // We overflowed, need to return false.
             return false;
         }
@@ -1374,7 +1358,7 @@ boolean OpenBCI_Radios_Class::bufferRadioAddData(BufferRadio *buf, volatile char
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioClean(BufferRadio *buf) {
-    bufferCleanChar(buf.data,OPENBCI_BUFFER_LENGTH);
+    bufferCleanChar(buf->data,OPENBCI_BUFFER_LENGTH_MULTI);
 }
 
 /**
@@ -1385,18 +1369,18 @@ void OpenBCI_Radios_Class::bufferRadioClean(BufferRadio *buf) {
  */
 void OpenBCI_Radios_Class::bufferRadioFlush(BufferRadio *buf) {
     // Lock this buffer down!
-    buf.flushing = true;
+    buf->flushing = true;
     if (debugMode) {
-        for (int j = 0; j < buf.positionWrite; j++) {
-            Serial.print(buf.data[j]);
+        for (int j = 0; j < buf->positionWrite; j++) {
+            Serial.print(buf->data[j]);
         }
         Serial.println();
     } else {
-        for (int j = 0; j < buf.positionWrite; j++) {
-            Serial.write(buf.data[j]);
+        for (int j = 0; j < buf->positionWrite; j++) {
+            Serial.write(buf->data[j]);
         }
     }
-    buf.flushing = false;
+    buf->flushing = false;
 }
 
 /**
@@ -1407,7 +1391,20 @@ void OpenBCI_Radios_Class::bufferRadioFlush(BufferRadio *buf) {
  * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::bufferRadioHasData(BufferRadio *buf) {
-    return buf.positionWrite > 0;
+    return buf->positionWrite > 0;
+}
+
+void OpenBCI_Radios_Class::bufferRadioProcess(void) {
+    bufferRadioProcessSingle(&bufferRadio);
+    bufferRadioProcessSingle(&bufferRadioBackUp);
+}
+
+void OpenBCI_Radios_Class::bufferRadioProcessSingle(BufferRadio *buf) {
+    if (bufferRadioHasData(buf)) {
+        if (buf->gotAllPackets && !buf->flushing) {
+            bufferRadioFlush(buf);
+        }
+    }
 }
 
 /**
@@ -1417,7 +1414,7 @@ boolean OpenBCI_Radios_Class::bufferRadioHasData(BufferRadio *buf) {
  * @author AJ Keller (@pushtheworldllc)
  */
 boolean OpenBCI_Radios_Class::bufferRadioReadyForData(BufferRadio *buf) {
-    return !buf.flushing;
+    return !buf->flushing;
 }
 
 /**
@@ -1426,11 +1423,10 @@ boolean OpenBCI_Radios_Class::bufferRadioReadyForData(BufferRadio *buf) {
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioReset(BufferRadio *buf) {
-    buf.flushing = false;
-    buf.gotAllPackets = false;
-    buf.loading = false;
-    buf.positionWrite = 0;
-    buf.previousPacketNumber = 0;
+    buf->flushing = false;
+    buf->gotAllPackets = false;
+    buf->positionWrite = 0;
+    buf->previousPacketNumber = 0;
 }
 
 /**
@@ -1829,8 +1825,8 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
                 singleCharMsg[0] = ORPM_PACKET_MISSED & 0xFF;
 
                 // Clean the radio buffer. Resets the flags.
-                bufferRadioReset();
-                bufferRadioClean();
+                bufferRadioReset(&bufferRadio);
+                bufferRadioClean(&bufferRadio);
 
             }
         }
@@ -1842,12 +1838,12 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
     if (goodToAddPacketToRadioBuffer) {
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        bufferRadioAddData(data+1,len-1,false);
+        bufferRadioAddData(&bufferRadio,data+1,len-1,gotLastPacket);
         // If this is the last packet then we need to set a flag to empty
         //  the buffer
         if (gotLastPacket) {
             // flag contents of radio buffer to be printed!
-            gotAllRadioPackets = true;
+            bufferRadio.gotAllPackets = true;
             // Serial.print("len: "); Serial.print(len); Serial.println("|~|");
         }
 
@@ -1909,20 +1905,42 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
     //  packet was 0 too, this is in an effort to get to the point in the
     //  program where we ask if this packet is a stream packet
     if (packetNumber == 0 && bufferRadio.previousPacketNumber == 0) {
-        // This is a one packet message
-        gotLastPacket = true;
+        // This is a one packet message... we'll add it right away.
+        goodToAddPacketToRadioBuffer = false;
+        if (!bufferRadio.flushing && !bufferRadioHasData(&bufferRadio)) {
+            bufferRadioAddData(&bufferRadio,data+1,len-1,true);
+        } else if (!bufferRadioBackUp.flushing && !bufferRadioHasData(&bufferRadioBackUp)) {
+            bufferRadioAddData(&bufferRadioBackUp,data+1,len-1,true);
+        } else {
+            // We have no room for this packet, restart!
+            singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+        }
 
     } else {
         if (packetNumber > 0 && bufferRadio.previousPacketNumber == 0) {
             // This is the first of multiple packets we are recieving
             bufferRadio.previousPacketNumber = packetNumber;
-            // Mark this as the first packet
-            firstPacket = true;
+
+            // if the buffer is not flushing and not full
+            //  set it as the current buffer
+            if (!bufferRadio.flushing && !bufferRadioHasData(&bufferRadio)) {
+                currentRadioBuffer = &bufferRadio;
+            } else if (!bufferRadioBackUp.flushing && !bufferRadioHasData(&bufferRadioBackUp)) {
+                currentRadioBuffer = &bufferRadioBackUp;
+            } else {
+                // We have no room for this packet, restart!
+                singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+                return false;
+            }
+
         } else {
             // This is not the first packet we are reciving of this page
-            if (bufferRadio.previousPacketNumber - packetNumber == 1) { // Normal...
+            if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) { // Normal...
                 // update
-                bufferRadio.previousPacketNumber = packetNumber;
+                currentRadioBuffer->previousPacketNumber = packetNumber;
 
                 // Is this the last packet?
                 if (packetNumber == 0) {
@@ -1936,7 +1954,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
 
                 // reset ring buffer to start
                 // Reset the packet state
-                bufferRadioReset();
+                bufferRadioReset(currentRadioBuffer);
                 RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
                 return false;
             }
@@ -1947,33 +1965,9 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
     //  message and this packet should be routed to either the Pic (if we're
     //  the Device) or the Driver (if we are the Host)
     if (goodToAddPacketToRadioBuffer) {
-        // Check to see if this is a stream packet... This the case then the
-        //  Device has sent a stream packet to the Host
-
         // This is not a stream packet and, be default, we will store it
         //  into a buffer called bufferRadio that is a 1 dimensional array
-        if (firstPacket) {
-            if (bufferRadioReadyForData(&bufferRadio)) {
-                bufferRadioAddData(&bufferRadio,data+1,len-1,gotLastPacket);
-            } else if (bufferRadioReadyForData(&bufferRadio1)) {
-                bufferRadioAddData(&bufferRadio1,data+1,len-1,gotLastPacket);
-            } else {
-                // We have no room for this packet, restart!
-                singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                return false;
-            }
-        } else {
-            if ()
-        }
-
-
-        // If this is the last packet then we need to set a flag to empty
-        //  the buffer
-        if (gotLastPacket) {
-            // flag contents of radio buffer to be printed!
-            gotAllRadioPackets = true;
-        }
+        bufferRadioAddData(currentRadioBuffer,data+1,len-1,gotLastPacket);
     }
 
     if (hostPacketToSend()) {

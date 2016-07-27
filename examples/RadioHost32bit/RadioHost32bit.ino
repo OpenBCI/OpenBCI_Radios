@@ -50,15 +50,7 @@ void loop() {
         radio.ringBufferWrite = 0;
     }
 
-    // Is there data in the radio buffer ready to be sent to the Driver?
-    if (radio.gotAllRadioPackets) {
-        // Flush radio buffer to the driver
-        radio.bufferRadioFlush();
-        // Reset the radio buffer flags
-        radio.bufferRadioReset();
-        // Clean the buffer.. fill with zeros
-        radio.bufferRadioClean();
-    }
+    radio.bufferRadioProcess();
 
     // Is there new data from the PC/Driver?
     // While loop to read successive bytes
@@ -79,11 +71,11 @@ void loop() {
         radio.systemUp = false;
         // Check to see if data was left in the radio buffer from an incomplete
         //  multi packet transfer.. i.e. a failed over the air upload
-        if (radio.bufferRadioHasData()) {
+        if (radio.bufferRadioHasData(radio.currentRadioBuffer)) {
             // Reset the radio buffer flags
-            radio.bufferRadioReset();
+            radio.bufferRadioReset(radio.currentRadioBuffer);
             // Clean the buffer.. fill with zeros
-            radio.bufferRadioClean();
+            radio.bufferRadioClean(radio.currentRadioBuffer);
         }
     }
 

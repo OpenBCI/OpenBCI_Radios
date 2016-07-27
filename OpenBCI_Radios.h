@@ -84,6 +84,8 @@ public:
     void        bufferRadioClean(BufferRadio *);
     boolean     bufferRadioHasData(BufferRadio *);
     void        bufferRadioFlush(BufferRadio *);
+    void        bufferRadioProcess(void);
+    void        bufferRadioProcessSingle(BufferRadio *buf);
     boolean     bufferRadioReadyForData(BufferRadio *buf);
     void        bufferRadioReset(BufferRadio *);
     void        bufferResetStreamPacketBuffer(void);
@@ -152,7 +154,6 @@ public:
     boolean     storeCharToSerialBuffer(char);
     boolean     thereIsDataInSerialBuffer(void);
     void        writeBufferToSerial(char *,int);
-    void        writeTheHostsRadioBufferToThePC(void);
 
     //////////////////////
     // SHARED VARIABLES //
@@ -160,6 +161,7 @@ public:
     // CUSTOMS
     BufferRadio bufferRadio;
     BufferRadio bufferRadioBackUp;
+    BufferRadio *currentRadioBuffer;
     Buffer bufferSerial;
     PacketBuffer *currentPacketBufferSerial;
     // BOOLEANS
