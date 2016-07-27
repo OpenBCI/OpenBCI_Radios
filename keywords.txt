@@ -19,7 +19,8 @@ bufferAddStreamPacket           KEYWORD2
 bufferAddTimeSyncSentAck        KEYWORD2
 bufferCleanSerial               KEYWORD2
 bufferRadioClean                KEYWORD2
-bufferRadioFlush                KEYWORD2
+bufferRadioFlushBuffers         KEYWORD2
+bufferRadioProcessSingle        KEYWORD2
 bufferRadioReset                KEYWORD2
 bufferResetStreamPacketBuffer   KEYWORD2
 commsFailureTimeout             KEYWORD2

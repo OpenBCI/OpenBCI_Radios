@@ -50,7 +50,7 @@ void loop() {
         radio.ringBufferWrite = 0;
     }
 
-    radio.bufferRadioProcess();
+    radio.bufferRadioFlushBuffers();
 
     // Is there new data from the PC/Driver?
     // While loop to read successive bytes

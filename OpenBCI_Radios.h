@@ -60,7 +60,7 @@ public:
         boolean gotAllPackets;
         char    data[OPENBCI_BUFFER_LENGTH_MULTI];
         int     positionWrite;
-        int     previousPacketNumber;
+        uint8_t previousPacketNumber;
     } BufferRadio;
 
 // SHARED
@@ -84,9 +84,10 @@ public:
     void        bufferRadioClean(BufferRadio *);
     boolean     bufferRadioHasData(BufferRadio *);
     void        bufferRadioFlush(BufferRadio *);
-    void        bufferRadioProcess(void);
+    void        bufferRadioFlushBuffers(void);
+    boolean     bufferRadioLoadingMultiPacket(BufferRadio *buf);
     void        bufferRadioProcessSingle(BufferRadio *buf);
-    boolean     bufferRadioReadyForData(BufferRadio *buf);
+    boolean     bufferRadioReadyForNewPage(BufferRadio *buf);
     void        bufferRadioReset(BufferRadio *);
     void        bufferResetStreamPacketBuffer(void);
     char        byteIdMake(boolean, int, volatile char *, int);
@@ -159,8 +160,8 @@ public:
     // SHARED VARIABLES //
     //////////////////////
     // CUSTOMS
-    BufferRadio bufferRadio;
-    BufferRadio bufferRadioBackUp;
+    BufferRadio bufferRadio[OPENBCI_NUMBER_RADIO_BUFFERS];
+    uint8_t currentRadioBufferNum;
     BufferRadio *currentRadioBuffer;
     Buffer bufferSerial;
     PacketBuffer *currentPacketBufferSerial;

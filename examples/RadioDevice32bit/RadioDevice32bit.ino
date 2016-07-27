@@ -73,9 +73,7 @@ void loop() {
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
-                    if (radio.sendPacketToHost() > 0) {
-                        radio.sendingMultiPacket = true;
-                    }
+                    radio.sendPacketToHost();
                     radio.ackCounter++;
                 } else {
                     // Serial.println("Err: dropping packet");
@@ -84,14 +82,7 @@ void loop() {
             }
         }
 
-        if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
-            // Flush radio buffer to the driver
-            radio.bufferRadioFlush();
-            // Reset the radio buffer flags
-            radio.bufferRadioReset();
-            // Clean the buffer.. fill with zeros
-            radio.bufferRadioClean();
-        }
+        radio.bufferRadioFlushBuffers();
 
         if (millis() > (radio.timeOfLastPoll + radio.pollTime)) {  // Has more than the poll time passed?
             // Refresh the poll timer
@@ -140,11 +131,6 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
 
     // Is the send data packet flag set to true
     if (sendDataPacket) {
-        if (radio.sendPacketToHost() == 0 && radio.sendingMultiPacket) {
-            // The last packet was just sent, need to wait poll time before
-            //  starting to send another multipacket
-            radio.sendingMultiPacket = false;
-            radio.timeOfLastMultipacketSendToHost = millis();
-        }
+        radio.sendPacketToHost();
     }
 }

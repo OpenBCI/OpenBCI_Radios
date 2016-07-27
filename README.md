@@ -91,6 +91,10 @@ Used to fill the buffer with all zeros. Should be used as frequently as possible
 
 Called when all the packets have been received to flush the contents of the radio buffer to the serial port.
 
+### bufferRadioFlushBuffers()
+
+Used to flush any radio buffer that is ready to be flushed to the serial port. For now flushes just bufferRadio and bufferRadioBackUp on the Host.
+
 ### bufferRadioHasData()
 
 Used to determine if there is data in the radio buffer. Most likely this data needs to be cleared.

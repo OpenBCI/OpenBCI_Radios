@@ -33,6 +33,8 @@
 #define OPENBCI_BUFFER_LENGTH_MULTI 528
 #define OPENBCI_BUFFER_LENGTH_STREAM 528
 
+#define OPENBCI_NUMBER_RADIO_BUFFERS 2
+
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
 #define OPENBCI_MODE_HOST 1
