@@ -11,11 +11,6 @@
 * Host is connected to PC via USB VCP (FTDI).
 * Device is connectedd to uC (PIC32MX250F128B with UDB32-MX2-DIP).
 *
-* In streamingData mode, Host insterts a pre-fix and post-fix to the data for PC coordination.
-*
-* Single byte serial messages sent from PC are modified by the Host to include a '+' before and after
-* This is to avoid an error experienced when the uC gets a 'ghost' command byte during streamData mode
-*
 * This software is provided as-is with no promise of workability
 * Use at your own risk, wysiwyg.
 *
@@ -28,12 +23,10 @@
 #include "OpenBCI_Radios.h"
 
 void setup() {
-    // If you forgot your channel numbers, then force a reset by uncommenting
-    //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.flashNonVolatileMemory();
-
     // Declare the radio mode and channel number. Note this channel is only
-    //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
+    //  set the first time the board powers up OR after a flash of the non-
+    //  volatile memory space with a call to `flashNonVolatileMemory`.
+    // MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
     radio.begin(OPENBCI_MODE_HOST,20);
 }
 
@@ -195,7 +188,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
 
     // Is the send data packet flag set to true
-    if (sendDataPacket && !radio.processingSendToDevice) {
+    if (sendDataPacket) {
         radio.sendPacketToDevice(device, false);
     }
 }

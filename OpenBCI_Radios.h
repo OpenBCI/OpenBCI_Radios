@@ -56,7 +56,9 @@ public:
     } StreamPacketBuffer;
 
     typedef struct {
-        char    data[OPENBCI_BUFFER_LENGTH];
+        boolean flushing;
+        boolean gotAllPackets;
+        char    data[OPENBCI_BUFFER_LENGTH_MULTI];
         int     positionWrite;
         int     previousPacketNumber;
     } BufferRadio;
@@ -73,16 +75,17 @@ public:
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
-    void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *, int );
+    void        bufferCleanCompletePacketBuffer(volatile PacketBuffer *, int);
     void        bufferCleanPacketBuffer(volatile PacketBuffer *,int);
     void        bufferCleanBuffer(volatile Buffer *, int);
     void        bufferCleanSerial(int);
     void        bufferCleanStreamPackets(int);
-    boolean     bufferRadioAddData(volatile char *, int, boolean);
-    void        bufferRadioClean(void);
-    boolean     bufferRadioHasData(void);
-    void        bufferRadioFlush(void);
-    void        bufferRadioReset(void);
+    boolean     bufferRadioAddData(BufferRadio *, volatile char *, int, boolean);
+    void        bufferRadioClean(BufferRadio *);
+    boolean     bufferRadioHasData(BufferRadio *);
+    void        bufferRadioFlush(BufferRadio *);
+    boolean     bufferRadioReadyForData(BufferRadio *buf);
+    void        bufferRadioReset(BufferRadio *);
     void        bufferResetStreamPacketBuffer(void);
     char        byteIdMake(boolean, int, volatile char *, int);
     byte        byteIdMakeStreamPacketType(void);
@@ -156,11 +159,11 @@ public:
     //////////////////////
     // CUSTOMS
     BufferRadio bufferRadio;
+    BufferRadio bufferRadioBackUp;
     Buffer bufferSerial;
     PacketBuffer *currentPacketBufferSerial;
     // BOOLEANS
     boolean debugMode;
-    volatile boolean gotAllRadioPackets;
     // CHARS
     char singleCharMsg[1];
     char singlePayLoad[1];
@@ -179,10 +182,9 @@ public:
     volatile boolean isWaitingForNewChannelNumberConfirmation;
     volatile boolean isWaitingForNewPollTimeConfirmation;
     volatile boolean sendSerialAck;
-    volatile boolean processingSendToDevice;
     volatile boolean printMessageToDriverFlag;
     volatile boolean systemUp;
-    char ringBuffer[OPENBCI_BUFFER_LENGTH];
+    char ringBuffer[OPENBCI_BUFFER_LENGTH_STREAM];
     volatile boolean packetInTXRadioBuffer;
     int ringBufferRead;
     int ringBufferWrite;

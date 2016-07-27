@@ -30,7 +30,8 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH 528
+#define OPENBCI_BUFFER_LENGTH_MULTI 528
+#define OPENBCI_BUFFER_LENGTH_STREAM 528
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
