@@ -2,6 +2,7 @@
 #include "OpenBCI_Radios.h"
 #include "PTW-Arduino-Assert.h"
 
+
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
@@ -20,51 +21,18 @@ void go() {
     // Start the test
     test.begin();
 
-    testCheckSum();
     testByteId();
     testOutput();
     testBuffer();
-    testNonVolatileFunctions();
+    // testNonVolatileFunctions();
 
     test.end();
-}
-
-void testCheckSum() {
-    test.describe("checkSum");
-
-    char temp1[3];
-    temp1[1] = 'a';
-    temp1[2] = 'j';
-
-    char temp2[3];
-    temp2[1] = 'a';
-    temp2[2] = 'k';
-
-
-    char checkSum1 = radio.checkSumMake(temp1 + 1,2);
-    char checkSum2 = radio.checkSumMake(temp2 + 1,2);
-
-    test.assertEqualChar(checkSum1,0x05,"Get's correct check sum for given char *");
-    test.assertGreaterThanChar(checkSum1,checkSum2,"Data with one byte of 1 less than other has smaller check sum");
-    test.assertEqualInt(checkSum1 - checkSum2,1,"Check sums of two different packets changed by 1 bit shall be one 1 less");
-
-    // Get byteId for this packet
-    char byteId = radio.byteIdMake(false, 0, temp1 + 1, 2);
-    // Set byteId for this packet
-    temp1[0] = byteId;
-    test.assertEqualBoolean(radio.checkSumsAreEqual(temp1,3),true,"Check sums verification works in good condition");
-
-    // Mess it up on purpose
-    temp1[0] = byteId & 0x00;
-    test.assertEqualBoolean(radio.checkSumsAreEqual(temp1,3),false,"Check sums verification works in bad condition");
-
 }
 
 void testByteId() {
     testByteIdMake();
     testByteIdGetPacketNumber();
     testByteIdGetStreamPacketType();
-    testByteIdGetCheckSum();
 }
 
 void testByteIdMake() {
@@ -128,14 +96,6 @@ void testByteIdGetStreamPacketType() {
 
 }
 
-void testByteIdGetCheckSum() {
-    test.describe("byteIdGetCheckSum");
-
-    char checkSum = radio.byteIdGetCheckSum(0x1B);
-
-    test.assertEqualChar(checkSum,(char)0x03,"Extracts check sum from byte id");
-}
-
 void testOutput() {
     test.describe("outputGetStopByteFromByteId");
 
@@ -152,49 +112,6 @@ void testOutput() {
     actualStopByte = radio.outputGetStopByteFromByteId(byteId);
     test.assertEqualChar((char)expectedStopByte,(char)actualStopByte,"Time sync packet");
 
-}
-
-void testBuffer() {
-    testBufferCleanChar();
-    testBufferCleanPacketBuffer();
-    testBufferRadio();
-}
-
-
-void testBufferCleanChar() {
-    test.describe("bufferCleanChar");
-
-    char buffer[] = "AJ";
-    char testMessage[] = "buf at index 0 cleared to 0x00";
-
-    radio.bufferCleanChar(buffer, sizeof(buffer));
-
-    for (int i = 0; i < sizeof(buffer); i++) {
-        testMessage[13] = (char)i + '0';
-        test.assertEqualChar(buffer[i],(char)0x00, testMessage);
-    }
-}
-
-void testBufferCleanPacketBuffer() {
-    test.describe("bufferCleanPacketBuffer");
-
-    int numberOfPackets = 10;
-
-    for (int i = 0; i < numberOfPackets; i++) {
-        (radio.bufferSerial.packetBuffer + i)->positionRead = 5 + i;
-        (radio.bufferSerial.packetBuffer + i)->positionWrite = 6 + i;
-    }
-
-    radio.bufferCleanPacketBuffer(radio.bufferSerial.packetBuffer,numberOfPackets);
-
-    char testMessage1[] = "buf at index 0 positionRead reset";
-    char testMessage2[] = "buf at index 0 positionWrite reset";
-    for (int j = 0; j < numberOfPackets; j++) {
-        testMessage1[13] = (char)j + '0';
-        test.assertEqualInt((radio.bufferSerial.packetBuffer + j)->positionRead, 0x00, testMessage1);
-        testMessage2[13] = (char)j + '0';
-        test.assertEqualInt((radio.bufferSerial.packetBuffer + j)->positionWrite, 0x01, testMessage2);
-    }
 }
 
 void testNonVolatileFunctions() {
@@ -257,56 +174,130 @@ void testNonVolatileFlashNonVolatileMemory() {
 
 }
 
+void testBuffer() {
+    testBufferRadio();
+    testBufferSerial();
+}
+
+void testBufferSerial() {
+    testBufferCleanChar();
+    testBufferCleanPacketBuffer();
+}
+
+void testBufferCleanChar() {
+    test.describe("bufferCleanChar");
+
+    char buffer[] = "AJ";
+    char testMessage[] = "buf at index 0 cleared to 0x00";
+
+    radio.bufferCleanChar(buffer, sizeof(buffer));
+
+    for (int i = 0; i < sizeof(buffer); i++) {
+        testMessage[13] = (char)i + '0';
+        test.assertEqualChar(buffer[i],(char)0x00, testMessage);
+    }
+}
+
+void testBufferCleanPacketBuffer() {
+    test.describe("bufferCleanPacketBuffer");
+
+    int numberOfPackets = 10;
+
+    for (int i = 0; i < numberOfPackets; i++) {
+        (radio.bufferSerial.packetBuffer + i)->positionRead = 5 + i;
+        (radio.bufferSerial.packetBuffer + i)->positionWrite = 6 + i;
+    }
+
+    radio.bufferCleanPacketBuffer(radio.bufferSerial.packetBuffer,numberOfPackets);
+
+    char testMessage1[] = "buf at index 0 positionRead reset";
+    char testMessage2[] = "buf at index 0 positionWrite reset";
+    for (int j = 0; j < numberOfPackets; j++) {
+        testMessage1[13] = (char)j + '0';
+        test.assertEqualInt((radio.bufferSerial.packetBuffer + j)->positionRead, 0x00, testMessage1);
+        testMessage2[13] = (char)j + '0';
+        test.assertEqualInt((radio.bufferSerial.packetBuffer + j)->positionWrite, 0x01, testMessage2);
+    }
+}
+
 void testBufferRadio() {
+    testBufferRadioAddData();
+    testBufferRadioClean();
+    testBufferRadioHasData();
+    testBufferRadioReset();
+}
+
+void testBufferRadioAddData() {
     test.describe("bufferRadioAddData");
+
     char buffer[] = "AJ Keller is the best programmer";
     int expectedLength = 32; // Then length of the above buffer
 
-    radio.bufferRadioAddData(buffer,expectedLength);
-
-    // Verify the correct number of bytes were added
-    test.assertEqualInt(radio.bufferRadio.positionWrite,expectedLength,"The buffer added the correct number of bytes");
-
+    test.assertEqualBoolean(radio.bufferRadioAddData(radio.currentRadioBuffer, (char *)buffer, expectedLength, false),true,"should be able to add buffer to radioBuf");
+    test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,false,"should not have all the packets");
+    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,expectedLength,"should move positionWrite by 32");
     for (int i = 0; i < expectedLength; i++) {
-        test.assertEqualChar(radio.bufferRadio.data[i],buffer[i], "Char is correct");
+        test.assertEqualChar(radio.currentRadioBuffer->data[i],buffer[i], "Char is correct");
     }
 
-    // Verify the flags and such
-    test.assertEqualInt(radio.bufferRadio.previousPacketNumber,0,"Packet Number is set correct");
-    test.assertEqualBoolean(radio.gotAllRadioPackets,false,"Did not get all the packets yet");
+    // Reset buffer
+    radio.currentRadioBuffer->positionWrite = 0;
 
-    // Mess up the flags
-    radio.gotAllRadioPackets = true;
-    radio.bufferRadio.previousPacketNumber = 0;
-
-    // Test the reset functions
-    test.describe("bufferRadioReset");
-    // Reset the flags
-    radio.bufferRadioReset();
-
-    // Verify they got Reset
-    test.assertEqualInt(radio.bufferRadio.positionWrite,0,"Position write was reset");
-    test.assertEqualInt(radio.bufferRadio.previousPacketNumber,0,"Packet Number was reset");
-    test.assertEqualBoolean(radio.gotAllRadioPackets,false,"Global flag reset");
-
-    // Now clear it!
-    test.describe("bufferRadioClean");
-    radio.bufferRadioClean();
-    // Should fill the array with all zeros
-    for (int j = 0; j < expectedLength; j++) {
-        test.assertEqualChar(radio.bufferRadio.data[j],0);
-    }
-
-    // Test how this will work in normal operations
-    radio.bufferRadioAddData(buffer+1,expectedLength-1);
-
-    // Verify the correct number of bytes were added
-    test.assertEqualInt(radio.bufferRadio.positionWrite,expectedLength - 1,"The buffer added the correct number of bytes");
+    // Test how this will work in normal operations, i.e. ignoring the byte id
+    test.assertEqualBoolean(radio.bufferRadioAddData(radio.currentRadioBuffer, buffer+1, expectedLength-1, true),true,"should be able to add buffer to radioBuf");
+    test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,true,"should be able to set gotAllPackets to true");
+    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,expectedLength - 1,"should set the positionWrite to 31");
 
     for (int i = 1; i < expectedLength; i++) {
         // Verify that we have a missing first char and off by one offset on the
         //  index.
-        test.assertEqualChar(radio.bufferRadio.data[i-1],buffer[i], "Char is correct");
+        test.assertEqualChar(radio.currentRadioBuffer->data[i-1],buffer[i], "Char is correct");
+    }
+}
+
+void testBufferRadioClean() {
+    test.describe("bufferRadioClean");
+
+    for (int i = 0; i < OPENBCI_BUFFER_LENGTH_MULTI; i++) {
+        radio.currentRadioBuffer->data[i] = 1;
     }
 
+    // Call the function under test
+    radio.bufferRadioClean(radio.currentRadioBuffer);
+
+    // Should fill the array with all zeros
+    for (int j = 0; j < OPENBCI_BUFFER_LENGTH_MULTI; j++) {
+        test.assertEqualChar(radio.currentRadioBuffer->data[j],0);
+    }
+
+}
+
+void testBufferRadioHasData() {
+    test.describe("bufferRadioHasData");
+
+    // Don't add any data
+    test.assertEqualBoolean(radio.bufferRadioHasData(radio.currentRadioBuffer),false,"should have no data at first");
+    // Add some data
+    radio.currentRadioBuffer->positionWrite = 69;
+    // Verify!
+    test.assertEqualBoolean(radio.bufferRadioHasData(radio.currentRadioBuffer),true,"should have data after moving positionWrite");
+}
+
+void testBufferRadioReset() {
+    // Test the reset functions
+    test.describe("bufferRadioReset");
+
+    radio.currentRadioBuffer->flushing = true;
+    radio.currentRadioBuffer->gotAllPackets = true;
+    radio.currentRadioBuffer->positionWrite = 60;
+    radio.currentRadioBuffer->previousPacketNumber = 3;
+
+    // Reset the flags
+    radio.bufferRadioReset(radio.currentRadioBuffer);
+
+    // Verify they got Reset
+    test.assertEqualBoolean(radio.currentRadioBuffer->flushing,false,"should set flushing to false");
+    test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,false,"should set got all packets to false");
+    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,0,"should set positionWrite to 0");
+    test.assertEqualInt(radio.currentRadioBuffer->previousPacketNumber,0,"should set previousPacketNumber to 0");
 }

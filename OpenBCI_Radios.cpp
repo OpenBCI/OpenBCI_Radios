@@ -630,7 +630,7 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  * @author AJ Keller (@pushtheworldllc)
  */
-byte OpenBCI_Radios_Class::processOutboundBuffer(volatile PacketBuffer *currentPacketBuffer) {
+byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuffer) {
     if (currentPacketBuffer->positionWrite == 3) {
         return processOutboundBufferCharDouble(currentPacketBuffer->data);
     } else if (currentPacketBuffer->positionWrite == 4) {
@@ -683,7 +683,7 @@ boolean OpenBCI_Radios_Class::processOutboundBufferForTimeSync(void) {
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  * @author AJ Keller (@pushtheworldllc)
  */
-byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer) {
+byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
     // The first byte needs to match the command key to act on it
     if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Decode the char
@@ -755,7 +755,7 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(volatile char *buffer
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  * @author AJ Keller (@pushtheworldllc)
  */
-byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(volatile char *buffer) {
+byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(char *buffer) {
     // The first byte needs to match the command key to act on it
     if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         switch (buffer[2]) {
@@ -1335,7 +1335,7 @@ void OpenBCI_Radios_Class::bufferCleanSerial(int numberOfPacketsToClean) {
  *      buffer was overflowed.
  * @author AJ Keller (@pushtheworldllc)
  */
-boolean OpenBCI_Radios_Class::bufferRadioAddData(BufferRadio *buf, volatile char *data, int len, boolean lastPacket) {
+boolean OpenBCI_Radios_Class::bufferRadioAddData(BufferRadio *buf, char *data, int len, boolean lastPacket) {
     if (lastPacket) {
         buf->gotAllPackets = true;
     }
@@ -1407,6 +1407,109 @@ boolean OpenBCI_Radios_Class::bufferRadioHasData(BufferRadio *buf) {
 
 boolean OpenBCI_Radios_Class::bufferRadioLoadingMultiPacket(BufferRadio *buf) {
     return bufferRadioHasData(buf) && !buf->gotAllPackets;
+}
+
+byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
+    // The packetNumber is embedded in the first byte, the byteId
+    int packetNumber = byteIdGetPacketNumber(data[0]);
+
+    // Last packet
+    if (packetNumber == 0) {
+        // Current buffer has no data
+        if (!bufferRadioHasData(currentRadioBuffer)) {
+            // Take it! Mark Last
+            bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
+            // Return that this last packet was added
+            return OPENBCI_PROCESS_RADIO_LAST;
+
+        // Current buffer has data
+        } else {
+            // Current buffer has all packets
+            if (currentRadioBuffer->gotAllPackets) {
+                // Can swtich to other buffer
+                if (bufferRadioSwitchToOtherBuffer()) {
+                    // Take it! Mark Last
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
+                    // Return that this last packet was added
+                    return OPENBCI_PROCESS_RADIO_LAST;
+
+                // Cannot switch to other buffer
+                } else {
+                    // Reject it!
+                    return OPENBCI_PROCESS_RADIO_REJECT;
+                }
+            // Current buffer does not have all packets
+            } else {
+                // Previous packet number == packetNumber + 1
+                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
+                    // Take it! Mark last.
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
+                    // Return that this last packet was added
+                    return OPENBCI_PROCESS_RADIO_LAST;
+
+                // Missed a packet
+                } else {
+                    // Reject it! Reset current buffer
+                    bufferRadioReset(currentRadioBuffer);
+                    return OPENBCI_PROCESS_RADIO_REJECT;
+                }
+            }
+        }
+    // Not last packet
+    } else {
+        // Current buffer has no data
+        if (!bufferRadioHasData(currentRadioBuffer)) {
+            // Take it, not last
+            bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
+
+            // Update the previous packet number
+            currentRadioBuffer->previousPacketNumber = packetNumber;
+
+            // Return that a packet that was not last was added
+            return OPENBCI_PROCESS_RADIO_LAST_NOT;
+
+        // Current buffer has data
+        } else {
+            // Current buffer has all packets
+            if (currentRadioBuffer->gotAllPackets) {
+                // Can switch to other buffer
+                if (bufferRadioSwitchToOtherBuffer()) {
+                    // Take it! Not last
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
+
+                    // Update the previous packet number
+                    currentRadioBuffer->previousPacketNumber = packetNumber;
+
+                    // Return that a packet that was not last was added
+                    return OPENBCI_PROCESS_RADIO_LAST_NOT;
+
+                // Cannot switch to other buffer
+                } else {
+                    // Reject it!
+                    return OPENBCI_PROCESS_RADIO_REJECT;
+                }
+            // Current buffer does not have all packets
+            } else {
+                // Previous packet number == packetNumber + 1
+                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
+                    // Take it! Not last.
+                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
+
+                    // Update the previous packet number
+                    currentRadioBuffer->previousPacketNumber = packetNumber;
+
+                    // Return that a packet that was not last was added
+                    return OPENBCI_PROCESS_RADIO_LAST_NOT;
+
+                // Missed a packet
+                } else {
+                    // Reject it! Reset current buffer
+                    bufferRadioReset(currentRadioBuffer);
+                    return OPENBCI_PROCESS_RADIO_REJECT;
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -1603,9 +1706,11 @@ OpenBCI_Radios_Class radio;
 boolean OpenBCI_Radios_Class::processRadioCharHost(device_t device, char newChar) {
 
     switch (newChar) {
-        case ORPM_PACKET_BAD_CHECK_SUM:
-            // Resend the last sent packet
-            bufferSerial.numberOfPacketsSent--;
+        case ORPM_PACKET_PAGE_REJECT:
+            // Start the page transmission over again
+            bufferSerial.numberOfPacketsSent = 0;
+            // Wait a little bit to let the Device finish
+            delay(10);
 
             return true;
 
@@ -1706,9 +1811,12 @@ boolean OpenBCI_Radios_Class::processRadioCharDevice(char newChar) {
 
     } else {
         switch (newChar) {
-            case ORPM_PACKET_BAD_CHECK_SUM:
-                // Resend the last sent packet
-                bufferSerial.numberOfPacketsSent--;
+            case ORPM_PACKET_PAGE_REJECT:
+                // Start the page transmission over again
+                bufferSerial.numberOfPacketsSent = 0;
+                // Wait a little bit to let the Host finish
+                delay(10);
+
                 return true;
 
             case ORPM_PACKET_MISSED:
@@ -1809,7 +1917,7 @@ boolean OpenBCI_Radios_Class::serialWriteTimeOut(void) {
  * @returns {boolean} - `true` if there is a packet to send to the Host.
  * @author AJ Keller (@pushtheworldllc)
  */
-boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, int len) {
+boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     // We enter this if statement if we got a packet with length greater than
     //  1. If we recieve a packet with packetNumber equal to 0, then we can set
     //  a flag to write the radio buffer.
@@ -1903,7 +2011,7 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(volatile char *data, in
  * @returns {boolean} - `true` if there is a packet to send to the Device.
  * @author AJ Keller (@pushtheworldllc)
  */
-boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile char *data, int len) {
+boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *data, int len) {
 
     if (byteIdGetIsStream(data[0])) {
         // We don't actually read to serial port yet, we simply move it
@@ -1914,107 +2022,11 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, volatile
         return hostPacketToSend();
     }
 
-    // We enter this if statement if we got a packet with length greater than one... it's important to note this is for both the Host and for the Device.
-    // A general rule of this system is that if we recieve a packet with a packetNumber of 0 that signifies an actionable end of transmission
-    boolean gotLastPacket = false;
-    boolean goodToAddPacketToRadioBuffer = true;
-
-    // The packetNumber is embedded in the first byte, the byteId
-    int packetNumber = byteIdGetPacketNumber(data[0]);
-
-    // Last packet
-    if (packetNumber == 0) {
-        // Current buffer has no data
-        if (!bufferRadioHasData(currentRadioBuffer)) {
-            // Take it! Mark Last
-            bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
-
-        // Current buffer has data
-        } else {
-            // Current buffer has all packets
-            if (currentRadioBuffer->gotAllPackets) {
-                // Can swtich to other buffer
-                if (bufferRadioSwitchToOtherBuffer()) {
-                    // Take it! Mark Last
-                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
-
-                // Cannot switch to other buffer
-                } else {
-                    // Reject it!
-                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                    return false;
-                }
-            // Current buffer does not have all packets
-            } else {
-                // Previous packet number == packetNumber + 1
-                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
-                    // Take it! Mark last.
-                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
-
-                // Missed a packet
-                } else {
-                    // Reject it! Reset current buffer
-                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-
-                    // Reset the `currentRadioBuffer` state
-                    bufferRadioReset(currentRadioBuffer);
-                    return false;
-                }
-            }
-        }
-    // Not last packet
-    } else {
-        // Current buffer has no data
-        if (!bufferRadioHasData(currentRadioBuffer)) {
-            // Take it, not last
-            bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
-
-            // Update the previous packet number
-            currentRadioBuffer->previousPacketNumber = packetNumber;
-
-        // Current buffer has data
-        } else {
-            // Current buffer has all packets
-            if (currentRadioBuffer->gotAllPackets) {
-                // Can switch to other buffer
-                if (bufferRadioSwitchToOtherBuffer()) {
-                    // Take it! Not last
-                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
-
-                    // Update the previous packet number
-                    currentRadioBuffer->previousPacketNumber = packetNumber;
-
-                // Cannot switch to other buffer
-                } else {
-                    // Reject it!
-                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-                    return false;
-                }
-            // Current buffer does not have all packets
-            } else {
-                // Previous packet number == packetNumber + 1
-                if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
-                    // Take it! Not last.
-                    bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
-
-                    // Update the previous packet number
-                    currentRadioBuffer->previousPacketNumber = packetNumber;
-
-                // Missed a packet
-                } else {
-                    // Reject it! Reset current buffer
-                    singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-                    RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-
-                    // Reset the `currentRadioBuffer` state
-                    bufferRadioReset(currentRadioBuffer);
-                    return false;
-                }
-            }
-        }
+    if (bufferRadioProcessPacket(data,len) == false) {
+        // Not able to process the packet
+        singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+        RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+        return false;
     }
 
     if (hostPacketToSend()) {

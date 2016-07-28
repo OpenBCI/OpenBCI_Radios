@@ -69,7 +69,7 @@
 // Private Radio communications
 //  ORPM --> "OpenBCI Radio Private Message"
 #define ORPM_INVALID_CODE_RECEIVED 0x00 // The other radio sent a 1 byte message that does not match any
-#define ORPM_PACKET_BAD_CHECK_SUM 0x01 // Bad check sum
+#define ORPM_PACKET_PAGE_REJECT 0x01 // Could not load page
 #define ORPM_PACKET_MISSED 0x02 // Missed a packet
 #define ORPM_PACKET_INIT 0x03 // Init packet
 #define ORPM_DEVICE_SERIAL_OVERFLOW 0x04 // The Device is being overflowed by Pic
@@ -83,6 +83,11 @@
 #define ACTION_RADIO_SEND_NONE 0x00
 #define ACTION_RADIO_SEND_NORMAL 0x01
 #define ACTION_RADIO_SEND_SINGLE_CHAR 0x02
+
+// Used to determine the result of processing a packet
+#define OPENBCI_PROCESS_RADIO_REJECT 0x00
+#define OPENBCI_PROCESS_RADIO_LAST 0x01
+#define OPENBCI_PROCESS_RADIO_LAST_NOT 0x02
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
