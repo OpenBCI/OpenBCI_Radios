@@ -1339,7 +1339,7 @@ boolean OpenBCI_Radios_Class::bufferRadioAddData(BufferRadio *buf, char *data, i
     if (lastPacket) {
         buf->gotAllPackets = true;
     }
-
+    // Serial.print("Pos write "); Serial.println(currentRadioBuffer->positionWrite);
     for (int i = 0; i < len; i++) {
         if (buf->positionWrite < OPENBCI_BUFFER_LENGTH_MULTI) { // Check for to prevent overflow
             buf->data[buf->positionWrite] = data[i];
@@ -1405,13 +1405,11 @@ boolean OpenBCI_Radios_Class::bufferRadioHasData(BufferRadio *buf) {
     return buf->positionWrite > 0;
 }
 
-boolean OpenBCI_Radios_Class::bufferRadioLoadingMultiPacket(BufferRadio *buf) {
-    return bufferRadioHasData(buf) && !buf->gotAllPackets;
-}
-
 byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
+
+    return OPENBCI_PROCESS_RADIO_REJECT;
 
     // Last packet
     if (packetNumber == 0) {

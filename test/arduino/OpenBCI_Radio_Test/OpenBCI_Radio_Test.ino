@@ -2,11 +2,15 @@
 #include "OpenBCI_Radios.h"
 #include "PTW-Arduino-Assert.h"
 
+int ledPin = 2;
 
 void setup() {
     // put your setup code here, to run once:
+    pinMode(ledPin,OUTPUT);
+    // put your setup code here, to run once:
     Serial.begin(115200);
     test.setSerial(Serial);
+    test.failVerbosity = true;
 }
 
 void loop() {
@@ -20,13 +24,14 @@ void loop() {
 void go() {
     // Start the test
     test.begin();
-
-    testByteId();
-    testOutput();
+    digitalWrite(ledPin, HIGH);
+    // testByteId();
+    // testOutput();
     testBuffer();
     // testNonVolatileFunctions();
 
     test.end();
+    digitalWrite(ledPin, LOW);
 }
 
 void testByteId() {
@@ -176,7 +181,7 @@ void testNonVolatileFlashNonVolatileMemory() {
 
 void testBuffer() {
     testBufferRadio();
-    testBufferSerial();
+    // testBufferSerial();
 }
 
 void testBufferSerial() {
@@ -221,10 +226,17 @@ void testBufferCleanPacketBuffer() {
 }
 
 void testBufferRadio() {
-    testBufferRadioAddData();
-    testBufferRadioClean();
-    testBufferRadioHasData();
-    testBufferRadioReset();
+    testBufferRadioSetup();
+
+    // testBufferRadioAddData();
+    // testBufferRadioClean();
+    // testBufferRadioHasData();
+    testBufferRadioProcessPacket();
+    // testBufferRadioReset();
+}
+
+void testBufferRadioSetup() {
+    radio.currentRadioBuffer = radio.bufferRadio;
 }
 
 void testBufferRadioAddData() {
@@ -266,14 +278,19 @@ void testBufferRadioClean() {
     radio.bufferRadioClean(radio.currentRadioBuffer);
 
     // Should fill the array with all zeros
+    boolean allZeros = true;
     for (int j = 0; j < OPENBCI_BUFFER_LENGTH_MULTI; j++) {
-        test.assertEqualChar(radio.currentRadioBuffer->data[j],0);
+        if (radio.currentRadioBuffer->data[j] != 0) {
+            allZeros = false;
+        }
     }
-
+    test.assertEqualBoolean(true,allZeros,"should set all values to zero");
 }
 
 void testBufferRadioHasData() {
     test.describe("bufferRadioHasData");
+
+    radio.currentRadioBuffer->positionWrite = 0;
 
     // Don't add any data
     test.assertEqualBoolean(radio.bufferRadioHasData(radio.currentRadioBuffer),false,"should have no data at first");
@@ -282,6 +299,50 @@ void testBufferRadioHasData() {
     // Verify!
     test.assertEqualBoolean(radio.bufferRadioHasData(radio.currentRadioBuffer),true,"should have data after moving positionWrite");
 }
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+
+void testBufferRadioProcessPacket() {
+    test.describe("bufferRadioProcessPacket");
+
+    char buffer[] = " taco";
+    int expectedLength = 5; // Then length of the above buffer
+
+    // Last packet
+    char byteId = radio.byteIdMake(false,0,(char *)buffer + 1, expectedLength - 1);
+
+    // Store that byteId
+    buffer[0] = byteId;
+
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer, expectedLength),OPENBCI_PROCESS_RADIO_LAST,"should add to radio buffer 1");
+    test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,true,"should be able to set gotAllPackets to true");
+    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,expectedLength - 1,"should set the positionWrite to 4");
+
+    for (int i = 1; i < expectedLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        test.assertEqualChar(radio.currentRadioBuffer->data[i-1],buffer[i], "Char is correct");
+    }
+
+
+}
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 void testBufferRadioReset() {
     // Test the reset functions
