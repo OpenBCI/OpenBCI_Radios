@@ -1416,7 +1416,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
             // Take it! Mark Last
             bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
             // Return that this last packet was added
-            return OPENBCI_PROCESS_RADIO_LAST;
+            return OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE;
 
         // Current buffer has data
         } else {
@@ -1427,12 +1427,13 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
                     // Take it! Mark Last
                     bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
                     // Return that this last packet was added
-                    return OPENBCI_PROCESS_RADIO_LAST;
+                    return OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST;
 
                 // Cannot switch to other buffer
                 } else {
+                    Serial.println("Last packet / Current buffer has data / Current buffer has all packets / Cannot switch to other buffer");
                     // Reject it!
-                    return OPENBCI_PROCESS_RADIO_REJECT;
+                    return OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST;
                 }
             // Current buffer does not have all packets
             } else {
@@ -1442,13 +1443,13 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
                     // Take it! Mark last.
                     bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
                     // Return that this last packet was added
-                    return OPENBCI_PROCESS_RADIO_LAST;
+                    return OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI;
 
                 // Missed a packet
                 } else {
                     // Reject it! Reset current buffer
                     bufferRadioReset(currentRadioBuffer);
-                    return OPENBCI_PROCESS_RADIO_REJECT;
+                    return OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST;
                 }
             }
         }
@@ -1464,12 +1465,10 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
             currentRadioBuffer->previousPacketNumber = packetNumber;
 
             // Return that a packet that was not last was added
-            return OPENBCI_PROCESS_RADIO_LAST_NOT;
+            return OPENBCI_PROCESS_RADIO_PASS_LAST_NOT;
 
         // Current buffer has data
         } else {
-            // Reject it!
-            return OPENBCI_PROCESS_RADIO_REJECT;
             // Current buffer has all packets
             if (currentRadioBuffer->gotAllPackets) {
                 // Can switch to other buffer
@@ -1481,12 +1480,12 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
                     currentRadioBuffer->previousPacketNumber = packetNumber;
 
                     // Return that a packet that was not last was added
-                    return OPENBCI_PROCESS_RADIO_LAST_NOT;
+                    return OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST_NOT;
 
                 // Cannot switch to other buffer
                 } else {
                     // Reject it!
-                    return OPENBCI_PROCESS_RADIO_REJECT;
+                    return OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST_NOT;
                 }
             // Current buffer does not have all packets
             } else {
@@ -1499,13 +1498,13 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
                     currentRadioBuffer->previousPacketNumber = packetNumber;
 
                     // Return that a packet that was not last was added
-                    return OPENBCI_PROCESS_RADIO_LAST_NOT;
+                    return OPENBCI_PROCESS_RADIO_PASS_LAST_NOT;
 
                 // Missed a packet
                 } else {
                     // Reject it! Reset current buffer
                     bufferRadioReset(currentRadioBuffer);
-                    return OPENBCI_PROCESS_RADIO_REJECT;
+                    return OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST_NOT;
                 }
             }
         }
@@ -2022,11 +2021,22 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
         return hostPacketToSend();
     }
 
-    if (bufferRadioProcessPacket(data,len) == false) {
-        // Not able to process the packet
-        singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
-        RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
-        return false;
+    switch (bufferRadioProcessPacket(data,len)) {
+        case OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST:
+        case OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST_NOT:
+            singleCharMsg[0] = (char)ORPM_PACKET_PAGE_REJECT;
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+
+        case OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST:
+        case OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST_NOT:
+            // Not able to process the packet
+            singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+            RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            return false;
+
+        default:
+            break;
     }
 
     if (hostPacketToSend()) {
