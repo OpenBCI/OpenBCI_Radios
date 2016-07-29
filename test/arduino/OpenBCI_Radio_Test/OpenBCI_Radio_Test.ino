@@ -313,10 +313,13 @@ void testBufferRadioHasData() {
 void testBufferRadioProcessPacket() {
     test.describe("bufferRadioProcessPacket");
 
-    char bufferTaco[] = " taco";
     char buffer32[] = " AJ Keller is da best programmer";
-    int buffer32Length = 32; // Then length of the above buffer
-    int bufferTacoLength = 5; // Then length of the above buffer
+    char bufferCali[] = " caliLucyMaggie";
+    char bufferTaco[] = " taco";
+
+    int buffer32Length = 32;
+    int bufferCaliLength = 15;
+    int bufferTacoLength = 5;
 
     // Last packet
     char byteId = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
@@ -359,6 +362,15 @@ void testBufferRadioProcessPacket() {
         //  index.
         test.assertEqualChar(radio.currentRadioBuffer->data[i-1],bufferTaco[i - buffer32Length + 1], "Char is correct");
     }
+
+    // Last packet
+    byteId = radio.byteIdMake(false,0,(char *)bufferCali + 1, bufferCaliLength - 1);
+    // Store that byteId
+    bufferCali[0] = byteId;
+    //      Current buffer has data
+    // Don't do any clean up
+    //          Current buffer has all packets
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferCali, bufferCaliLength),OPENBCI_PROCESS_RADIO_LAST,"should switch add the last packet");
 
 }
 

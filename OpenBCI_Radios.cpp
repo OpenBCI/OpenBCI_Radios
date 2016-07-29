@@ -1422,9 +1422,6 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
         } else {
             // Current buffer has all packets
             if (currentRadioBuffer->gotAllPackets) {
-                return OPENBCI_PROCESS_RADIO_REJECT;
-                return OPENBCI_PROCESS_RADIO_REJECT;
-
                 // Can swtich to other buffer
                 if (bufferRadioSwitchToOtherBuffer()) {
                     // Take it! Mark Last
