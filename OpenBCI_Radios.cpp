@@ -1409,8 +1409,6 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
 
-    return OPENBCI_PROCESS_RADIO_REJECT;
-
     // Last packet
     if (packetNumber == 0) {
         // Current buffer has no data
@@ -1422,6 +1420,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
 
         // Current buffer has data
         } else {
+            return OPENBCI_PROCESS_RADIO_REJECT;
             // Current buffer has all packets
             if (currentRadioBuffer->gotAllPackets) {
                 // Can swtich to other buffer
@@ -1468,6 +1467,8 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
 
         // Current buffer has data
         } else {
+            // Reject it!
+            return OPENBCI_PROCESS_RADIO_REJECT;
             // Current buffer has all packets
             if (currentRadioBuffer->gotAllPackets) {
                 // Can switch to other buffer
