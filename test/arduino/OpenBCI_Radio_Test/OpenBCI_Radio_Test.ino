@@ -314,7 +314,7 @@ void testBufferRadioProcessPacket() {
     test.describe("bufferRadioProcessPacket");
 
     char bufferTaco[] = " taco";
-    char buffer32[] = "AJ Keller is the best programmer";
+    char buffer32[] = " AJ Keller is da best programmer";
     int buffer32Length = 32; // Then length of the above buffer
     int bufferTacoLength = 5; // Then length of the above buffer
 
@@ -345,10 +345,10 @@ void testBufferRadioProcessPacket() {
     // Store that byteId
     buffer32[0] = byteId1;
     bufferTaco[0] = byteId2;
-    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_LAST_NOT,"should add not the last packet");
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_LAST_NOT,"should add not the last packet");
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_LAST,"should add the last packet");
     test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,true,"should be able to set gotAllPackets to true");
-    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,(bufferTacoLength - buffer32Length) - 2,"should set the positionWrite to size of both packets");
+    test.assertEqualInt(radio.currentRadioBuffer->positionWrite,(bufferTacoLength + buffer32Length) - 2,"should set the positionWrite to size of both packets");
     for (int i = 1; i < buffer32Length; i++) {
         // Verify that we have a missing first char and off by one offset on the
         //  index.
@@ -357,7 +357,7 @@ void testBufferRadioProcessPacket() {
     for (int i = buffer32Length; i < buffer32Length + bufferTacoLength; i++) {
         // Verify that we have a missing first char and off by one offset on the
         //  index.
-        test.assertEqualChar(radio.currentRadioBuffer->data[i-1],bufferTaco[i], "Char is correct");
+        test.assertEqualChar(radio.currentRadioBuffer->data[i-1],bufferTaco[i - buffer32Length + 1], "Char is correct");
     }
 
 }

@@ -1420,9 +1420,11 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
 
         // Current buffer has data
         } else {
-            return OPENBCI_PROCESS_RADIO_REJECT;
             // Current buffer has all packets
             if (currentRadioBuffer->gotAllPackets) {
+                return OPENBCI_PROCESS_RADIO_REJECT;
+                return OPENBCI_PROCESS_RADIO_REJECT;
+
                 // Can swtich to other buffer
                 if (bufferRadioSwitchToOtherBuffer()) {
                     // Take it! Mark Last
@@ -1439,6 +1441,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
             } else {
                 // Previous packet number == packetNumber + 1
                 if (currentRadioBuffer->previousPacketNumber - packetNumber == 1) {
+                    // Serial.println("Last packet / Current buffer has data / Current buffer does not have all packets / Previous packet number == packetNumber + 1");
                     // Take it! Mark last.
                     bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
                     // Return that this last packet was added
@@ -1456,6 +1459,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     } else {
         // Current buffer has no data
         if (!bufferRadioHasData(currentRadioBuffer)) {
+            // Serial.println("Not last packet / Current buffer has no data");
             // Take it, not last
             bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
 
