@@ -324,19 +324,22 @@ void testBufferRadioProcessPacket() {
     int bufferTacoLength = 5;
     int bufferTomatoPotatoLength = 13;
 
+    boolean allDataCorrect = true;
+
+    // # CLEANUP
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE
+    ////////////////////////////////////////////////////////////
+    bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
     // Last packet
-    char byteId = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
-    // Store that byteId
-    bufferTaco[0] = byteId;
     //      Current buffer has no data
-    radio.bufferRadioReset(radio.bufferRadio);
-    radio.bufferRadioReset(radio.bufferRadio + 1);
-    radio.currentRadioBuffer = radio.bufferRadio;
     //          Take it! Mark Last
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE,"should add to radio buffer 1");
     test.assertEqualBoolean(radio.currentRadioBuffer->gotAllPackets,true,"should be able to set gotAllPackets to true");
     test.assertEqualInt(radio.currentRadioBuffer->positionWrite,bufferTacoLength - 1,"should set the positionWrite to 4");
-    boolean allDataCorrect = true;
+    allDataCorrect = true;
     for (int i = 1; i < bufferTacoLength; i++) {
         // Verify that we have a missing first char and off by one offset on the
         //  index.
@@ -360,16 +363,19 @@ void testBufferRadioProcessPacket() {
 
 
     // # CLEANUP
-    radio.bufferRadioReset(radio.bufferRadio);
-    radio.bufferRadioReset(radio.bufferRadio + 1);
-    radio.currentRadioBuffer = radio.bufferRadio;
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI
+    ////////////////////////////////////////////////////////////
+    buffer32[0] = radio.byteIdMake(false,1,(char *)buffer32 + 1, buffer32Length - 1);
+    bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add not the last packet");
+    // Not last packet
     //      Current buffer has data
-    char byteId1 = radio.byteIdMake(false,1,(char *)buffer32 + 1, buffer32Length - 1);
-    char byteId2 = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
-    // Store that byteId
-    buffer32[0] = byteId1;
-    bufferTaco[0] = byteId2;
-    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_LAST_NOT,"should add not the last packet");
+    //          Current buffer does not have all packets
+    //              Previous packet number == packetNumber + 1
+    //                  Take it! Mark last.
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI,"should add the last packet");
     test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,true,"should set gotAllPackets to true on first buffer");
     test.assertEqualInt(radio.bufferRadio->positionWrite,(bufferTacoLength + buffer32Length) - 2,"should set the positionWrite to size of both packets");
@@ -393,13 +399,24 @@ void testBufferRadioProcessPacket() {
     }
     test.assertEqualBoolean(allDataCorrect,true, "taco buffer loaded into correct position in first buffer");
 
+    // # CLEANUP
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST
+    ////////////////////////////////////////////////////////////
+    // Need the first buffer to be full
+    buffer32[0] = radio.byteIdMake(false,1,(char *)buffer32 + 1, buffer32Length - 1);
+    bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add not the last packet");
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI,"should add the last packet");
+
+    bufferCali[0] = radio.byteIdMake(false,0,(char *)bufferCali + 1, bufferCaliLength - 1);
     // Last packet
-    byteId = radio.byteIdMake(false,0,(char *)bufferCali + 1, bufferCaliLength - 1);
-    // Store that byteId
-    bufferCali[0] = byteId;
     //      Current buffer has data
-    // DON'T DO CLEAN UP
     //          Current buffer has all packets
+    //              Can swtich to other buffer
+    //                  Take it! Mark Last
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferCali, bufferCaliLength),OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST,"should switch and add the last packet");
     test.assertEqualBoolean((radio.bufferRadio + 1)->gotAllPackets,true,"should set gotAllPackets to true for second buffer");
     test.assertEqualInt((radio.bufferRadio + 1)->positionWrite,bufferCaliLength - 1,"should set the positionWrite to size of cali buffer");
@@ -411,7 +428,7 @@ void testBufferRadioProcessPacket() {
             allDataCorrect = false;
         }
     }
-    test.assertEqualBoolean(allDataCorrect, true, "Cali buffer is loaded in the second buffer correctly");
+    test.assertEqualBoolean(allDataCorrect, true, "should have loaded cali buffer in the second buffer correctly");
     // Verify that both of the buffers are full
     test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,true,"should still have a full first buffer after switch");
     test.assertEqualInt(radio.bufferRadio->positionWrite,(bufferTacoLength + buffer32Length) - 2,"first buffer should still have correct size");
@@ -428,26 +445,196 @@ void testBufferRadioProcessPacket() {
     }
     test.assertEqualBoolean(allDataCorrect, true, "currentRadioBuffer should have the cali buffer loaded into it");
 
+    // Do it again in reverse, where the second buffer is full
+    // So clear the first buffer and point to the second
+    radio.bufferRadioReset(radio.bufferRadio);
+    radio.currentRadioBuffer = radio.bufferRadio + 1;
+
+    bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
     // Last packet
-    byteId = radio.byteIdMake(false,0,(char *)bufferTomatoPotato + 1, bufferTomatoPotatoLength - 1);
-    // Store that byteId
-    bufferTomatoPotato[0] = byteId;
     //      Current buffer has data
-    // Both buffers are full
     //          Current buffer has all packets
-    // Verified
+    //              Can swtich to other buffer
+    //                  Take it! Mark Last
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI,"should add the last packet");
+    test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,true,"should mark the first buffer full after switch");
+    allDataCorrect = true;
+    for (int i = 1; i < bufferTacoLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if (radio.bufferRadio->data[i-1] != bufferTaco[i]) {
+            allDataCorrect = false;
+        }
+    }
+    test.assertEqualBoolean(allDataCorrect, true, "should have the taco buffer loaded into the first buffer");
+    allDataCorrect = true;
+    for (int i = 1; i < bufferTacoLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if (radio.currentRadioBuffer->data[i-1] != bufferTaco[i]) {
+            allDataCorrect = false;
+        }
+    }
+    test.assertEqualBoolean(allDataCorrect, true, "should have the taco buffer loaded into currentRadioBuffer");
+
+
+
+    test.assertEqualBoolean((radio.bufferRadio + 1)->gotAllPackets,true,"should set gotAllPackets to true for second buffer");
+    test.assertEqualInt((radio.bufferRadio + 1)->positionWrite,bufferCaliLength - 1,"should set the positionWrite to size of cali buffer");
+    allDataCorrect = true;
+    for (int i = 1; i < bufferCaliLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if ((radio.bufferRadio + 1)->data[i-1] != bufferCali[i]) {
+            allDataCorrect = false;
+        }
+    }
+
+
+
+
+    // DON'T DO CLEAN UP
+    //  Need both buffers full
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST
+    ////////////////////////////////////////////////////////////
+    bufferTomatoPotato[0] = radio.byteIdMake(false,0,(char *)bufferTomatoPotato + 1, bufferTomatoPotatoLength - 1);
+    // Last packet
+    //      Current buffer has data
+    //          Current buffer has all packets
     //              Cannot switch to other buffer
     //                  Reject it!
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTomatoPotato, bufferTomatoPotatoLength),OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST,"should reject the addition of this buffer");
 
-    // Verify with multi
-    byteId1 = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
-    // Store that byteId
-    buffer32Hey[0] = byteId1;
-    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST_NOT,"should reject the addition of this multi page buffer");
+    // TODO: Add flushing test
+
+
+    // DON'T DO CLEAN UP
+    //  Need both buffers full
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST
+    ////////////////////////////////////////////////////////////
+    buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
+    // Not last packet
+    //      Current buffer has data
+    //          Current buffer has all packets
+    //              Cannot switch to other buffer
+    //                  Reject it!
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST,"should reject the addition of this multi page buffer");
+
+    // Verify the taco buffer and buffer32 are in buffer 1
+    allDataCorrect = true;
+    for (int i = 1; i < buffer32Length; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if (radio.bufferRadio->data[i-1] != buffer32[i]) {
+            allDataCorrect = false;
+        }
+    }
+    test.assertEqualBoolean(allDataCorrect, true, "should still have buffer32 loaded into the correct postion in first buffer");
+    allDataCorrect = true;
+    for (int i = buffer32Length; i < buffer32Length + bufferTacoLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if (radio.bufferRadio->data[i-1] != bufferTaco[i - buffer32Length + 1]) {
+            allDataCorrect = false;
+        }
+    }
+    test.assertEqualBoolean(allDataCorrect,true, "should still have taco buffer loaded into correct position in first buffer");
+    allDataCorrect = true;
+    for (int i = 1; i < bufferCaliLength; i++) {
+        // Verify that we have a missing first char and off by one offset on the
+        //  index.
+        if ((radio.bufferRadio + 1)->data[i-1] != bufferCali[i]) {
+            allDataCorrect = false;
+        }
+    }
+    test.assertEqualBoolean(allDataCorrect, true, "should still have cali buffer loaded in the second buffer");
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST
+    ////////////////////////////////////////////////////////////
+    // Clear the first buffer, second buffer still has stuff in it
+    radio.bufferRadioReset(radio.bufferRadio);
+    // Make sure currentRadioBuffer pointer it on the second buffer
+    radio.currentRadioBuffer = radio.bufferRadio + 1;
+    // Load it
+    buffer32Hey[0] = radio.byteIdMake(false,2,(char *)buffer32Hey + 1, buffer32Length - 1);
+    // Not last packet
+    //      Current buffer has data
+    //          Current buffer has all packets
+    //              Can switch to other buffer
+    //                  Take it! Not last
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST,"should reject the addition of this multi page buffer");
+
+    // # CLEANUP
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST
+    ////////////////////////////////////////////////////////////
+    buffer32[0] = radio.byteIdMake(false,2,(char *)buffer32 + 1, buffer32Length - 1);
+    bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add not the last packet");
+    // Last packet
+    //      Current buffer has data
+    //          Current buffer does not have all packets
+    //              Missed a packet
+    //                  Reject it! Reset current buffer
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST,"should not add the last packet because missed packet 1");
+    test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets");
+    test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet");
+
+    // # CLEANUP
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE
+    ////////////////////////////////////////////////////////////
+    buffer32[0] = radio.byteIdMake(false,2,(char *)buffer32 + 1, buffer32Length - 1);
+    buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add first packet of several");
+    // Not last packet
+    //      Current buffer has data
+    //          Current buffer does not have all packets
+    //              Previous packet number == packetNumber + 1
+    //                  Take it! Not last.
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE,"should add middle packet");
+    test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets");
+    test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet");
+
+
+    // # CLEANUP
+    testBufferRadioCleanUp();
+
+    ////////////////////////////////////////////////////////////
+    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST
+    ////////////////////////////////////////////////////////////
+    buffer32[0] = radio.byteIdMake(false,3,(char *)buffer32 + 1, buffer32Length - 1);
+    buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add first packet of several");
+    // Not last packet
+    //      Current buffer has data
+    //          Current buffer does not have all packets
+    //              Missed a packet
+    //                  Reject it! Reset current buffer
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST,"should not be able to add middle packet because not last");
+    test.assertEqualBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets");
+    test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet");
+
+    // # CLEANUP
+    testBufferRadioCleanUp();
 
 
 
+}
+
+void testBufferRadioCleanUp() {
+    radio.bufferRadioReset(radio.bufferRadio);
+    radio.bufferRadioReset(radio.bufferRadio + 1);
+    radio.currentRadioBuffer = radio.bufferRadio;
 }
 
 ////////////////////////////////////////////////////////////
