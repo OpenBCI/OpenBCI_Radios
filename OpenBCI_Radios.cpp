@@ -1918,83 +1918,43 @@ boolean OpenBCI_Radios_Class::processDeviceRadioCharData(char *data, int len) {
     //  1. If we recieve a packet with packetNumber equal to 0, then we can set
     //  a flag to write the radio buffer.
 
-    boolean gotLastPacket = false;
-    boolean goodToAddPacketToRadioBuffer = true;
-    boolean firstPacket = false;
-
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
 
     if (byteIdGetIsStream(data[0])) {
         // Send any stream packet that comes back, back!
-        RFduinoGZLL.sendToHost((const char*)data,len);
+        // RFduinoGZLL.sendToHost((const char*)data,len);
         // Check to see if there is a packet to send back
         return packetToSend();
     }
 
-    // This first statment asks if this is a last packet and the previous
-    //  packet was 0 too, this is in an effort to get to the point in the
-    //  program where we ask if this packet is a stream packet
-    if (packetNumber == 0 && bufferRadio->previousPacketNumber == 0) {
-        // This is a one packet message
-        gotLastPacket = true;
+    switch (bufferRadioProcessPacket(data,len)) {
+        case OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST:
+        case OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST:
+            singleCharMsg[0] = (char)ORPM_PACKET_PAGE_REJECT;
+            RFduinoGZLL.sendToHost(singleCharMsg,1);
+            return false;
 
-    } else {
-        if (packetNumber > 0 && bufferRadio->previousPacketNumber == 0) {
-            // This is the first of multiple packets we are recieving
-            bufferRadio->previousPacketNumber = packetNumber;
+        case OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST:
+        case OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST:
+            // Not able to process the packet
+            singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
+            RFduinoGZLL.sendToHost(singleCharMsg,1);
+            bufferRadioReset(currentRadioBuffer);
+            return false;
 
-        } else {
-            // This is not the first packet we are reciving of this page
-            if (bufferRadio->previousPacketNumber - packetNumber == 1) { // Normal...
-                // Update the global var
-                bufferRadio->previousPacketNumber = packetNumber;
-
-                // Is this the last packet?
-                if (packetNumber == 0) {
-                    gotLastPacket = true;
-                }
-
+        default:
+            if (packetToSend()) {
+                return true;
+            } else if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend && bufferSerial.numberOfPacketsToSend != 0) {
+                // Clear buffer
+                bufferCleanSerial(bufferSerial.numberOfPacketsSent);
+                return false;
             } else {
-                goodToAddPacketToRadioBuffer = false;
-                // We missed a packet, send resend message
-                singleCharMsg[0] = ORPM_PACKET_MISSED & 0xFF;
-
-                // Clean the radio buffer. Resets the flags.
-                bufferRadioReset(bufferRadio);
-                bufferRadioClean(bufferRadio);
-
+                pollHost();
+                return false;
             }
-        }
-    }
-
-    // goodToAddPacketToRadioBuffer is true if we have not recieved an error
-    //  message and this packet should be routed to either the Pic (if we're
-    //  the Device) or the Driver (if we are the Host)
-    if (goodToAddPacketToRadioBuffer) {
-        // This is not a stream packet and, be default, we will store it
-        //  into a buffer called bufferRadio that is a 1 dimensional array
-        // If this is the last packet then we need to set a flag to empty
-        //  the buffer
-        bufferRadioAddData(bufferRadio,data+1,len-1,gotLastPacket);
-
-        if (packetToSend()) {
-            return true;
-        } else if (bufferSerial.numberOfPacketsSent == bufferSerial.numberOfPacketsToSend && bufferSerial.numberOfPacketsToSend != 0) {
-            // Clear buffer
-            bufferCleanSerial(bufferSerial.numberOfPacketsSent);
-            return false;
-        } else {
-            pollHost();
-            return false;
-        }
-
-
-
-    } else { // We got a problem
-        RFduinoGZLL.sendToHost(singleCharMsg,1);
-        pollRefresh();
-        return false;
+            break;
     }
 }
 
