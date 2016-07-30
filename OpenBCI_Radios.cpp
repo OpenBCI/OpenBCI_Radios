@@ -1408,7 +1408,6 @@ boolean OpenBCI_Radios_Class::bufferRadioHasData(BufferRadio *buf) {
 byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     // The packetNumber is embedded in the first byte, the byteId
     int packetNumber = byteIdGetPacketNumber(data[0]);
-
     // Last packet
     if (packetNumber == 0) {
         // Current buffer has no data
