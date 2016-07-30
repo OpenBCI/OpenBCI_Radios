@@ -1565,7 +1565,7 @@ boolean OpenBCI_Radios_Class::bufferRadioSwitchToOtherBuffer(void) {
         }
     // current radio buffer is set to the second one
     } else {
-        if (bufferRadioReadyForNewPage(bufferRadio + 1)) {
+        if (bufferRadioReadyForNewPage(bufferRadio)) {
             currentRadioBuffer--;
             return true;
         }
