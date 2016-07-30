@@ -227,13 +227,13 @@ void testBufferCleanPacketBuffer() {
 
 void testBufferRadio() {
     testBufferRadioSetup();
-    // testBufferRadioAddData();
-    // testBufferRadioClean();
-    // testBufferRadioHasData();
+    testBufferRadioAddData();
+    testBufferRadioClean();
+    testBufferRadioHasData();
     testBufferRadioProcessPacket();
-    // testBufferRadioReadyForNewPage();
-    // testBufferRadioReset();
-    // testBufferRadioSwitchToOtherBuffer();
+    testBufferRadioReadyForNewPage();
+    testBufferRadioReset();
+    testBufferRadioSwitchToOtherBuffer();
 }
 
 void testBufferRadioSetup() {
@@ -308,25 +308,32 @@ void testBufferRadioProcessPacket() {
 
     test.describe("bufferRadioProcessPacket");
 
-    char buffer32[] = " AJ Keller is da best programmer";
-    char buffer32Hey[] = " hey there, my name is AJ Keller";
-    char bufferCali[] = " caliLucyMaggie";
+    testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE();
+
+    testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST();
+
+}
+
+void testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE() {
+
     char bufferTaco[] = " taco";
-    char bufferTomatoPotato[] = " tomatoPotato";
-
-    int buffer32Length = 32;
-    int bufferCaliLength = 15;
     int bufferTacoLength = 5;
-    int bufferTomatoPotatoLength = 13;
 
-    boolean allDataCorrect = true;
-
-    // # CLEANUP
     testBufferRadioCleanUp();
-
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE
-    ////////////////////////////////////////////////////////////
     test.detail("OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE");
     bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
     // Last packet
@@ -342,13 +349,17 @@ void testBufferRadioProcessPacket() {
     test.assertEqualInt(radio.bufferRadio->positionWrite,bufferTacoLength - 1,"should set the positionWrite to 4");
     test.assertEqualBuffer(radio.bufferRadio->data,bufferTaco + 1, bufferTacoLength - 1, "currentRadioBuffer should have the taco buffer loaded into it");
 
-    // # CLEANUP
-    testBufferRadioCleanUp();
+}
 
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI
-    ////////////////////////////////////////////////////////////
+void testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI() {
+    char buffer32[] = " AJ Keller is da best programmer";
+    char bufferTaco[] = " taco";
+
+    int buffer32Length = 32;
+    int bufferTacoLength = 5;
+    testBufferRadioCleanUp();
     test.detail("OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI");
+    test.it("should be able to add a multi page packet");
     buffer32[0] = radio.byteIdMake(false,1,(char *)buffer32 + 1, buffer32Length - 1);
     bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add not the last packet");
@@ -362,14 +373,17 @@ void testBufferRadioProcessPacket() {
     test.assertEqualInt(radio.bufferRadio->positionWrite,(bufferTacoLength + buffer32Length) - 2,"should set the positionWrite to size of both packets", __LINE__);
     test.assertEqualBuffer(radio.bufferRadio->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
     test.assertEqualBuffer(radio.bufferRadio->data + (buffer32Length - 1),bufferTaco + 1, bufferTacoLength - 1, "taco buffer loaded into correct position in first buffer", __LINE__);
+}
 
+void testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST() {
+    char buffer32[] = " AJ Keller is da best programmer";
+    char bufferCali[] = " caliLucyMaggie";
+    char bufferTaco[] = " taco";
 
-    // # CLEANUP
+    int buffer32Length = 32;
+    int bufferCaliLength = 15;
+    int bufferTacoLength = 5;
     testBufferRadioCleanUp();
-
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST
-    ////////////////////////////////////////////////////////////
     test.detail("OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST");
     // Need the first buffer to be full
     test.it("should switch to second buffer when first buffer is full and id last packet");
@@ -481,11 +495,16 @@ void testBufferRadioProcessPacket() {
     test.assertBoolean((radio.bufferRadio + 1)->gotAllPackets,true,"should still have gotAllPackets true for second buffer", __LINE__);
     test.assertEqualInt((radio.bufferRadio + 1)->positionWrite,bufferCaliLength - 1,"should still have positionWrite to size of cali buffer in buffer 2", __LINE__);
     test.assertEqualBuffer((radio.bufferRadio + 1)->data,bufferCali + 1, bufferCaliLength - 1, "should still have loaded cali buffer in the first buffer correctly", __LINE__);
+}
 
+void testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST() {
+    char bufferCali[] = " caliLucyMaggie";
+    char bufferTaco[] = " taco";
+    char bufferTomatoPotato[] = " tomatoPotato";
 
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST
-    ////////////////////////////////////////////////////////////
+    int bufferCaliLength = 15;
+    int bufferTacoLength = 5;
+    int bufferTomatoPotatoLength = 13;
     test.detail("OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST");
     test.it("should not be able to switch to other buffer when both are full");
     testBufferRadioCleanUp();
@@ -515,18 +534,24 @@ void testBufferRadioProcessPacket() {
     //                  Reject it!
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTomatoPotato, bufferTomatoPotatoLength),OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST,"should reject the addition of this buffer", __LINE__);
 
-    // # CLEANUP
-    testBufferRadioCleanUp();
+}
 
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST
-    ////////////////////////////////////////////////////////////
+void testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST() {
+    char buffer32Hey[] = " hey there, my name is AJ Keller";
+    char bufferCali[] = " caliLucyMaggie";
+    char bufferTaco[] = " taco";
+
+    int buffer32Length = 32;
+    int bufferCaliLength = 15;
+    int bufferTacoLength = 5;
+    int bufferTomatoPotatoLength = 13;
+    testBufferRadioCleanUp();
     test.detail("OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST");
     // Fill both buffers
     bufferCali[0] = radio.byteIdMake(false,0,(char *)bufferCali + 1, bufferCaliLength - 1);
     bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
-    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferCali, bufferCaliLength),OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST,"should add the last packet to buffer 1", __LINE__);
-    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI,"should add the last packet to buffer 2", __LINE__);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferCali, bufferCaliLength),OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE,"should add the last packet to buffer 1", __LINE__);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferTaco, bufferTacoLength),OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST,"should add the last packet to buffer 2", __LINE__);
 
     buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
     // Not last packet
@@ -535,24 +560,26 @@ void testBufferRadioProcessPacket() {
     //              Cannot switch to other buffer
     //                  Reject it!
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST,"should reject the addition of this multi page buffer", __LINE__);
-    allDataCorrect = true;
-    for (int i = 1; i < bufferCaliLength; i++) {
-        // Verify that we have a missing first char and off by one offset on the
-        //  index.
-        if ((radio.bufferRadio + 1)->data[i-1] != bufferCali[i]) {
-            allDataCorrect = false;
-        }
-    }
-    test.assertBoolean(allDataCorrect, true, "should still have cali buffer loaded in the second buffer");
-    // TODO: Add test for taco buffer
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST
-    ////////////////////////////////////////////////////////////
+    test.assertEqualBuffer(radio.bufferRadio->data,bufferCali + 1, bufferCaliLength - 1, "should still have loaded cali buffer in the first buffer correctly", __LINE__);
+    test.assertEqualBuffer((radio.bufferRadio + 1)->data,bufferTaco + 1, bufferTacoLength - 1, "should still have loaded taco buffer in the second buffer correctly", __LINE__);
+
+}
+
+void testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST() {
+    char bufferCali[] = " caliLucyMaggie";
+    char buffer32Hey[] = " hey there, my name is AJ Keller";
+    int bufferCaliLength = 15;
+    int buffer32Length = 32;
+
     test.detail("OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST");
+    testBufferRadioCleanUp();
     // Clear the first buffer, second buffer still has stuff in it
     radio.bufferRadioReset(radio.bufferRadio);
     // Make sure currentRadioBuffer pointer it on the second buffer
     radio.currentRadioBuffer = radio.bufferRadio + 1;
+    bufferCali[0] = radio.byteIdMake(false,0,(char *)bufferCali + 1, bufferCaliLength - 1);
+    test.assertEqualByte(radio.bufferRadioProcessPacket((char *)bufferCali, bufferCaliLength),OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE,"should add the last packet to buffer 1", __LINE__);
+
     // Load it
     buffer32Hey[0] = radio.byteIdMake(false,2,(char *)buffer32Hey + 1, buffer32Length - 1);
     // Not last packet
@@ -561,13 +588,17 @@ void testBufferRadioProcessPacket() {
     //              Can switch to other buffer
     //                  Take it! Not last
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST,"should reject the addition of this multi page buffer", __LINE__);
+}
 
+void testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST() {
+    char buffer32[] = " AJ Keller is da best programmer";
+    char bufferTaco[] = " taco";
+
+    int buffer32Length = 32;
+    int bufferTacoLength = 5;
     // # CLEANUP
     testBufferRadioCleanUp();
 
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST
-    ////////////////////////////////////////////////////////////
     test.detail("OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST");
     buffer32[0] = radio.byteIdMake(false,2,(char *)buffer32 + 1, buffer32Length - 1);
     bufferTaco[0] = radio.byteIdMake(false,0,(char *)bufferTaco + 1, bufferTacoLength - 1);
@@ -581,12 +612,16 @@ void testBufferRadioProcessPacket() {
     test.assertBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets", __LINE__);
     test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet", __LINE__);
 
+}
+
+void testBufferRadio_OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE() {
+    char buffer32[] = " AJ Keller is da best programmer";
+    char buffer32Hey[] = " hey there, my name is AJ Keller";
+    int buffer32Length = 32;
+
     // # CLEANUP
     testBufferRadioCleanUp();
-
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE
-    ////////////////////////////////////////////////////////////
+    test.detail("OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE");
     buffer32[0] = radio.byteIdMake(false,2,(char *)buffer32 + 1, buffer32Length - 1);
     buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST,"should add first packet of several", __LINE__);
@@ -597,15 +632,17 @@ void testBufferRadioProcessPacket() {
     //                  Take it! Not last.
     test.assertEqualByte(radio.bufferRadioProcessPacket((char *)buffer32Hey, buffer32Length),OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE,"should add middle packet", __LINE__);
     test.assertBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets", __LINE__);
-    test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet", __LINE__);
+    test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1 + buffer32Length - 1,"should set the positionWrite to size of first packet", __LINE__);
 
+}
+
+void testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST() {
+    char buffer32[] = " AJ Keller is da best programmer";
+    char buffer32Hey[] = " hey there, my name is AJ Keller";
+    int buffer32Length = 32;
 
     // # CLEANUP
     testBufferRadioCleanUp();
-
-    ////////////////////////////////////////////////////////////
-    ////// Test: OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST
-    ////////////////////////////////////////////////////////////
     test.detail("OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST");
     buffer32[0] = radio.byteIdMake(false,3,(char *)buffer32 + 1, buffer32Length - 1);
     buffer32Hey[0] = radio.byteIdMake(false,1,(char *)buffer32Hey + 1, buffer32Length - 1);
@@ -619,13 +656,7 @@ void testBufferRadioProcessPacket() {
     test.assertBoolean(radio.bufferRadio->gotAllPackets,false,"should not have gotAllPackets", __LINE__);
     test.assertEqualInt(radio.bufferRadio->positionWrite,buffer32Length - 1,"should set the positionWrite to size of first packet", __LINE__);
 
-    // # CLEANUP
-    testBufferRadioCleanUp();
-
-
-
 }
-
 
 
 ////////////////////////////////////////////////////////////

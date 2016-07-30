@@ -1411,7 +1411,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     // Last packet
     if (packetNumber == 0) {
         // Current buffer has no data
-        if (!bufferRadioHasData(currentRadioBuffer)) {
+        if (bufferRadioReadyForNewPage(currentRadioBuffer)) {
             // Take it! Mark Last
             bufferRadioAddData(currentRadioBuffer,data+1,len-1,true);
             // Return that this last packet was added
@@ -1419,8 +1419,8 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
 
         // Current buffer has data
         } else {
-            // Current buffer has all packets
-            if (currentRadioBuffer->gotAllPackets) {
+            // Current buffer has all packets or is flushing
+            if (currentRadioBuffer->gotAllPackets || currentRadioBuffer->flushing) {
                 // Can swtich to other buffer
                 if (bufferRadioSwitchToOtherBuffer()) {
                     // Take it! Mark Last
@@ -1446,8 +1446,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
 
                 // Missed a packet
                 } else {
-                    // Reject it! Reset current buffer
-                    bufferRadioReset(currentRadioBuffer);
+                    // Reject it!
                     return OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST;
                 }
             }
@@ -1455,7 +1454,7 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
     // Not last packet
     } else {
         // Current buffer has no data
-        if (!bufferRadioHasData(currentRadioBuffer)) {
+        if (bufferRadioReadyForNewPage(currentRadioBuffer)) {
             // Serial.println("Not last packet / Current buffer has no data");
             // Take it, not last
             bufferRadioAddData(currentRadioBuffer,data+1,len-1,false);
@@ -1502,7 +1501,6 @@ byte OpenBCI_Radios_Class::bufferRadioProcessPacket(char *data, int len) {
                 // Missed a packet
                 } else {
                     // Reject it! Reset current buffer
-                    bufferRadioReset(currentRadioBuffer);
                     return OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST;
                 }
             }
@@ -2032,6 +2030,7 @@ boolean OpenBCI_Radios_Class::processHostRadioCharData(device_t device, char *da
             // Not able to process the packet
             singleCharMsg[0] = (char)ORPM_PACKET_MISSED;
             RFduinoGZLL.sendToDevice(device,singleCharMsg,1);
+            bufferRadioReset(currentRadioBuffer);
             return false;
 
         default:
