@@ -135,7 +135,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_BAUD_FAST() {
 }
 
 void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_SYS_UP() {
-    radio.bufferCleanSerial(1);
+    radio.bufferSerialReset(1);
 
     test.it("should return to print the system status success message if the system is up");
     radio.systemUp = true;
