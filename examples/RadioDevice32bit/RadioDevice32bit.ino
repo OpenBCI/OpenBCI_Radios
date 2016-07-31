@@ -47,12 +47,14 @@ void loop() {
         radio.bufferSerial.overflowed = false;
 
     } else {
-        if (Serial.available()) { // Is there new serial data available?
+        while (Serial.available()) { // Is there new serial data available?
             char newChar = Serial.read();
             // Mark the last serial as now;
             radio.lastTimeSerialRead = micros();
+            // Store it to serial buffer
+            radio.bufferSerialAddChar(newChar);
             // Get one char and process it
-            radio.processSerialCharDevice(newChar);
+            radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
             // Reset the poll timer to prevent contacting the host mid read
             radio.pollRefresh();
         }
@@ -61,7 +63,7 @@ void loop() {
             // Has 80uS passed since the last time we read from the serial port?
             if (micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
-                    radio.sendStreamPacketToTheHost();
+                    radio.bufferStreamSendToHost();
                 } else {
                     // packet loss incur... never seems to happen
                 }
