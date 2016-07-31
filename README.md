@@ -112,6 +112,18 @@ Used to reset the flags and positions of the radio buffer.
 
 Resets the stream packet buffer to default settings
 
+### bufferSerialAddChar(newChar)
+
+Stores a char to the serial buffer. Used by both the Device and the Host. Protects the system from buffer overflow.
+
+**_newChar_** - {char}
+
+The new char to store to the serial buffer.
+
+**_Returns_** - {boolean}
+
+`true` if the new char was added to the serial buffer,
+
 ### commsFailureTimeout()
 
 The first line of defense against a system that has lost it's device. The timeout is 15ms longer than the longest poll time (255ms) possible.
@@ -159,14 +171,6 @@ Answers the question of if a packet is ready to be sent. need to check and there
 **_Returns_** {boolean}
 
 `true` if there is a packet ready to send on the Host
-
-### isAStreamPacketWaitingForLaunch()
-
-Checks to see if the stream packet parser is in the STREAM_STATE_READY which means that a stream packet is ready to be sent to the Host.
-
-**_Returns_** {boolean}
-
-`true` if there is a stream packet ready to send the Host
 
 ### ledFeedBackForPassThru()
 
@@ -328,19 +332,7 @@ Used to see if enough time has passed since the last serial read. Useful to if a
 
 `true` if enough time has passed.
 
-### storeCharToSerialBuffer(newChar)
-
-Stores a char to the serial buffer. Used by both the Device and the Host. Protects the system from buffer overflow.
-
-**_newChar_** - {char}
-
-The new char to store to the serial buffer.
-
-**_Returns_** - {boolean}
-
-`true` if the new char was added to the serial buffer,
-
-### thereIsDataInSerialBuffer()
+### bufferSerialHasData()
 
 If there are packets to be sent in the serial buffer.
 
