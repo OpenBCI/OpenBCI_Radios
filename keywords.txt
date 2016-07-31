@@ -29,7 +29,6 @@ flashNonVolatileMemory          KEYWORD2
 getChannelNumber                KEYWORD2
 getPollTime                     KEYWORD2
 hostPacketToSend                KEYWORD2
-isAStreamPacketWaitingForLaunch KEYWORD2
 ledFeedBackForPassThru          KEYWORD2
 packetToSend                    KEYWORD2
 packetsInSerialBuffer           KEYWORD2
@@ -48,7 +47,7 @@ sendPollMessageToHost           KEYWORD2
 sendStreamPacketToTheHost       KEYWORD2
 serialWriteTimeOut              KEYWORD2
 storeCharToSerialBuffer         KEYWORD2
-thereIsDataInSerialBuffer       KEYWORD2
+bufferSerialHasData       KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

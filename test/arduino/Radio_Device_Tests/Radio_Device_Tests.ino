@@ -26,7 +26,7 @@ void go() {
     digitalWrite(ledPin, HIGH);
 
     testProcessChar();
-    testbufferStreamAddChar();
+    testBufferStreamAddChar();
     testProcessRadioChar();
     testByteIdMakeStreamPacketType();
 
@@ -40,29 +40,39 @@ void go() {
 /********************************************/
 /********************************************/
 
-void testbufferStreamAddChar() {
+void testBufferStreamAddChar() {
     test.describe("bufferStreamAddChar");
 
-    testbufferStreamAddChar_STREAM_STATE_INIT();
-    testbufferStreamAddChar_STREAM_STATE_TAIL();
-    testbufferStreamAddChar_STREAM_STATE_STORING();
-    testbufferStreamAddChar_STREAM_STATE_READY();
+    testBufferStreamAddChar_STREAM_STATE_INIT();
+    testBufferStreamAddChar_STREAM_STATE_TAIL();
+    testBufferStreamAddChar_STREAM_STATE_STORING();
+    testBufferStreamAddChar_STREAM_STATE_READY();
 
 }
 
-void testbufferStreamAddChar_STREAM_STATE_INIT() {
+void testBufferStreamAddChar_STREAM_STATE_INIT() {
     test.detail("STREAM_STATE_INIT");
+    char newChar = (char)0x00;
 
     test.it("should recognize the start byte and change state to storing");
     radio.bufferStreamReset(radio.streamPacketBuffer);
-    char newChar = '0';
+    newChar = (char)OPENBCI_STREAM_PACKET_HEAD;
     radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
     test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_STORING, "should enter state storing", __LINE__);
     test.assertEqualChar(radio.streamPacketBuffer->data[0],newChar,"should have stored the new char", __LINE__);
     test.assertEqualByte(radio.streamPacketBuffer->bytesIn,1,"should have read one byte in",__LINE__);
+
+    test.it("should do nothing if not the start byte");
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+    newChar = (char)0x00;
+    radio.streamPacketBuffer->data[0] = (char)0xF9; // newChar
+    radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
+    test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_INIT, "should stay in init state", __LINE__);
+    test.assertNotEqualChar(radio.streamPacketBuffer->data[0],newChar,"should not have stored the new char", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->bytesIn,0,"should not have read any bytes in",__LINE__);
 }
 
-void testbufferStreamAddChar_STREAM_STATE_TAIL() {
+void testBufferStreamAddChar_STREAM_STATE_TAIL() {
     test.detail("STREAM_STATE_TAIL");
 
     char newChar = 'A';
@@ -97,7 +107,7 @@ void testbufferStreamAddChar_STREAM_STATE_TAIL() {
 
 }
 
-void testbufferStreamAddChar_STREAM_STATE_STORING() {
+void testBufferStreamAddChar_STREAM_STATE_STORING() {
     test.detail("STREAM_STATE_STORING");
 
     char newChar = 'A';
@@ -107,7 +117,7 @@ void testbufferStreamAddChar_STREAM_STATE_STORING() {
     initialBytesIn = 5;
     radio.bufferStreamReset(radio.streamPacketBuffer);
     radio.streamPacketBuffer->bytesIn = initialBytesIn;
-    radio.streamPacketBuffer->state = radio.STREAM_STATE_TAIL;
+    radio.streamPacketBuffer->state = radio.STREAM_STATE_STORING;
     radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
     test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_STORING, "should remain in state storing", __LINE__);
     test.assertEqualChar(radio.streamPacketBuffer->data[initialBytesIn],newChar,"should have stored the new char to inital bytesIn position", __LINE__);
@@ -117,7 +127,7 @@ void testbufferStreamAddChar_STREAM_STATE_STORING() {
     initialBytesIn = 31;
     radio.bufferStreamReset(radio.streamPacketBuffer);
     radio.streamPacketBuffer->bytesIn = initialBytesIn;
-    radio.streamPacketBuffer->state = radio.STREAM_STATE_TAIL;
+    radio.streamPacketBuffer->state = radio.STREAM_STATE_STORING;
     radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
     test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_TAIL, "should change state to tail", __LINE__);
     test.assertEqualChar(radio.streamPacketBuffer->data[initialBytesIn],newChar,"should have stored the new char to inital bytesIn position", __LINE__);
@@ -125,7 +135,8 @@ void testbufferStreamAddChar_STREAM_STATE_STORING() {
 
 }
 
-void testbufferStreamAddChar_STREAM_STATE_READY() {
+void testBufferStreamAddChar_STREAM_STATE_READY() {
+    test.detail("STREAM_STATE_READY");
     test.it("should change to init state and set bytesIn to 0");
     radio.bufferStreamReset(radio.streamPacketBuffer);
     radio.streamPacketBuffer->state = radio.STREAM_STATE_READY;
@@ -185,6 +196,7 @@ void testProcessCharSingleChar() {
 
 void testProcessCharStreamPacket() {
     test.describe("processCharForStreamPacket");
+    test.it("should recognze a stream packet and wait 88us before allowing the stream packet to be sent with stop byte of 0xC0");
 
     // Clear the buffers
     radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
@@ -196,21 +208,20 @@ void testProcessCharStreamPacket() {
     // Right away we want to see if enough time has passed, this should be false
     //  because we just processed a char, after this test is complete, we should
     //  be far passed 90uS
-    boolean notEnoughTimePassed = micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
-    test.assertBoolean(notEnoughTimePassed,false,"Type 0 waiting...",__LINE__);
+    test.assertBoolean(radio.bufferStreamTimeout(),false,"waiting...",__LINE__);
 
     // Do we have a stream packet waiting to launch?
-    test.assertBoolean(radio.isAStreamPacketWaitingForLaunch(),true,"Type 0 loaded",__LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_READY,"state ready with 0xC0",__LINE__);
 
     // This should return true this time
-    boolean enoughTimePassed = micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
-    test.assertBoolean(enoughTimePassed,true,"Type 0 ready",__LINE__);
+    test.assertBoolean(radio.bufferStreamTimeout(),true,"able to send",__LINE__);
 
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // Try a stream packet with another stop byte /////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
+    test.it("should recognze a stream packet and wait 88us before allowing the stream packet to be sent with stop byte of 0xC5");
     // Clear the buffers
     radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
@@ -221,15 +232,13 @@ void testProcessCharStreamPacket() {
     // Right away we want to see if enough time has passed, this should be false
     //  because we just processed a char, after this test is complete, we should
     //  be far passed 90uS
-    notEnoughTimePassed = micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
-    test.assertBoolean(notEnoughTimePassed,false,"Type 5 waiting",__LINE__);
+    test.assertBoolean(radio.bufferStreamTimeout(),false,"Type 5 waiting",__LINE__);
 
     // Do we have a stream packet waiting to launch?
-    test.assertBoolean(radio.isAStreamPacketWaitingForLaunch(),true,"Type 5 loaded",__LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_READY,"state ready with 0xC5",__LINE__);
 
     // This should return true this time
-    enoughTimePassed = micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
-    test.assertBoolean(enoughTimePassed,true,"Type 5 ready",__LINE__);
+    test.assertBoolean(radio.bufferStreamTimeout(),true,"Type 5 ready",__LINE__);
 
     // Remember to clean up after yourself
     testProcessChar_CleanUp();
@@ -251,12 +260,11 @@ void testProcessCharStreamPackets() {
     for (int i = 0; i < numberOfTrials; i++) {
         // Write a stream packet with end byte 0xC0
         writeAStreamPacketToProcessChar(0xC0);
+        radio.lastTimeSerialRead = micros();
         // Stream packet should be waiting
-        test.assertBoolean(radio.isAStreamPacketWaitingForLaunch(),true);
-        // Save the current time;
-        t1 = micros();
+        test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_READY,"state ready",__LINE__);
         // Wait
-        while(micros() < (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS)) {};
+        while(!radio.bufferStreamTimeout()) {};
         // configure the test message
         testMessage[5] = (i + 1) + '0';
         // Send the stream packet
@@ -280,8 +288,7 @@ void testProcessCharNotStreamPacket() {
     radio.lastTimeSerialRead = micros();
     // Quick! Write another char
     radio.bufferStreamAddChar(radio.streamPacketBuffer, newChar);
-
-    test.assertBoolean(radio.isAStreamPacketWaitingForLaunch(),false,"Too many packets in",__LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_INIT,"state init",__LINE__);
     test.assertEqualInt(radio.streamPacketBuffer->bytesIn,0,"0 bytes in",__LINE__);
 
     // Clear the buffers
@@ -290,8 +297,7 @@ void testProcessCharNotStreamPacket() {
 
     // Write a stream packet with a bad end byte
     writeAStreamPacketToProcessChar(0xB5);
-    test.assertBoolean(radio.isAStreamPacketWaitingForLaunch(),false,"Bad end byte",__LINE__);
-
+    test.assertEqualByte(radio.streamPacketBuffer->state,radio.STREAM_STATE_INIT,"bad end byte state init",__LINE__);
 
     // Remember to clean up after yourself
     testProcessChar_CleanUp();

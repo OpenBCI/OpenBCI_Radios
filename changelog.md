@@ -1,3 +1,10 @@
+# v2.0.0-rc.4 - Release Candidate 4
+
+### Breaking Changes
+
+* Removed function `isAStreamPacketWaitingForLaunch`. Now just check if stream packet buffer is in the ready state.
+* Renamed `thereIsDataInSerialBuffer` to `bufferSerialHasData`
+
 # v2.0.0-rc.3 - Release Candidate 3
 
 ### Enhancements

@@ -873,7 +873,7 @@ boolean OpenBCI_Radios_Class::didPicSendDeviceSerialData(void) {
  *  serial buffer, `false` if not...
  * @author AJ Keller (@pushtheworldllc)
  */
-boolean OpenBCI_Radios_Class::thereIsDataInSerialBuffer(void) {
+boolean OpenBCI_Radios_Class::bufferSerialHasData(void) {
     return bufferSerial.numberOfPacketsSent < bufferSerial.numberOfPacketsToSend;
 }
 
@@ -959,16 +959,6 @@ int OpenBCI_Radios_Class::sendPacketToHost(void) {
 }
 
 /**
- * @description Checks to see if the stream packet parser is in the STREAM_STATE_READY
- *  which means that a stream packet is ready to be sent to the Host.
- * @returns {boolean} `true` if there is a packet waiting.
- * @author AJ Keller (@pushtheworldllc)
- */
-boolean OpenBCI_Radios_Class::isAStreamPacketWaitingForLaunch(void) {
-    return curStreamState == STREAM_STATE_READY;
-}
-
-/**
  * @description Test to see if a char follows the stream tail byte format
  * @author AJ Keller (@pushtheworldllc)
  */
@@ -990,36 +980,36 @@ void OpenBCI_Radios_Class::bufferStreamAddChar(StreamPacketBuffer *buf, char new
         case STREAM_STATE_TAIL:
             // Is the current char equal to 0xCX where X is 0-F?
             if (isATailByte(newChar)) {
-                // // Set the type byte
-                // buf->typeByte = newChar;
-                // // Change the state to ready
-                // buf->state = STREAM_STATE_READY;
+                // Set the type byte
+                buf->typeByte = newChar;
+                // Change the state to ready
+                buf->state = STREAM_STATE_READY;
             } else {
-                // // Reset the state machine
-                // buf->state = STREAM_STATE_INIT;
-                // // Set bytes in to 0
-                // buf->bytesIn = 0;
+                // Reset the state machine
+                buf->state = STREAM_STATE_INIT;
+                // Set bytes in to 0
+                buf->bytesIn = 0;
                 // Test to see if this byte is a head byte, maybe if it's not a
                 //  tail byte then that's because a byte was dropped on the way
                 //  over from the Pic.
                 if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
-                    // // Move the state
-                    // buf->state = STREAM_STATE_STORING;
-                    // // Store to the streamPacketBuffer
-                    // buf->data[0] = newChar;
-                    // // Set to 1
-                    // buf->bytesIn = 1;
+                    // Move the state
+                    buf->state = STREAM_STATE_STORING;
+                    // Store to the streamPacketBuffer
+                    buf->data[0] = newChar;
+                    // Set to 1
+                    buf->bytesIn = 1;
                 }
             }
             break;
         case STREAM_STATE_STORING:
-            // // Store to the stream packet buffer
-            // buf->data[buf->bytesIn] = newChar;
-            // // Increment the number of bytes read in
-            // buf->bytesIn++;
+            // Store to the stream packet buffer
+            buf->data[buf->bytesIn] = newChar;
+            // Increment the number of bytes read in
+            buf->bytesIn++;
 
             if (buf->bytesIn == OPENBCI_MAX_PACKET_SIZE_BYTES) {
-                // buf->state = STREAM_STATE_TAIL;
+                buf->state = STREAM_STATE_TAIL;
             }
 
             break;
@@ -1027,25 +1017,25 @@ void OpenBCI_Radios_Class::bufferStreamAddChar(StreamPacketBuffer *buf, char new
         //  packet which means this is not a stream packet, it's part of a
         //  bigger message
         case STREAM_STATE_READY:
-            // // Got a 34th byte, go back to start
-            // buf->state = STREAM_STATE_INIT;
-            // // Set bytes in to 0
-            // buf->bytesIn = 0;
+            // Got a 34th byte, go back to start
+            buf->state = STREAM_STATE_INIT;
+            // Set bytes in to 0
+            buf->bytesIn = 0;
 
             break;
         case STREAM_STATE_INIT:
             if (newChar == OPENBCI_STREAM_PACKET_HEAD) {
-                // // Move the state
-                // buf->state = STREAM_STATE_STORING;
-                // // Store to the streamPacketBuffer
-                // buf->data[0] = newChar;
-                // // Set to 1
-                // buf->bytesIn = 1;
+                // Move the state
+                buf->state = STREAM_STATE_STORING;
+                // Store to the streamPacketBuffer
+                buf->data[0] = newChar;
+                // Set to 1
+                buf->bytesIn = 1;
             }
             break;
         default:
             // // Reset the state
-            // buf->state = STREAM_STATE_INIT;
+            buf->state = STREAM_STATE_INIT;
             break;
 
     }
@@ -1501,6 +1491,10 @@ boolean OpenBCI_Radios_Class::bufferRadioSwitchToOtherBuffer(void) {
     return false;
 }
 
+boolean OpenBCI_Radios_Class::bufferSerialTimeout(void) {
+    return micros() > (lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS);
+}
+
 boolean OpenBCI_Radios_Class::bufferStreamAddData(char *data) {
     if (bufferStreamReadyForNewPacket(streamPacketBuffer)) {
         bufferStreamStoreData(streamPacketBuffer, data);
@@ -1570,6 +1564,11 @@ void OpenBCI_Radios_Class::bufferStreamStoreData(StreamPacketBuffer *buf, char *
     for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
         buf->data[i] = data[i+1];
     }
+}
+
+
+boolean OpenBCI_Radios_Class::bufferStreamTimeout(void) {
+    return micros() > (lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_STREAM_uS);
 }
 
 /**

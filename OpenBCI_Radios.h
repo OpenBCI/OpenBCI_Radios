@@ -103,7 +103,9 @@ public:
     boolean     bufferRadioSwitchToOtherBuffer(void);
     void        bufferResetStreamPacketBuffer(void);
     boolean     bufferSerialAddChar(char);
+    boolean     bufferSerialHasData(void);
     void        bufferSerialReset(uint8_t);
+    boolean     bufferSerialTimeout(void);
     void        bufferStreamAddChar(StreamPacketBuffer *, char);
     boolean     bufferStreamAddData(char *);
     void        bufferStreamFlush(StreamPacketBuffer *);
@@ -113,6 +115,7 @@ public:
     void        bufferStreamReset(StreamPacketBuffer *);
     boolean     bufferStreamSendToHost(StreamPacketBuffer *buf);
     void        bufferStreamStoreData(StreamPacketBuffer *, char *);
+    boolean     bufferStreamTimeout(void);
     boolean     byteIdGetIsStream(uint8_t);
     int         byteIdGetPacketNumber(uint8_t);
     byte        byteIdGetStreamPacketType(uint8_t);
@@ -130,7 +133,6 @@ public:
     uint32_t    getPollTime(void);
     boolean     hasStreamPacket(void);
     boolean     hostPacketToSend(void);
-    boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByte(uint8_t);
     void        ledFeedBackForPassThru(void);
     // void        moveStreamPacketToTempBuffer(volatile char *data);
@@ -176,7 +178,6 @@ public:
     void        setByteIdForPacketBuffer(int);
     boolean     setChannelNumber(uint32_t);
     boolean     setPollTime(uint32_t);
-    boolean     thereIsDataInSerialBuffer(void);
     void        writeBufferToSerial(char *,int);
 
     //////////////////////

@@ -171,14 +171,6 @@ Answers the question of if a packet is ready to be sent. need to check and there
 
 `true` if there is a packet ready to send on the Host
 
-### isAStreamPacketWaitingForLaunch()
-
-Checks to see if the stream packet parser is in the STREAM_STATE_READY which means that a stream packet is ready to be sent to the Host.
-
-**_Returns_** {boolean}
-
-`true` if there is a stream packet ready to send the Host
-
 ### ledFeedBackForPassThru()
 
 Used to flash the led to indicate to the user the device is in pass through mode.
@@ -339,7 +331,7 @@ Used to see if enough time has passed since the last serial read. Useful to if a
 
 `true` if enough time has passed.
 
-### thereIsDataInSerialBuffer()
+### bufferSerialHasData()
 
 If there are packets to be sent in the serial buffer.
 
