@@ -178,8 +178,8 @@ void testNonVolatileFlashNonVolatileMemory() {
 }
 
 void testBuffer() {
-    // testBufferRadio();
-    // testBufferSerial();
+    testBufferRadio();
+    testBufferSerial();
     testBufferStream();
 }
 
