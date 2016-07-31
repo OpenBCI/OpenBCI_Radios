@@ -15,12 +15,10 @@
 #include "OpenBCI_Radios.h"
 
 void setup() {
-    // If you forgot your channel numbers, then force a reset by uncommenting
-    //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.flashNonVolatileMemory();
-
     // Declare the radio mode and channel number. Note this channel is only
-    //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE HOST!
+    //  set the first time the board powers up OR after a flash of the non-
+    //  volatile memory space with a call to `flashNonVolatileMemory`.
+    // MAKE SURE THIS CHANNEL NUMBER MATCHES THE HOST!
     radio.begin(OPENBCI_MODE_DEVICE,20);
 }
 
@@ -34,7 +32,7 @@ void loop() {
         radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Clear the stream packet buffer
-        radio.bufferResetStreamPacketBuffer();
+        radio.bufferStreamReset();
 
         // Send reset message to the board
         radio.resetPic32();
@@ -71,7 +69,7 @@ void loop() {
         } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
-            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0){
+            if ((micros() > (radio.lastTimeSerialRead + OPENBCI_TIMEOUT_PACKET_NRML_uS)) && radio.bufferSerial.numberOfPacketsSent == 0 ) {
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
@@ -84,14 +82,7 @@ void loop() {
             }
         }
 
-        if (radio.gotAllRadioPackets) { // Did we recieve all packets in a potential multi packet transmission
-            // Flush radio buffer to the driver
-            radio.bufferRadioFlush();
-            // Reset the radio buffer flags
-            radio.bufferRadioReset();
-            // Clean the buffer.. fill with zeros
-            radio.bufferRadioClean();
-        }
+        radio.bufferRadioFlushBuffers();
 
         if (millis() > (radio.timeOfLastPoll + radio.pollTime)) {  // Has more than the poll time passed?
             // Refresh the poll timer

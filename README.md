@@ -91,6 +91,18 @@ Used to fill the buffer with all zeros. Should be used as frequently as possible
 
 Called when all the packets have been received to flush the contents of the radio buffer to the serial port.
 
+### bufferRadioFlushBuffers()
+
+Used to flush any radio buffer that is ready to be flushed to the serial port. For now flushes just bufferRadio and bufferRadioBackUp on the Host.
+
+### bufferRadioHasData()
+
+Used to determine if there is data in the radio buffer. Most likely this data needs to be cleared.
+
+**_Returns_** {boolean}
+
+`true` if the radio buffer has data, `false` if not...
+
 ### bufferRadioReset()
 
 Used to reset the flags and positions of the radio buffer.
@@ -289,7 +301,11 @@ The device to send the packet to.
 
 ### sendPacketToHost()
 
-Called from Devices to send a packet to Host. Uses global variables to send the correct packet.                
+Called from Devices to send a packet to Host. Uses global variables to send the correct packet.
+
+**_Returns_** - {int}
+
+The packet number sent.               
 
 ### sendPollMessageToHost()
 

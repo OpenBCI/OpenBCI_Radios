@@ -11,11 +11,6 @@
 * Host is connected to PC via USB VCP (FTDI).
 * Device is connectedd to uC (PIC32MX250F128B with UDB32-MX2-DIP).
 *
-* In streamingData mode, Host insterts a pre-fix and post-fix to the data for PC coordination.
-*
-* Single byte serial messages sent from PC are modified by the Host to include a '+' before and after
-* This is to avoid an error experienced when the uC gets a 'ghost' command byte during streamData mode
-*
 * This software is provided as-is with no promise of workability
 * Use at your own risk, wysiwyg.
 *
@@ -28,44 +23,23 @@
 #include "OpenBCI_Radios.h"
 
 void setup() {
-    // If you forgot your channel numbers, then force a reset by uncommenting
-    //  the line below. This will force a reflash of the non-volitile memory space.
-    // radio.flashNonVolatileMemory();
-
     // Declare the radio mode and channel number. Note this channel is only
-    //  set on init flash. MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
+    //  set the first time the board powers up OR after a flash of the non-
+    //  volatile memory space with a call to `flashNonVolatileMemory`.
+    // MAKE SURE THIS CHANNEL NUMBER MATCHES THE DEVICE!
     radio.begin(OPENBCI_MODE_HOST,20);
 }
 
 void loop() {
 
-    // Check the stream packet buffers for data
-    if (radio.streamPacketBuffer1.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer1);
-    }
-    if (radio.streamPacketBuffer2.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer2);
-    }
-    if (radio.streamPacketBuffer3.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer3);
-    }
-    // Is there a stream packet waiting to get sent to the PC
-    if (radio.ringBufferWrite > 0) {
-        for (int i = 0; i < radio.ringBufferWrite; i++) {
-            Serial.write(radio.ringBuffer[i]);
-        }
-        radio.ringBufferWrite = 0;
+    if (radio.printMessageToDriverFlag) {
+        radio.printMessageToDriverFlag = false;
+        radio.printMessageToDriver(radio.msgToPrint);
     }
 
-    // Is there data in the radio buffer ready to be sent to the Driver?
-    if (radio.gotAllRadioPackets) {
-        // Flush radio buffer to the driver
-        radio.bufferRadioFlush();
-        // Reset the radio buffer flags
-        radio.bufferRadioReset();
-        // Clean the buffer.. fill with zeros
-        radio.bufferRadioClean();
-    }
+    radio.bufferStreamFlushBuffers();
+
+    radio.bufferRadioFlushBuffers();
 
     // Is there new data from the PC/Driver?
     // While loop to read successive bytes
@@ -82,7 +56,16 @@ void loop() {
 
     // Set system to down if we experience a comms timout
     if (radio.commsFailureTimeout()) {
+        // Mark the system as down
         radio.systemUp = false;
+        // Check to see if data was left in the radio buffer from an incomplete
+        //  multi packet transfer.. i.e. a failed over the air upload
+        if (radio.bufferRadioHasData(radio.currentRadioBuffer)) {
+            // Reset the radio buffer flags
+            radio.bufferRadioReset(radio.currentRadioBuffer);
+            // Clean the buffer.. fill with zeros
+            radio.bufferRadioClean(radio.currentRadioBuffer);
+        }
     }
 
     if (radio.serialWriteTimeOut()) {
@@ -91,10 +74,10 @@ void loop() {
         if (radio.lastTimeHostHeardFromDevice > 0) {
             // Is a packet in the TX buffer
             if (radio.packetInTXRadioBuffer == false) {
-                //packets in the serial buffer?
-                if (radio.packetsInSerialBuffer()) {
+                //packets in the serial buffer and there is 1 packet to send
+                if (radio.bufferSerial.numberOfPacketsSent == 0 && radio.bufferSerial.numberOfPacketsToSend == 1) {
                     // process with a send to device
-                    radio.sendPacketToDevice(DEVICE0);
+                    radio.processOutboundBufferForTimeSync();
                 }
             } else {
                 // Comms time out?
@@ -108,7 +91,6 @@ void loop() {
                     } else {
                         radio.processCommsFailure();
                     }
-
                 }
             }
         } else { // lastTimeHostHeardFromDevice has not been changed
@@ -119,10 +101,6 @@ void loop() {
         }
     }
 
-    if (radio.printMessageToDriverFlag) {
-        radio.printMessageToDriverFlag = false;
-        radio.printMessageToDriver(radio.msgToPrint);
-    }
 }
 
 /**
@@ -142,7 +120,8 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
     // Send a time sync ack to driver?
     if (radio.sendSerialAck) {
-        radio.bufferAddTimeSyncSentAck();
+        radio.printMessageToDriverFlag = true;
+        radio.msgToPrint = radio.HOST_MESSAGE_SERIAL_ACK;
     }
     // If system is not up, set it up!
     radio.systemUp = true;
@@ -168,11 +147,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 RFduinoGZLL.channel = radio.getChannelNumber();
                 RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
             }
-            radio.msgToPrint = OPENBCI_HOST_MSG_CHAN_GET_SUCCESS;
+            radio.msgToPrint = radio.HOST_MESSAGE_CHAN_GET_SUCCESS;
             radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewChannelNumberConfirmation = false;
         } else if (radio.isWaitingForNewPollTimeConfirmation) {
-            radio.msgToPrint = OPENBCI_HOST_MSG_POLL_TIME;
+            radio.msgToPrint = radio.HOST_MESSAGE_POLL_TIME;
             radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewPollTimeConfirmation = false;
         }
@@ -187,7 +166,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
 
     // Is the send data packet flag set to true
-    if (sendDataPacket && !radio.processingSendToDevice) {
-        radio.sendPacketToDevice(device);
+    if (sendDataPacket) {
+        radio.sendPacketToDevice(device, false);
     }
 }

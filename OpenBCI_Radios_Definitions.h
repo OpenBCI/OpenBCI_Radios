@@ -22,7 +22,7 @@
 
 #define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
 #define OPENBCI_TIMEOUT_PACKET_STREAM_uS 88 // Slightly longer than it takes to send a serial byte at 115200
-#define OPENBCI_TIMEOUT_PACKET_POLL_MS 80 // Poll time out length for sending null packet from device to host
+#define OPENBCI_TIMEOUT_PACKET_POLL_MS 48 // Poll time out length for sending null packet from device to host
 #define OPENBCI_TIMEOUT_COMMS_MS 270 // Comms failure time out length. Used only by Host.
 
 // Stream byte stuff
@@ -30,7 +30,11 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH 528
+#define OPENBCI_BUFFER_LENGTH_MULTI 528
+#define OPENBCI_BUFFER_LENGTH_STREAM 330
+
+#define OPENBCI_NUMBER_RADIO_BUFFERS 2
+#define OPENBCI_NUMBER_STREAM_BUFFERS 3
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
@@ -66,7 +70,7 @@
 // Private Radio communications
 //  ORPM --> "OpenBCI Radio Private Message"
 #define ORPM_INVALID_CODE_RECEIVED 0x00 // The other radio sent a 1 byte message that does not match any
-#define ORPM_PACKET_BAD_CHECK_SUM 0x01 // Bad check sum
+#define ORPM_PACKET_PAGE_REJECT 0x01 // Could not load page
 #define ORPM_PACKET_MISSED 0x02 // Missed a packet
 #define ORPM_PACKET_INIT 0x03 // Init packet
 #define ORPM_DEVICE_SERIAL_OVERFLOW 0x04 // The Device is being overflowed by Pic
@@ -74,12 +78,24 @@
 #define ORPM_CHANGE_CHANNEL_DEVICE_READY 0x06 //
 #define ORPM_CHANGE_POLL_TIME_HOST_REQUEST 0x07 //
 #define ORPM_CHANGE_POLL_TIME_DEVICE_READY 0x08 //
-#define ORPM_CHANGE_POLL_TIME_GET 0x09 //
+#define ORPM_GET_POLL_TIME 0x09 //
 
 // Used to determine what to send after a proccess out bound buffer
 #define ACTION_RADIO_SEND_NONE 0x00
 #define ACTION_RADIO_SEND_NORMAL 0x01
 #define ACTION_RADIO_SEND_SINGLE_CHAR 0x02
+
+// Used to determine the result of processing a packet
+#define OPENBCI_PROCESS_RADIO_FAIL_SWITCH_LAST      0x00
+#define OPENBCI_PROCESS_RADIO_FAIL_SWITCH_NOT_LAST  0x01
+#define OPENBCI_PROCESS_RADIO_FAIL_MISSED_LAST      0x02
+#define OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST  0x03
+#define OPENBCI_PROCESS_RADIO_PASS_LAST_MULTI       0x04
+#define OPENBCI_PROCESS_RADIO_PASS_LAST_SINGLE      0x05
+#define OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_FIRST   0x06
+#define OPENBCI_PROCESS_RADIO_PASS_NOT_LAST_MIDDLE  0x07
+#define OPENBCI_PROCESS_RADIO_PASS_SWITCH_LAST      0x08
+#define OPENBCI_PROCESS_RADIO_PASS_SWITCH_NOT_LAST  0x09
 
 // Byte id stuff
 #define OPENBCI_BYTE_ID_RESEND 0xFF
@@ -93,17 +109,17 @@
 #define OPENBCI_HOST_TIME_SYNC_ACK ','
 
 // Commands
-#define OPENBCI_HOST_PRIVATE_CMD_KEY 0xF0
-#define OPENBCI_HOST_CMD_CHANNEL_GET 0x00
-#define OPENBCI_HOST_CMD_CHANNEL_SET 0x01
-#define OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE 0x02
-#define OPENBCI_HOST_CMD_POLL_TIME_GET 0x03
-#define OPENBCI_HOST_CMD_POLL_TIME_SET 0x04
-#define OPENBCI_HOST_CMD_BAUD_DEFAULT 0x05
-#define OPENBCI_HOST_CMD_BAUD_FAST 0x06
-#define OPENBCI_HOST_CMD_SYS_UP 0x07
-#define OPENBCI_HOST_CMD_TIME_PIN_HIGH 0x08
-#define OPENBCI_HOST_CMD_TIME_PIN_LOW 0x09
+#define OPENBCI_HOST_PRIVATE_CMD_KEY            0xF0
+#define OPENBCI_HOST_CMD_CHANNEL_GET            0x00
+#define OPENBCI_HOST_CMD_CHANNEL_SET            0x01
+#define OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE    0x02
+#define OPENBCI_HOST_CMD_POLL_TIME_GET          0x03
+#define OPENBCI_HOST_CMD_POLL_TIME_SET          0x04
+#define OPENBCI_HOST_CMD_BAUD_DEFAULT           0x05
+#define OPENBCI_HOST_CMD_BAUD_FAST              0x06
+#define OPENBCI_HOST_CMD_SYS_UP                 0x07
+#define OPENBCI_HOST_CMD_TIME_PIN_HIGH          0x08
+#define OPENBCI_HOST_CMD_TIME_PIN_LOW           0x09
 
 // Raw data packet types/codes
 #define OPENBCI_PACKET_TYPE_RAW_AUX      = 3; // 0011
@@ -119,18 +135,5 @@
 #define OPENBCI_HOST_PRIVATE_POS_KEY 1
 #define OPENBCI_HOST_PRIVATE_POS_CODE 2
 #define OPENBCI_HOST_PRIVATE_POS_PAYLOAD 3
-
-// Messages to print
-#define OPENBCI_HOST_MSG_COMMS_DOWN         0
-#define OPENBCI_HOST_MSG_BAUD_FAST          1
-#define OPENBCI_HOST_MSG_BAUD_DEFAULT       2
-#define OPENBCI_HOST_MSG_SYS_UP             3
-#define OPENBCI_HOST_MSG_SYS_DOWN           4
-#define OPENBCI_HOST_MSG_CHAN               5
-#define OPENBCI_HOST_MSG_CHAN_OVERRIDE      6
-#define OPENBCI_HOST_MSG_CHAN_VERIFY        7
-#define OPENBCI_HOST_MSG_CHAN_GET_FAILURE   8
-#define OPENBCI_HOST_MSG_CHAN_GET_SUCCESS   9
-#define OPENBCI_HOST_MSG_POLL_TIME          10
 
 #endif
