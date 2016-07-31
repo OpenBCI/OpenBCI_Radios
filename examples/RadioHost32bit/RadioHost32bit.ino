@@ -32,6 +32,11 @@ void setup() {
 
 void loop() {
 
+    if (radio.printMessageToDriverFlag) {
+        radio.printMessageToDriverFlag = false;
+        radio.printMessageToDriver(radio.msgToPrint);
+    }
+
     radio.bufferStreamFlushBuffers();
 
     radio.bufferRadioFlushBuffers();
@@ -96,10 +101,6 @@ void loop() {
         }
     }
 
-    if (radio.printMessageToDriverFlag) {
-        radio.printMessageToDriverFlag = false;
-        radio.printMessageToDriver(radio.msgToPrint);
-    }
 }
 
 /**

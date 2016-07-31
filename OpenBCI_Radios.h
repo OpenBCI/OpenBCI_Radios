@@ -207,11 +207,7 @@ public:
     volatile boolean sendSerialAck;
     volatile boolean printMessageToDriverFlag;
     volatile boolean systemUp;
-    char ringBuffer[OPENBCI_BUFFER_LENGTH_STREAM];
     volatile boolean packetInTXRadioBuffer;
-    int ringBufferRead;
-    int ringBufferWrite;
-    int ringBufferNumBytes;
 
     STREAM_STATE curStreamState;
 

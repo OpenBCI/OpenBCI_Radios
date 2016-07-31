@@ -188,9 +188,6 @@ void OpenBCI_Radios_Class::configureHost(void) {
     Serial.begin(OPENBCI_BAUD_RATE_DEFAULT);
 
     packetInTXRadioBuffer = false;
-    ringBufferRead = 0;
-    ringBufferWrite = 0;
-    ringBufferNumBytes = 0;
     sendSerialAck = false;
     channelNumberSaveAttempted = false;
     printMessageToDriverFlag = false;
@@ -1195,68 +1192,6 @@ void OpenBCI_Radios_Class::writeBufferToSerial(char *buffer, int length) {
     }
 }
 
-// void OpenBCI_Radios_Class::moveStreamPacketToTempBuffer(volatile char *data) {
-//     if (!streamPacketBuffer1.full) {
-//         streamPacketBuffer1.typeByte = outputGetStopByteFromByteId(data[0]);
-//         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-//             streamPacketBuffer1.data[i] = data[i+1];
-//         }
-//         streamPacketBuffer1.full = true;
-//     } else if (!streamPacketBuffer2.full) {
-//         streamPacketBuffer2.typeByte = outputGetStopByteFromByteId(data[0]);
-//         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-//             streamPacketBuffer2.data[i] = data[i+1];
-//         }
-//         streamPacketBuffer2.full = true;
-//     } else if (!streamPacketBuffer2.full) {
-//         streamPacketBuffer3.typeByte = outputGetStopByteFromByteId(data[0]);
-//         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-//             streamPacketBuffer3.data[i] = data[i+1];
-//         }
-//         streamPacketBuffer3.full = true;
-//     } // else you in trouble!
-// }
-
-/**
- * @description Moves bytes from StreamPacketBuffers to the main radio buffer.
- * @param `buf` - {StreamPacketBuffer *} - A buffer to read into the ring buffer
- * @author AJ Keller (@pushtheworldllc)
- */
-// void OpenBCI_Radios_Class::bufferAddStreamPacket(StreamPacketBuffer *buf) {
-//     if (ringBufferWrite < (OPENBCI_BUFFER_LENGTH_STREAM - OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES)) {
-//         ringBuffer[ringBufferWrite] = 0xA0;
-//         ringBufferWrite++;
-//         for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
-//             ringBuffer[ringBufferWrite] = buf->data[i];
-//             ringBufferWrite++;
-//         }
-//         ringBuffer[ringBufferWrite] = buf->typeByte;
-//         ringBufferWrite++;
-//
-//         buf->full = false;
-//     } else {
-//         // Overflowed
-//         buf->full = false;
-//     }
-//
-//
-// }
-
-/**
- * @description Adds a `,` to the main ring buffer. Used to ack that a time sync set command was sent.
- * @author AJ Keller (@pushtheworldllc)
- */
-void OpenBCI_Radios_Class::bufferAddTimeSyncSentAck(void) {
-
-    if (ringBufferWrite >= OPENBCI_BUFFER_LENGTH_STREAM) {
-        ringBufferWrite = 0;
-    }
-    ringBuffer[ringBufferWrite] = (char)OPENBCI_HOST_TIME_SYNC_ACK;
-    ringBufferWrite++;
-    ringBufferNumBytes++;
-    sendSerialAck = false;
-}
-
 /**
 * @description Private function to clear the given buffer of length
 * @author AJ Keller (@pushtheworldllc)
@@ -1599,10 +1534,13 @@ void OpenBCI_Radios_Class::bufferStreamFlush(StreamPacketBuffer *buf) {
 void OpenBCI_Radios_Class::bufferStreamFlushBuffers(void) {
     if (!bufferStreamReadyForNewPacket(streamPacketBuffer)) {
         bufferStreamFlush(streamPacketBuffer);
+        bufferStreamReset(streamPacketBuffer);
     } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 1)) {
         bufferStreamFlush(streamPacketBuffer + 1);
+        bufferStreamReset(streamPacketBuffer + 1);
     } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 2)) {
         bufferStreamFlush(streamPacketBuffer + 2);
+        bufferStreamReset(streamPacketBuffer + 2);
     }
 }
 
