@@ -56,7 +56,7 @@ void testByteIdMake() {
     byteId = radio.byteIdMake(false,9,NULL,0);
     test.assertEqualChar(byteId,(char)0x48,"Can set packet number of 9 in byteId");
 
-    radio.bufferCleanSerial(12);
+    radio.bufferSerialReset(12);
 
     for (int i = 0; i < OPENBCI_MAX_DATA_BYTES_IN_PACKET; i++) {
         radio.bufferSerial.packetBuffer->data[i] = 0;

@@ -83,7 +83,6 @@ public:
     void        begin(uint8_t);
     void        begin(uint8_t, uint32_t);
     void        beginDebug(uint8_t, uint32_t);
-    // void        bufferAddStreamPacket(StreamPacketBuffer *buf);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(char *, int);
     void        bufferCleanCompleteBuffer(Buffer *, int);
@@ -111,6 +110,7 @@ public:
     void        bufferStreamFlush(StreamPacketBuffer *);
     void        bufferStreamFlushBuffers(void);
     boolean     bufferStreamReadyForNewPacket(StreamPacketBuffer *);
+    boolean     bufferStreamReadyToSendToHost(StreamPacketBuffer *buf);
     void        bufferStreamReset(void);
     void        bufferStreamReset(StreamPacketBuffer *);
     boolean     bufferStreamSendToHost(StreamPacketBuffer *buf);
@@ -173,7 +173,6 @@ public:
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte);
     void        sendStreamPackets(void);
-    void        sendTheDevicesFirstPacketToTheHost(void);
     boolean     serialWriteTimeOut(void);
     void        setByteIdForPacketBuffer(int);
     boolean     setChannelNumber(uint32_t);

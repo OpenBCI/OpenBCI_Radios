@@ -1,9 +1,24 @@
 # v2.0.0-rc.4 - Release Candidate 4
 
+### Enhancements
+
+* Refactor of the was the device reads and processes chars. Completely auto tested.
+* Complete auto test coverage over mission critical buffer functions.
+* Less packet loss over same distance as compared with previous release candidates.
+* Renamed a ton of functions to follow a new convention where there are three main buffer categories:
+  * `Serial` which handles non streaming data coming from serial port to radio
+  * `Radio` which handles non streaming data coming from radio to serial port
+  * `Stream` which handles both streaming data in both directions.
+
 ### Breaking Changes
 
 * Removed function `isAStreamPacketWaitingForLaunch`. Now just check if stream packet buffer is in the ready state.
 * Renamed `thereIsDataInSerialBuffer` to `bufferSerialHasData`
+* Renamed `packetsInSerialBuffer` for `bufferSerialHasData` to follow new convention.
+* Renamed `sendStreamPacketToTheHost` to `bufferStreamSendToHost` to follow new convention.
+* Renamed `storeCharToSerialBuffer` to `bufferSerialAddChar` to follow new convention.
+* Refactored `processSerialCharDevice` into `bufferSerialAddChar` and `bufferStreamAddChar`.
+* Removed ring buffer.
 
 # v2.0.0-rc.3 - Release Candidate 3
 

@@ -29,10 +29,10 @@ void loop() {
     //  initiaite a communication between back to the Driver.
     if (radio.bufferSerial.overflowed) {
         // Clear the buffer holding all serial data.
-        radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+        radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Clear the stream packet buffer
-        radio.bufferStreamReset();
+        radio.bufferStreamReset(radio.streamPacketBuffer);
 
         // Send reset message to the board
         radio.resetPic32();
@@ -59,19 +59,19 @@ void loop() {
             radio.pollRefresh();
         }
 
-        if (radio.streamPacketBuffer->state == radio.STREAM_STATE_READY) { // Is there a stream packet waiting to get sent to the Host?
+        if (radio.bufferStreamReadyToSendToHost(radio.streamPacketBuffer)) { // Is there a stream packet waiting to get sent to the Host?
             // Has 80uS passed since the last time we read from the serial port?
-            if (bufferStreamTimeout()) {
+            if (radio.bufferStreamTimeout()) {
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
-                    radio.bufferStreamSendToHost();
+                    radio.bufferStreamSendToHost(radio.streamPacketBuffer);
                 } else {
                     // packet loss incur... never seems to happen
                 }
             }
-        } else if (radio.thereIsDataInSerialBuffer()) { // Is there data from the Pic waiting to get sent to Host
+        } else if (radio.bufferSerialHasData()) { // Is there data from the Pic waiting to get sent to Host
             // Has 3ms passed since the last time the serial port was read. Only the
             //  first packet get's sent from here
-            if (bufferSerialTimeout() && radio.bufferSerial.numberOfPacketsSent == 0 ) {
+            if (radio.bufferSerialTimeout() && radio.bufferSerial.numberOfPacketsSent == 0 ) {
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
@@ -126,7 +126,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
         sendDataPacket = radio.packetToSend();
         if (sendDataPacket == false) {
             if (radio.bufferSerial.numberOfPacketsSent > 0) {
-                radio.bufferCleanSerial(radio.bufferSerial.numberOfPacketsSent);
+                radio.bufferSerialReset(radio.bufferSerial.numberOfPacketsSent);
             }
         }
     }
