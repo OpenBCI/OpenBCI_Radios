@@ -49,10 +49,7 @@ var sampFunc = sample => {
 };
 
 var startHost = () => {
-    ourBoard.autoFindOpenBCIBoard()
-        .then(portName => {
-            return ourBoard.connect(portName);
-        })
+    ourBoard.connect(portNames.host)
         .then(() => {
             ourBoard.on('ready',function() {
                 ourBoard.streamStart();

@@ -49,7 +49,6 @@ void loop() {
     } else {
         if (Serial.available()) { // Is there new serial data available?
             char newChar = Serial.read();
-            Serial.println(newChar);
             // Mark the last serial as now;
             radio.lastTimeSerialRead = micros();
             // Get one char and process it
