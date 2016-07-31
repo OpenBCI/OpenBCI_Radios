@@ -34,6 +34,20 @@ public:
         STREAM_STATE_READY,
         STREAM_STATE_TAIL
     };
+    typedef enum HOST_MESSAGE {
+        HOST_MESSAGE_SERIAL_ACK,
+        HOST_MESSAGE_COMMS_DOWN,
+        HOST_MESSAGE_BAUD_FAST,
+        HOST_MESSAGE_BAUD_DEFAULT,
+        HOST_MESSAGE_SYS_UP,
+        HOST_MESSAGE_SYS_DOWN,
+        HOST_MESSAGE_CHAN,
+        HOST_MESSAGE_CHAN_OVERRIDE,
+        HOST_MESSAGE_CHAN_VERIFY,
+        HOST_MESSAGE_CHAN_GET_FAILURE,
+        HOST_MESSAGE_CHAN_GET_SUCCESS,
+        HOST_MESSAGE_POLL_TIME
+    };
     // STRUCTS
     typedef struct {
       char  data[OPENBCI_MAX_PACKET_SIZE_BYTES];
@@ -52,7 +66,7 @@ public:
         char        typeByte;
         char        data[OPENBCI_MAX_PACKET_SIZE_BYTES];
         int         bytesIn;
-        boolean     full;
+        boolean     flushing;
     } StreamPacketBuffer;
 
     typedef struct {
@@ -71,7 +85,7 @@ public:
     boolean     byteIdGetIsStream(char);
     int         byteIdGetPacketNumber(char);
     byte        byteIdGetStreamPacketType(char);
-    void        bufferAddStreamPacket(StreamPacketBuffer *buf);
+    // void        bufferAddStreamPacket(StreamPacketBuffer *buf);
     void        bufferAddTimeSyncSentAck(void);
     void        bufferCleanChar(volatile char *, int);
     void        bufferCleanCompleteBuffer(volatile Buffer *, int);
@@ -92,6 +106,13 @@ public:
     void        bufferRadioReset(BufferRadio *);
     boolean     bufferRadioSwitchToOtherBuffer(void);
     void        bufferResetStreamPacketBuffer(void);
+    boolean     bufferStreamAddData(char *);
+    void        bufferStreamFlush(StreamPacketBuffer *);
+    void        bufferStreamFlushBuffers(void);
+    boolean     bufferStreamReadyForNewPacket(StreamPacketBuffer *);
+    void        bufferStreamReset(void);
+    void        bufferStreamReset(StreamPacketBuffer *);
+    void        bufferStreamStoreData(StreamPacketBuffer *, char *);
     char        byteIdMake(boolean, int, volatile char *, int);
     byte        byteIdMakeStreamPacketType(void);
     boolean     commsFailureTimeout(void);
@@ -109,7 +130,7 @@ public:
     boolean     isAStreamPacketWaitingForLaunch(void);
     boolean     isATailByteChar(char);
     void        ledFeedBackForPassThru(void);
-    void        moveStreamPacketToTempBuffer(volatile char *data);
+    // void        moveStreamPacketToTempBuffer(volatile char *data);
     boolean     needToSetChannelNumber(void);
     boolean     needToSetPollTime(void);
     byte        outputGetStopByteFromByteId(char);
@@ -173,10 +194,7 @@ public:
     char singleCharMsg[1];
     char singlePayLoad[1];
 
-    StreamPacketBuffer streamPacketBuffer;
-    StreamPacketBuffer streamPacketBuffer1;
-    StreamPacketBuffer streamPacketBuffer2;
-    StreamPacketBuffer streamPacketBuffer3;
+    StreamPacketBuffer streamPacketBuffer[OPENBCI_NUMBER_STREAM_BUFFERS];
     volatile boolean sendingMultiPacket;
     volatile boolean isWaitingForNewChannelNumber;
     volatile boolean isWaitingForNewPollTime;

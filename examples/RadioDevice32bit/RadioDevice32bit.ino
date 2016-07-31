@@ -32,7 +32,7 @@ void loop() {
         radio.bufferCleanSerial(OPENBCI_MAX_NUMBER_OF_BUFFERS);
 
         // Clear the stream packet buffer
-        radio.bufferResetStreamPacketBuffer();
+        radio.bufferStreamReset();
 
         // Send reset message to the board
         radio.resetPic32();

@@ -32,23 +32,7 @@ void setup() {
 
 void loop() {
 
-    // Check the stream packet buffers for data
-    if (radio.streamPacketBuffer1.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer1);
-    }
-    if (radio.streamPacketBuffer2.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer2);
-    }
-    if (radio.streamPacketBuffer3.full) {
-        radio.bufferAddStreamPacket(&radio.streamPacketBuffer3);
-    }
-    // Is there a stream packet waiting to get sent to the PC
-    if (radio.ringBufferWrite > 0) {
-        for (int i = 0; i < radio.ringBufferWrite; i++) {
-            Serial.write(radio.ringBuffer[i]);
-        }
-        radio.ringBufferWrite = 0;
-    }
+    radio.bufferStreamFlushBuffers();
 
     radio.bufferRadioFlushBuffers();
 
@@ -135,7 +119,8 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
     // Send a time sync ack to driver?
     if (radio.sendSerialAck) {
-        radio.bufferAddTimeSyncSentAck();
+        radio.printMessageToDriverFlag = true;
+        radio.msgToPrint = radio.HOST_MESSAGE_SERIAL_ACK;
     }
     // If system is not up, set it up!
     radio.systemUp = true;
@@ -161,11 +146,11 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
                 RFduinoGZLL.channel = radio.getChannelNumber();
                 RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
             }
-            radio.msgToPrint = OPENBCI_HOST_MSG_CHAN_GET_SUCCESS;
+            radio.msgToPrint = radio.HOST_MESSAGE_CHAN_GET_SUCCESS;
             radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewChannelNumberConfirmation = false;
         } else if (radio.isWaitingForNewPollTimeConfirmation) {
-            radio.msgToPrint = OPENBCI_HOST_MSG_POLL_TIME;
+            radio.msgToPrint = radio.HOST_MESSAGE_POLL_TIME;
             radio.printMessageToDriverFlag = true;
             radio.isWaitingForNewPollTimeConfirmation = false;
         }

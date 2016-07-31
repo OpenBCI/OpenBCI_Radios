@@ -34,6 +34,7 @@
 #define OPENBCI_BUFFER_LENGTH_STREAM 330
 
 #define OPENBCI_NUMBER_RADIO_BUFFERS 2
+#define OPENBCI_NUMBER_STREAM_BUFFERS 3
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
@@ -134,18 +135,5 @@
 #define OPENBCI_HOST_PRIVATE_POS_KEY 1
 #define OPENBCI_HOST_PRIVATE_POS_CODE 2
 #define OPENBCI_HOST_PRIVATE_POS_PAYLOAD 3
-
-// Messages to print
-#define OPENBCI_HOST_MSG_COMMS_DOWN         0
-#define OPENBCI_HOST_MSG_BAUD_FAST          1
-#define OPENBCI_HOST_MSG_BAUD_DEFAULT       2
-#define OPENBCI_HOST_MSG_SYS_UP             3
-#define OPENBCI_HOST_MSG_SYS_DOWN           4
-#define OPENBCI_HOST_MSG_CHAN               5
-#define OPENBCI_HOST_MSG_CHAN_OVERRIDE      6
-#define OPENBCI_HOST_MSG_CHAN_VERIFY        7
-#define OPENBCI_HOST_MSG_CHAN_GET_FAILURE   8
-#define OPENBCI_HOST_MSG_CHAN_GET_SUCCESS   9
-#define OPENBCI_HOST_MSG_POLL_TIME          10
 
 #endif

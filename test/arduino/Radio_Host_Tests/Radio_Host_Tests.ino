@@ -32,8 +32,8 @@ void go() {
 }
 
 void testProcessOutboundBuffer() {
-    // testProcessOutboundBufferForTimeSync();
-    // testProcessOutboundBufferCharDouble();
+    testProcessOutboundBufferForTimeSync();
+    testProcessOutboundBufferCharDouble();
     testProcessOutboundBufferCharTriple();
 }
 
@@ -87,7 +87,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_CHANNEL_GET() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_CHANNEL_GET;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_GET_SUCCESS,  "should get chan success message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_CHAN_GET_SUCCESS,  "should get chan success message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -99,7 +99,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_CHANNEL_GET() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_CHANNEL_GET;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_GET_FAILURE,  "should get chan failure message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_CHAN_GET_FAILURE,  "should get chan failure message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -113,7 +113,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_BAUD_DEFAULT() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_BAUD_DEFAULT;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_BAUD_DEFAULT, "should get baud rate change to default message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_BAUD_DEFAULT, "should get baud rate change to default message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -128,7 +128,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_BAUD_FAST() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_BAUD_FAST;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_BAUD_FAST, "should get baud rate change to fast message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_BAUD_FAST, "should get baud rate change to fast message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -145,7 +145,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_SYS_UP() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_SYS_UP;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_SYS_UP, "should get system status success message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_SYS_UP, "should get system status success message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -157,7 +157,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_SYS_UP() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_SYS_UP;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_SYS_DOWN, "should get system status failure message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_SYS_DOWN, "should get system status failure message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -186,7 +186,7 @@ void testProcessOutboundBufferCharDouble_OPENBCI_HOST_CMD_POLL_TIME_GET() {
     radio.bufferSerial.packetBuffer->data[2] = (char)OPENBCI_HOST_CMD_POLL_TIME_GET;
     radio.bufferSerial.packetBuffer->positionWrite = 3;
     test.assertEqualByte(radio.processOutboundBufferCharDouble(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE, "should not send any message", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_COMMS_DOWN, "should get poll time get failure message code", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_COMMS_DOWN, "should get poll time get failure message code", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"sets the print flag to high", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should set position to 1", __LINE__);
 
@@ -230,7 +230,6 @@ void testProcessOutboundBufferCharTriple_OPENBCI_HOST_CMD_CHANNEL_SET() {
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_SINGLE_CHAR,"should send a private radio message", __LINE__);
     test.assertEqualInt((int)radio.radioChannel, newChannelNumber,"should capture new radio channel number", __LINE__);
     test.assertBetweenInclusiveInt((int)radio.previousRadioChannel,RFDUINOGZLL_CHANNEL_LIMIT_LOWER,RFDUINOGZLL_CHANNEL_LIMIT_UPPER, "should get previousRadioChannel number to be >= 0 and <= 25", __LINE__);
-    test.assertBoolean(radio.printMessageToDriverFlag,false,"should leave the print flag to false", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
     test.assertEqualChar(radio.singleCharMsg[0],(char)ORPM_CHANGE_CHANNEL_HOST_REQUEST, "should store host channel change requestin single char buffer", __LINE__);
 
@@ -244,10 +243,9 @@ void testProcessOutboundBufferCharTriple_OPENBCI_HOST_CMD_CHANNEL_SET() {
     radio.previousRadioChannel = 0x30;
     radio.msgToPrint = 25;
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE,"should take no radio action", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_VERIFY, "should send verify channel number message", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_CHAN_VERIFY, "should send verify channel number message", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"should set print flag to true", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
-    test.assertEqualChar(radio.singleCharMsg[0],(char)ORPM_CHANGE_CHANNEL_HOST_REQUEST, "should store host channel change request in single char buffer", __LINE__);
 
 }
 
@@ -262,7 +260,6 @@ void testProcessOutboundBufferCharTriple_OPENBCI_HOST_CMD_POLL_TIME_SET() {
     radio.previousRadioChannel = 0x30;
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_SINGLE_CHAR,"should send a private radio message", __LINE__);
     test.assertEqualInt((int)radio.pollTime, newPollTime,"should capture new radio poll time", __LINE__);
-    test.assertBoolean(radio.printMessageToDriverFlag,false,"should leave the print flag to false", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
     test.assertEqualChar(radio.singleCharMsg[0],(char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST, "should store host poll change request in single char buffer", __LINE__);
 }
@@ -278,7 +275,7 @@ void testProcessOutboundBufferCharTriple_OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE() 
     radio.msgToPrint = 25;
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE,"should send a private radio message", __LINE__);
     test.assertEqualInt((int)radio.radioChannel, newChannelNumber,"should capture new radio channel number", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_OVERRIDE, "should change message to print to host channel override", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_CHAN_OVERRIDE, "should change message to print to host channel override", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"should change the print flag to true", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
 
@@ -291,7 +288,7 @@ void testProcessOutboundBufferCharTriple_OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE() 
     radio.previousRadioChannel = 0x30;
     radio.msgToPrint = 25;
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NONE,"should take no radio action", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_VERIFY, "should send verify channel number message", __LINE__);
+    test.assertEqualByte(radio.msgToPrint,radio.HOST_MESSAGE_CHAN_VERIFY, "should send verify channel number message", __LINE__);
     test.assertBoolean(radio.printMessageToDriverFlag,true,"should set print flag to true", __LINE__);
     test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
 
@@ -308,9 +305,6 @@ void testProcessOutboundBufferCharTriple_default() {
     radio.singleCharMsg[0] = (char)0xFF;
 
     test.assertEqualByte(radio.processOutboundBufferCharTriple(radio.bufferSerial.packetBuffer->data),ACTION_RADIO_SEND_NORMAL,"should take normal radio action", __LINE__);
-    test.assertEqualByte(radio.msgToPrint,OPENBCI_HOST_MSG_CHAN_VERIFY, "should send verify channel number message", __LINE__);
-    test.assertBoolean(radio.printMessageToDriverFlag,true,"should set print flag to true", __LINE__);
-    test.assertEqualInt(radio.bufferSerial.packetBuffer->positionWrite,0x01, "should reset the write position to 1", __LINE__);
 
 }
 

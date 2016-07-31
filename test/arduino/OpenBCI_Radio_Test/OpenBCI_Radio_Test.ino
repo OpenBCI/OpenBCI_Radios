@@ -23,10 +23,10 @@ void go() {
     // Start the test
     test.begin();
     digitalWrite(ledPin, HIGH);
-    // testByteId();
-    // testOutput();
+    testByteId();
+    testOutput();
     testBuffer();
-    // testNonVolatileFunctions();
+    testNonVolatileFunctions();
 
     test.end();
     digitalWrite(ledPin, LOW);
@@ -178,8 +178,9 @@ void testNonVolatileFlashNonVolatileMemory() {
 }
 
 void testBuffer() {
-    testBufferRadio();
+    // testBufferRadio();
     // testBufferSerial();
+    testBufferStream();
 }
 
 void testBufferSerial() {
@@ -646,16 +647,6 @@ void testBufferRadio_OPENBCI_PROCESS_RADIO_FAIL_MISSED_NOT_LAST() {
 
 }
 
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
 void testBufferRadioReadyForNewPage() {
     // # CLEANUP
     testBufferRadioCleanUp();
@@ -809,4 +800,178 @@ void testBufferRadioCleanUp() {
     radio.bufferRadioReset(radio.bufferRadio);
     radio.bufferRadioReset(radio.bufferRadio + 1);
     radio.currentRadioBuffer = radio.bufferRadio;
+}
+
+void testBufferStream() {
+    test.describe("testBufferStream");
+
+    testBufferStreamAddData();
+    testBufferStreamReadyForNewPacket();
+    testBufferStreamReset();
+    testBufferStreamStoreData();
+}
+
+void testBufferStreamAddData() {
+    test.describe("bufferStreamAddData");
+    char buffer32[] = " AJ Keller is da best programmer";
+    char buffer32Hey[] = " hey there, my name is AJ Keller";
+    char buffer32Q[] = " so you want to be a programmer?";
+    char buffer32At[] = " if so you should use auto tests";
+    int buffer32Length = 32;
+    int packetType1 = 0x00;
+    int packetType2 = 0x00;
+    int packetType3 = 0x00;
+
+    test.it("should be able to add a packet to the first streamPacketBuffer");
+    testBufferStreamCleanUp();
+    packetType1 = 0x01;
+    buffer32[0] = radio.byteIdMake(true,packetType1,(char *)buffer32 + 1, buffer32Length - 1);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32),true,"should add the stream packet",__LINE__);
+    test.assertEqualBuffer(radio.streamPacketBuffer->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn, buffer32Length - 1, "should add 31 bytes to the stream packet buffer", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->typeByte, packetType1 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+
+    test.it("should be able to add a packet to the second streamPacketBuffer when first is not ready for a new packet");
+    testBufferStreamCleanUp();
+    packetType1 = 0x01;
+    packetType2 = 0x02;
+    buffer32[0] = radio.byteIdMake(true,packetType1,(char *)buffer32 + 1, buffer32Length - 1);
+    buffer32Hey[0] = radio.byteIdMake(true,packetType2,(char *)buffer32Hey + 1, buffer32Length - 1);
+
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32),true,"should add the first stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Hey),true,"should add the second stream packet",__LINE__);
+    test.assertEqualBuffer(radio.streamPacketBuffer->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn, buffer32Length - 1, "should add 31 bytes to the first stream packet buffer", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->typeByte, packetType1 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 1)->data,buffer32Hey + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in second buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->bytesIn, buffer32Length - 1, "should add 31 bytes to the second stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 1)->typeByte, packetType2 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+
+    test.it("should be able to add a packet to the third streamPacketBuffer when first and second are not ready for a new packet");
+    testBufferStreamCleanUp();
+    packetType1 = 0x01;
+    packetType2 = 0x02;
+    packetType3 = 0x03;
+    buffer32[0] = radio.byteIdMake(true,packetType1,(char *)buffer32 + 1, buffer32Length - 1);
+    buffer32Hey[0] = radio.byteIdMake(true,packetType2,(char *)buffer32Hey + 1, buffer32Length - 1);
+    buffer32Q[0] = radio.byteIdMake(true,packetType3,(char *)buffer32Q + 1, buffer32Length - 1);
+
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32),true,"should add the first stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Hey),true,"should add the second stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Q),true,"should add the third stream packet",__LINE__);
+    test.assertEqualBuffer(radio.streamPacketBuffer->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn, buffer32Length - 1, "should add 31 bytes to the first stream packet buffer", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->typeByte, packetType1 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 1)->data,buffer32Hey + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in second buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->bytesIn, buffer32Length - 1, "should add 31 bytes to the second stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 1)->typeByte, packetType2 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 2)->data,buffer32Q + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in third buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 2)->bytesIn, buffer32Length - 1, "should add 31 bytes to the third stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 2)->typeByte, packetType3 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+
+    test.it("should not be able to add a packet when the first, second and third are not ready for a new packet");
+    testBufferStreamCleanUp();
+    packetType1 = 0x01;
+    packetType2 = 0x02;
+    packetType3 = 0x03;
+    buffer32[0] = radio.byteIdMake(true,packetType1,(char *)buffer32 + 1, buffer32Length - 1);
+    buffer32Hey[0] = radio.byteIdMake(true,packetType2,(char *)buffer32Hey + 1, buffer32Length - 1);
+    buffer32Q[0] = radio.byteIdMake(true,packetType3,(char *)buffer32Q + 1, buffer32Length - 1);
+    buffer32At[0] = radio.byteIdMake(true,packetType3 + 1,(char *)buffer32At + 1, buffer32Length - 1);
+
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32),true,"should add the first stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Hey),true,"should add the second stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Q),true,"should add the third stream packet",__LINE__);
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32At),false,"should not be able to add the forth stream packet",__LINE__);
+    test.assertEqualBuffer(radio.streamPacketBuffer->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn, buffer32Length - 1, "should add 31 bytes to the first stream packet buffer", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->typeByte, packetType1 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 1)->data,buffer32Hey + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in second buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->bytesIn, buffer32Length - 1, "should add 31 bytes to the second stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 1)->typeByte, packetType2 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 2)->data,buffer32Q + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in third buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 2)->bytesIn, buffer32Length - 1, "should add 31 bytes to the third stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 2)->typeByte, packetType3 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+
+    test.it("should be able to add a packet to the second streamPacketBuffer when first is flushing");
+    testBufferStreamCleanUp();
+    packetType2 = 0x02;
+    buffer32Hey[0] = radio.byteIdMake(true,packetType2,(char *)buffer32Hey + 1, buffer32Length - 1);
+    radio.streamPacketBuffer->flushing = true;
+    test.assertBoolean(radio.bufferStreamAddData((char *)buffer32Hey),true,"should add the second stream packet",__LINE__);
+    test.assertEqualBuffer((radio.streamPacketBuffer + 1)->data,buffer32Hey + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in second buffer", __LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->bytesIn, buffer32Length - 1, "should add 31 bytes to the second stream packet buffer", __LINE__);
+    test.assertEqualByte((radio.streamPacketBuffer + 1)->typeByte, packetType2 | OPENBCI_STREAM_BYTE_STOP, "should set the type byte to 0xCX where X is the packetType",__LINE__);
+
+}
+
+void testBufferStreamCleanUp() {
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+    radio.bufferStreamReset(radio.streamPacketBuffer + 1);
+    radio.bufferStreamReset(radio.streamPacketBuffer + 2);
+}
+
+void testBufferStreamReadyForNewPacket() {
+    test.describe("bufferStreamReadyForNewPacket");
+
+    test.it("should be able to add a packet after reset");
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+    test.assertBoolean(radio.bufferStreamReadyForNewPacket(radio.streamPacketBuffer),true,"should add buffer",__LINE__);
+
+    test.it("should not be able to add a packet if flushing");
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+    radio.streamPacketBuffer->flushing = true;
+    test.assertBoolean(radio.bufferStreamReadyForNewPacket(radio.streamPacketBuffer),false,"should not add buffer if flushing",__LINE__);
+
+    test.it("should not be able to add a packet if it has data in it");
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+    radio.streamPacketBuffer->bytesIn = 31;
+    test.assertBoolean(radio.bufferStreamReadyForNewPacket(radio.streamPacketBuffer),false,"should not add buffer if it has data in it",__LINE__);
+
+}
+
+void testBufferStreamReset() {
+    test.describe("bufferStreamReset");
+
+    test.it("should reset the first stream packet and the curStreamState to init");
+    radio.streamPacketBuffer->flushing = true;
+    radio.streamPacketBuffer->bytesIn = 32;
+    radio.streamPacketBuffer->typeByte = 2;
+    radio.curStreamState = radio.STREAM_STATE_READY;
+
+    radio.bufferStreamReset();
+    test.assertBoolean(radio.streamPacketBuffer->flushing,false,"should set flushing to false",__LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn,0,"should set bytesIn to 0",__LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->typeByte,0,"should set typeByte to 0",__LINE__);
+    test.assertEqualByte(radio.curStreamState, radio.STREAM_STATE_INIT, "should set stream state back to init",__LINE__);
+
+    test.it("should be able to reset the second stream buffer");
+    (radio.streamPacketBuffer + 1)->flushing = true;
+    (radio.streamPacketBuffer + 1)->bytesIn = 32;
+    (radio.streamPacketBuffer + 1)->typeByte = 2;
+
+    radio.bufferStreamReset(radio.streamPacketBuffer + 1);
+    test.assertBoolean((radio.streamPacketBuffer + 1)->flushing,false,"should set flushing to false",__LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->bytesIn,0,"should set bytesIn to 0",__LINE__);
+    test.assertEqualInt((radio.streamPacketBuffer + 1)->typeByte,0,"should set typeByte to 0",__LINE__);
+
+}
+
+void testBufferStreamStoreData() {
+    test.describe("bufferStreamStoreData");
+    char buffer32[] = " AJ Keller is da best programmer";
+    int buffer32Length = 32;
+    int packetType = 0;
+
+
+    test.it("should be able to store a buffer in the stream packet");
+    packetType = 0x06;
+    radio.bufferStreamReset(radio.streamPacketBuffer);
+
+    buffer32[0] = radio.byteIdMake(true,packetType,(char *)buffer32 + 1, buffer32Length - 1);
+    radio.bufferStreamStoreData(radio.streamPacketBuffer,(char *)buffer32);
+    test.assertEqualBuffer(radio.streamPacketBuffer->data,buffer32 + 1, buffer32Length - 1, "buffer32 loaded into the correct postion in first buffer", __LINE__);
+    test.assertEqualInt(radio.streamPacketBuffer->bytesIn,buffer32Length - 1, "should store 31 bytes to the first streamPacketBuffer", __LINE__);
+    test.assertEqualByte(radio.streamPacketBuffer->typeByte,packetType | OPENBCI_STREAM_BYTE_STOP,"should store the packetNumber OR'd with a stop byte", __LINE__);
+
 }
