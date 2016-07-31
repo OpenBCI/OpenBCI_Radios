@@ -15,14 +15,18 @@ ringBuffer      KEYWORD1
 #######################################
 begin                           KEYWORD2
 beginDebug                      KEYWORD2
-bufferAddStreamPacket           KEYWORD2
-bufferAddTimeSyncSentAck        KEYWORD2
-bufferCleanSerial               KEYWORD2
 bufferRadioClean                KEYWORD2
 bufferRadioFlushBuffers         KEYWORD2
-bufferRadioProcessSingle        KEYWORD2
 bufferRadioReset                KEYWORD2
-bufferResetStreamPacketBuffer   KEYWORD2
+bufferSerialAddChar             KEYWORD2
+bufferSerialHasData             KEYWORD2
+bufferSerialReset               KEYWORD2
+bufferSerialTimeout             KEYWORD2
+bufferStreamAddChar             KEYWORD2
+bufferStreamReadyToSendToHost   KEYWORD2
+bufferStreamReset               KEYWORD2
+bufferStreamSendToHost          KEYWORD2
+bufferStreamTimeout             KEYWORD2
 commsFailureTimeout             KEYWORD2
 didPCSendDataToHost             KEYWORD2
 flashNonVolatileMemory          KEYWORD2
@@ -31,10 +35,8 @@ getPollTime                     KEYWORD2
 hostPacketToSend                KEYWORD2
 ledFeedBackForPassThru          KEYWORD2
 packetToSend                    KEYWORD2
-packetsInSerialBuffer           KEYWORD2
 pollRefresh                     KEYWORD2
 printMessageToDriver            KEYWORD2
-processSerialCharDevice         KEYWORD2
 processCommsFailure             KEYWORD2
 processRadioCharDevice          KEYWORD2
 processRadioCharHost            KEYWORD2
@@ -44,10 +46,7 @@ resetPic32                      KEYWORD2
 sendPacketToDevice              KEYWORD2
 sendPacketToHost                KEYWORD2
 sendPollMessageToHost           KEYWORD2
-sendStreamPacketToTheHost       KEYWORD2
 serialWriteTimeOut              KEYWORD2
-storeCharToSerialBuffer         KEYWORD2
-bufferSerialHasData       KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

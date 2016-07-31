@@ -75,14 +75,6 @@ A buffer to read into the ring buffer
 
 Adds a `,` to the main ring buffer. Used to ack that a time sync set command was sent.
 
-### bufferCleanSerial(numberOfPacketsToClean)
-
-Function to clean (clear/reset) the bufferSerial.
-
-**_numberOfPacketsToClean_** - `int`
-
-The number of packets you want to clean, for example, on init, we would clean all packets, but on cleaning from the RFduinoGZLL_onReceive() we would only clean the number of packets actually used.
-
 ### bufferRadioClean()
 
 Used to fill the buffer with all zeros. Should be used as frequently as possible. This is very useful if you need to ensure that no bad data is sent over the serial port.
@@ -107,10 +99,6 @@ Used to determine if there is data in the radio buffer. Most likely this data ne
 
 Used to reset the flags and positions of the radio buffer.
 
-### bufferResetStreamPacketBuffer()
-
-Resets the stream packet buffer to default settings
-
 ### bufferSerialAddChar(newChar)
 
 Stores a char to the serial buffer. Used by both the Device and the Host. Protects the system from buffer overflow.
@@ -121,7 +109,83 @@ The new char to store to the serial buffer.
 
 **_Returns_** - {boolean}
 
-`true` if the new char was added to the serial buffer,
+`true` if the new char was added to the serial buffer, `false` if not.
+
+### bufferSerialHasData()
+
+If there are packets to be sent in the serial buffer.
+
+**_Returns_** - {boolean}
+
+`true` if there are packets waiting to be sent from the serial buffer, `false` if not...
+
+### bufferSerialReset(n)
+
+Function to clean (clear/reset) the bufferSerial.
+
+**_n_** - `uint8_t`
+
+The number of packets you want to clean, for example, on init, we would clean all packets, but on cleaning from the RFduinoGZLL_onReceive() we would only clean the number of packets actually used.
+
+### bufferSerialTimeout()
+
+Based off the last time the serial port was read from, Determines if enough time has passed to qualify this data as a full serial page.
+
+**_Returns_** - {boolean}
+
+`true` if enough time has passed, `false` if not.
+
+### bufferStreamAddChar(buf, newChar)
+
+Process a char from the serial port on the Device. Enters the char into the stream state machine.
+
+**_buf_** - `StreamPacketBuffer *`
+
+The stream packet buffer to add the char to.
+
+**_newChar_** - `char`
+
+A new char to process.
+
+### bufferStreamReadyToSendToHost(buf)
+
+Utility function to return `true` if the the streamPacketBuffer is in the STREAM_STATE_READY. Normally used for determining if a stream packet is ready to be sent.
+
+**_buf_** - `StreamPacketBuffer *`
+
+The stream packet buffer to send to the Host.
+
+**_Returns_** - {boolean}
+
+`true` is the `buf` is in the ready state, `false` otherwise.
+
+### bufferStreamReset()
+
+Resets the first stream packet buffer to default settings.
+
+### bufferStreamReset(buf)
+
+Resets the stream packet buffer to default settings
+
+**_buf_** - `StreamPacketBuffer *`
+
+Pointer to a stream packet buffer to reset.
+
+### bufferStreamSendToHost(buf)
+
+Sends the contents of the `buf` to the HOST, sends as stream packet with the proper byteId.
+
+**_buf_** - `StreamPacketBuffer *`
+
+Pointer to a stream packet buffer to be sent to the Host.
+
+### bufferStreamTimeout()
+
+Based off the last time the serial port was read from, Determines if enough time has passed to qualify this data as a stream packet.
+
+**_Returns_** - {boolean}
+
+`true` if enough time has passed, `false` if not.
 
 ### commsFailureTimeout()
 
@@ -278,19 +342,6 @@ The char to be read in.
 
 `true` if a packet should be sent from the serial buffer.            
 
-
-### processSerialCharDevice(newChar)
-
-Process a char from the serial port on the Device. Stores the char not only to the serial buffer but also tries enters the char into the stream state machine.
-
-**_newChar_** - {char}
-
-A new char to process
-
-**_Returns_** - {char}
-
-Passes `newChar` back out.
-
 ### resetPic32()
 
 Sends a soft reset command to the Pic 32 incase of an emergency.
@@ -315,26 +366,10 @@ The packet number sent.
 
 Sends a null byte to the host.
 
-### sendStreamPacketToTheHost()
-
-Sends the contents of the `streamPacketBuffer` to the HOST, sends as stream packet with the proper byteId.     
-
-**_Returns_** - {boolean}
-
-`true` when the packet has been added to the TX buffer.
-
 ### serialWriteTimeOut()
 
 Used to see if enough time has passed since the last serial read. Useful to if a serial transmission from the PC/Driver has concluded.   
 
 **_Returns_** - {boolean}
 
-`true` if enough time has passed.
-
-### bufferSerialHasData()
-
-If there are packets to be sent in the serial buffer.
-
-**_Returns_** - {boolean}
-
-`true` if there are packets waiting to be sent from the serial buffer, `false` if not...       
+`true` if enough time has passed.      
