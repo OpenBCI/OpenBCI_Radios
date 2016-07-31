@@ -85,8 +85,8 @@ void loop() {
         if (radio.lastTimeHostHeardFromDevice > 0) {
             // Is a packet in the TX buffer
             if (radio.packetInTXRadioBuffer == false) {
-                //packets in the serial buffer?
-                if (radio.packetsInSerialBuffer()) {
+                //packets in the serial buffer and there is 1 packet to send
+                if (radio.bufferSerial.numberOfPacketsSent == 0 && radio.bufferSerial.numberOfPacketsToSend == 1) {
                     // process with a send to device
                     radio.processOutboundBufferForTimeSync();
                 }

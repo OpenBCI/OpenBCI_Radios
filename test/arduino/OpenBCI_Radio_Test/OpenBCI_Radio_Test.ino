@@ -5,9 +5,7 @@
 int ledPin = 2;
 
 void setup() {
-    // put your setup code here, to run once:
     pinMode(ledPin,OUTPUT);
-    // put your setup code here, to run once:
     Serial.begin(115200);
     test.setSerial(Serial);
     test.failVerbosity = true;
