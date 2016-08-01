@@ -15,13 +15,20 @@ var badPackets = 0;
 var goodPackets = 0;
 var rawSampleCount = 0;
 var sampleRecievedCounter = 0;
-
+var lastAckCount = 0;
 var sampFunc = sample => {
     rawSampleCount++;
     // console.log(`got sample ${sample.sampleNumber} expecting ${sampleRecievedCounter}`);
-    if (sample.timestamp) {
-        console.log(sample.timestamp);
+
+    if (sample.auxData[5] != lastAckCount) {
+        console.log(`Last ack count ${sample.auxData[5]}`);
+        lastAckCount = sample.auxData[5];
     }
+
+    if (sample.auxData[4] > 0) {
+        console.log(`${sample.sampleNumber} was held by device ${sample.auxData[4]} time${sample.auxData[4] > 1 ? "s" : ""}`);
+    }
+
     if (sample.sampleNumber === sampleRecievedCounter) {
         // console.log(`\tgood`);
         goodPackets++;
@@ -56,9 +63,9 @@ var startHost = () => {
                 ourBoard.streamStart();
 
             });
-            ourBoard.on('rawDataPacket', rawDataPacket => {
-                console.log('rawDataPacket',rawDataPacket);
-            })
+            // ourBoard.on('rawDataPacket', rawDataPacket => {
+            //     console.log('rawDataPacket',rawDataPacket);
+            // })
             ourBoard.on('sample',sampFunc);
         }).catch(err => {
             console.log(`connect error ${err}`);

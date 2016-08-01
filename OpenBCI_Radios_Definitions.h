@@ -17,8 +17,6 @@
 #define OPENBCI_MAX_DATA_BYTES_IN_PACKET 31
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
 #define OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES 33
-#define OPENBCI_MAX_NUMBER_OF_BUFFERS 16
-
 
 #define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
 #define OPENBCI_TIMEOUT_PACKET_STREAM_uS 88 // Slightly longer than it takes to send a serial byte at 115200
@@ -31,10 +29,10 @@
 
 // Max buffer lengths
 #define OPENBCI_BUFFER_LENGTH_MULTI 528
-#define OPENBCI_BUFFER_LENGTH_STREAM 330
 
 #define OPENBCI_NUMBER_RADIO_BUFFERS 2
-#define OPENBCI_NUMBER_STREAM_BUFFERS 3
+#define OPENBCI_NUMBER_SERIAL_BUFFERS 16
+#define OPENBCI_NUMBER_STREAM_BUFFERS 10
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0

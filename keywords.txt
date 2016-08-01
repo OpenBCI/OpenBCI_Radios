@@ -20,6 +20,7 @@ bufferRadioFlushBuffers         KEYWORD2
 bufferRadioReset                KEYWORD2
 bufferSerialAddChar             KEYWORD2
 bufferSerialHasData             KEYWORD2
+bufferSerialProcessCommsFailure KEYWORD2
 bufferSerialReset               KEYWORD2
 bufferSerialTimeout             KEYWORD2
 bufferStreamAddChar             KEYWORD2
@@ -37,7 +38,6 @@ ledFeedBackForPassThru          KEYWORD2
 packetToSend                    KEYWORD2
 pollRefresh                     KEYWORD2
 printMessageToDriver            KEYWORD2
-processCommsFailure             KEYWORD2
 processRadioCharDevice          KEYWORD2
 processRadioCharHost            KEYWORD2
 processDeviceRadioCharData      KEYWORD2

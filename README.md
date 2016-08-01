@@ -17,6 +17,26 @@ For a general discussion of the OpenBCI Radio firmware please refer to software 
 
 For [detailed installation and upload instructions](http://docs.openbci.com/tutorials/03-Upload_Code_to_OpenBCI_Dongle) please refer to our learning section on [openbci.com](http://www.openbci.com).
 
+# Developing
+
+## Running Tests
+
+Before we begin, let's declare there are two types of testing, _functional_ and _unit_ testing. The _unit_ testing for this library uses the [PTW-Arduino-Assert](https://github.com/PushTheWorld/PTW-Arduino-Assert) framework. The _functional_ testing is completed with the [OpenBCI_NodeJS](https://github.com/pushtheworldllc/OpenBCI_NodeJS) libraries extensive automated testing that will functionally verify all components of the entire system.
+
+This library is heavily dependent on automated testing. Thus this library uses the [Push The World Arduino Test Framework](https://github.com/PushTheWorld/PTW-Arduino-Assert) which you *must* install to your `libraries` folder in order to run the automated tests.
+
+# Contributing
+
+Contributions are more then welcomed, they are encouraged!
+
+## Contribute to the library
+1. Fork it!
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Make changes and ensure tests all pass, add tests if able.
+4. Commit your changes: `git commit -m 'Add some feature'`
+5. Push to the branch: `git push origin my-new-feature`
+6. Submit a pull request :D
+
 # Reference Guide
 
 ## Functions
@@ -72,10 +92,6 @@ Moves bytes from StreamPacketBuffers to the main radio buffer.
 
 A buffer to read into the ring buffer
 
-### bufferAddTimeSyncSentAck()
-
-Adds a `,` to the main ring buffer. Used to ack that a time sync set command was sent.
-
 ### bufferRadioClean()
 
 Used to fill the buffer with all zeros. Should be used as frequently as possible. This is very useful if you need to ensure that no bad data is sent over the serial port.
@@ -119,6 +135,10 @@ If there are packets to be sent in the serial buffer.
 **_Returns_** - {boolean}
 
 `true` if there are packets waiting to be sent from the serial buffer, `false` if not...
+
+### bufferSerialProcessCommsFailure()
+
+Used to process the the serial buffer if the device fails to poll the host more than 3 * pollTime. This function should process the serial buffer for a Host channel change override and channel get request. Further this function should clear the serial buffer if there is anything inside it. In the special circumstances where the Host is waiting for either a channel change confirmation or a poll time change confirmation Should also revert to the pervious channel number
 
 ### bufferSerialReset(n)
 
@@ -268,6 +288,8 @@ Writes to the serial port a message that matches a specific code.
 
 * `_code_` {uint8_t} - The code to Serial.write().
   * `OPENBCI_HOST_MSG_COMMS_DOWN` - Print the comms down message
+  * `HOST_MESSAGE_COMMS_DOWN_CHAN` - Print the message when the comms when down trying to change channels.
+  * `HOST_MESSAGE_COMMS_DOWN_POLL_TIME` - Print the messafe when the comms go down trying to change poll times.
   * `OPENBCI_HOST_MSG_BAUD_FAST` - Baud rate swtiched to 230400
   * `OPENBCI_HOST_MSG_BAUD_DEFAULT` - Baud rate swtiched to 115200
   * `OPENBCI_HOST_MSG_SYS_UP` - Print the system up message
@@ -278,10 +300,7 @@ Writes to the serial port a message that matches a specific code.
   * `OPENBCI_HOST_MSG_CHAN_GET_FAILURE` - The message to print when there is a comms timeout and to print just the Host channel number.
   * `OPENBCI_HOST_MSG_CHAN_GET_SUCCESS` - The message to print when the Host and Device are communicating.
   * `OPENBCI_HOST_MSG_POLL_TIME` - Prints the poll time when there is no comms.
-
-### processCommsFailure()
-
-Used to process the the serial buffer if the device fails to poll the host more than 3 * pollTime.
+  * `HOST_MESSAGE_SERIAL_ACK` - Writes a serial ack (',') to the Driver/PC
 
 ### processDeviceRadioCharData(data, len)
 

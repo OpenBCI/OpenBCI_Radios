@@ -113,9 +113,11 @@ void OpenBCI_Radios_Class::configure(uint8_t mode, uint32_t channelNumber) {
         bufferRadioReset(bufferRadio + 1);
         bufferRadioClean(bufferRadio);
         bufferRadioClean(bufferRadio + 1);
+        streamPacketBufferHead = 0;
+        streamPacketBufferTail = 0;
         currentRadioBuffer = bufferRadio;
         currentRadioBufferNum = 0;
-        bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+        bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
 
         // Diverge program execution based on Device or Host
         switch (mode) {
@@ -253,6 +255,7 @@ void OpenBCI_Radios_Class::revertToPreviousChannelNumber(void) {
     RFduinoGZLL.end();
     RFduinoGZLL.channel = previousRadioChannel;
     RFduinoGZLL.begin(RFDUINOGZLL_ROLE_HOST);
+    radioChannel = previousRadioChannel;
 }
 
 /**
@@ -449,6 +452,8 @@ void OpenBCI_Radios_Class::printValidatedCommsTimeout(void) {
  * @param {uint8_t} - The code to print Serial.write()
  *  Possible options:
  *  `HOST_MESSAGE_COMMS_DOWN` - Print the comms down message
+ *  `HOST_MESSAGE_COMMS_DOWN_CHAN` - Print the message when the comms when down trying to change channels.
+ *  `HOST_MESSAGE_COMMS_DOWN_POLL_TIME` - Print the messafe when the comms go down trying to change poll times.
  *  `HOST_MESSAGE_BAUD_FAST` - Baud rate swtiched to 230400
  *  `HOST_MESSAGE_BAUD_DEFAULT` - Baud rate swtiched to 115200
  *  `HOST_MESSAGE_SYS_UP` - Print the system up message
@@ -466,6 +471,18 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
     switch (code) {
         case HOST_MESSAGE_COMMS_DOWN:
             printValidatedCommsTimeout();
+            break;
+        case HOST_MESSAGE_COMMS_DOWN_CHAN:
+            printFailure();
+            Serial.print("Channel Change Request");
+            printCommsTimeout();
+            printEOT();
+            break;
+        case HOST_MESSAGE_COMMS_DOWN_POLL_TIME:
+            printFailure();
+            Serial.print("Poll Time Change Request");
+            printCommsTimeout();
+            printEOT();
             break;
         case HOST_MESSAGE_SYS_UP:
             printSuccess();
@@ -548,26 +565,25 @@ void OpenBCI_Radios_Class::printMessageToDriver(uint8_t code) {
  *  more than 3 * pollTime.
  * @author AJ Keller (@pushtheworldllc)
  */
-void OpenBCI_Radios_Class::processCommsFailure(void) {
+void OpenBCI_Radios_Class::bufferSerialProcessCommsFailure(void) {
     systemUp = false;
     if (isWaitingForNewChannelNumberConfirmation) {
         isWaitingForNewChannelNumberConfirmation = false;
         revertToPreviousChannelNumber();
-        printValidatedCommsTimeout();
+        msgToPrint = HOST_MESSAGE_COMMS_DOWN_CHAN;
+        printMessageToDriverFlag = true;
     } else if (isWaitingForNewPollTimeConfirmation) {
         isWaitingForNewPollTimeConfirmation = false;
-        printValidatedCommsTimeout();
+        msgToPrint = HOST_MESSAGE_COMMS_DOWN_POLL_TIME;
+        printMessageToDriverFlag = true;
     } else {
-        switch (bufferSerial.numberOfPacketsToSend) {
-            case 0:
-                break; // Do nothing
-            case 1:
-                processCommsFailureSinglePacket();
-                break;
-            default: // numberOfPacketsToSend > 1
-                bufferSerialReset(bufferSerial.numberOfPacketsToSend);
-                printValidatedCommsTimeout();
-                break;
+        if (bufferSerialHasData()) {
+            byte action = processOutboundBuffer(bufferSerial.packetBuffer);
+            if (action == ACTION_RADIO_SEND_NORMAL) {
+                msgToPrint = HOST_MESSAGE_COMMS_DOWN;
+                printMessageToDriverFlag = true;
+            }
+            bufferSerialReset(bufferSerial.numberOfPacketsToSend);
         }
     }
 }
@@ -633,11 +649,11 @@ void OpenBCI_Radios_Class::processCommsFailureSinglePacket(void) {
  *                      ACTION_RADIO_SEND_SINGLE_CHAR - Send a secret radio message from singleCharMsg buffer
  * @author AJ Keller (@pushtheworldllc)
  */
-byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuffer) {
-    if (currentPacketBuffer->positionWrite == 3) {
-        return processOutboundBufferCharDouble(currentPacketBuffer->data);
-    } else if (currentPacketBuffer->positionWrite == 4) {
-        return processOutboundBufferCharTriple(currentPacketBuffer->data);
+byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *buf) {
+    if (buf->positionWrite == 3) {
+        return processOutboundBufferCharDouble(buf->data);
+    } else if (buf->positionWrite == 4) {
+        return processOutboundBufferCharTriple(buf->data);
     } else {
         return ACTION_RADIO_SEND_NORMAL;
     }
@@ -656,17 +672,25 @@ byte OpenBCI_Radios_Class::processOutboundBuffer(PacketBuffer *currentPacketBuff
 boolean OpenBCI_Radios_Class::processOutboundBufferForTimeSync(void) {
     if (bufferSerial.packetBuffer->positionWrite == 2) {
         if ((char)bufferSerial.packetBuffer->data[1] == (char)OPENBCI_HOST_TIME_SYNC) {
-            // Send a comma back to the PC/Driver
-            sendSerialAck = true;
-            // Add the byteId to the packet
-            bufferSerial.packetBuffer->data[0] = byteIdMake(false,0,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
-            // Serial.print("Sending "); Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite); Serial.println(" bytes");
-            RFduinoGZLL.sendToDevice(DEVICE0,(char *)bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
-            // Set flag
-            packetInTXRadioBuffer = true;
-            // Clear the buffer // TODO: Don't clear buffer here
-            bufferSerialReset(1);
-            return true;
+            if (systemUp) {
+                // Send a comma back to the PC/Driver
+                sendSerialAck = true;
+                // Add the byteId to the packet
+                bufferSerial.packetBuffer->data[0] = byteIdMake(false,0,bufferSerial.packetBuffer->data + 1, bufferSerial.packetBuffer->positionWrite - 1);
+                // Serial.print("Sending "); Serial.print((bufferSerial.packetBuffer + bufferSerial.numberOfPacketsSent)->positionWrite); Serial.println(" bytes");
+                RFduinoGZLL.sendToDevice(DEVICE0,(char *)bufferSerial.packetBuffer->data, bufferSerial.packetBuffer->positionWrite);
+                // Set flag
+                packetInTXRadioBuffer = true;
+                // Clear the buffer // TODO: Don't clear buffer here
+                bufferSerialReset(1);
+                return true;
+            } else {
+                msgToPrint = HOST_MESSAGE_COMMS_DOWN;
+                printMessageToDriverFlag = true;
+                // Clean the serial buffer
+                bufferSerialReset(1);
+                return false;
+            }
         }
     }
     return false;
@@ -684,9 +708,9 @@ boolean OpenBCI_Radios_Class::processOutboundBufferForTimeSync(void) {
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
     // The first byte needs to match the command key to act on it
-    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+    if (buffer[OPENBCI_HOST_PRIVATE_POS_KEY] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
         // Decode the char
-        switch (buffer[2]) {
+        switch (buffer[OPENBCI_HOST_PRIVATE_POS_CODE]) {
             // Is the byte the command for a host channel number?
             case OPENBCI_HOST_CMD_CHANNEL_GET:
                 if (systemUp) {
@@ -732,14 +756,22 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
                     bufferSerialReset(1);
                     return ACTION_RADIO_SEND_SINGLE_CHAR;
                 } else {
-                    // Clean the serial buffer
-                    bufferSerialReset(1);
                     msgToPrint = HOST_MESSAGE_COMMS_DOWN;
                     printMessageToDriverFlag = true;
+                    // Clean the serial buffer
+                    bufferSerialReset(1);
                     return ACTION_RADIO_SEND_NONE;
                 }
             default:
-                return ACTION_RADIO_SEND_NORMAL;
+                if (systemUp) {
+                    return ACTION_RADIO_SEND_NORMAL;
+                } else {
+                    msgToPrint = HOST_MESSAGE_COMMS_DOWN;
+                    printMessageToDriverFlag = true;
+                    // Clean the serial buffer
+                    bufferSerialReset(1);
+                    return ACTION_RADIO_SEND_NONE;
+                }
         }
     } else {
         return ACTION_RADIO_SEND_NORMAL;
@@ -758,14 +790,21 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharDouble(char *buffer) {
  */
 byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(char *buffer) {
     // The first byte needs to match the command key to act on it
-    if (buffer[1] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
-        switch (buffer[2]) {
+    if (buffer[OPENBCI_HOST_PRIVATE_POS_KEY] == OPENBCI_HOST_PRIVATE_CMD_KEY) {
+        switch (buffer[OPENBCI_HOST_PRIVATE_POS_CODE]) {
             // Is the first byte equal to the channel change request?
             case OPENBCI_HOST_CMD_CHANNEL_SET:
+                if (!systemUp) {
+                    msgToPrint = HOST_MESSAGE_COMMS_DOWN;
+                    printMessageToDriverFlag = true;
+                    // Clean the serial buffer
+                    bufferSerialReset(1);
+                    return ACTION_RADIO_SEND_NONE;
+                }
                 // Make sure the channel is within bounds (<25)
                 if (buffer[3] <= RFDUINOGZLL_CHANNEL_LIMIT_UPPER) {
                     // Save requested new channel number
-                    radioChannel = (uint32_t)buffer[3];
+                    radioChannel = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
                     // Save the previous channel number
                     previousRadioChannel = getChannelNumber();
                     // Send a channel change request to the device
@@ -784,15 +823,24 @@ byte OpenBCI_Radios_Class::processOutboundBufferCharTriple(char *buffer) {
                     return ACTION_RADIO_SEND_NONE;
                 }
             case OPENBCI_HOST_CMD_POLL_TIME_SET:
-                // Save the new poll time
-                pollTime = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
-                // Send a time change request to the device
-                singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
-                // Clear the serial buffer
-                bufferSerialReset(1);
-                return ACTION_RADIO_SEND_SINGLE_CHAR;
+                if (systemUp) {
+                    // Save the new poll time
+                    pollTime = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
+                    // Send a time change request to the device
+                    singleCharMsg[0] = (char)ORPM_CHANGE_POLL_TIME_HOST_REQUEST;
+                    // Clear the serial buffer
+                    bufferSerialReset(1);
+                    return ACTION_RADIO_SEND_SINGLE_CHAR;
+                } else {
+                    msgToPrint = HOST_MESSAGE_COMMS_DOWN;
+                    printMessageToDriverFlag = true;
+                    // Clean the serial buffer
+                    bufferSerialReset(1);
+                    return ACTION_RADIO_SEND_NONE;
+                }
             case OPENBCI_HOST_CMD_CHANNEL_SET_OVERIDE:
                 if (setChannelNumber((uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD])) {
+                    radioChannel = (uint32_t)buffer[OPENBCI_HOST_PRIVATE_POS_PAYLOAD];
                     msgToPrint = HOST_MESSAGE_CHAN_OVERRIDE;
                     printMessageToDriverFlag = true;
                 } else {
@@ -1305,7 +1353,7 @@ boolean OpenBCI_Radios_Class::bufferSerialAddChar(char newChar) {
 
         } else {
             // Are we out of serial buffers?
-            if (bufferSerial.numberOfPacketsToSend == OPENBCI_MAX_NUMBER_OF_BUFFERS) {
+            if (bufferSerial.numberOfPacketsToSend == OPENBCI_NUMBER_SERIAL_BUFFERS) {
                 // Set the overflowed flag equal to true
                 bufferSerial.overflowed = true;
                 // Serial.println("OVR");
@@ -1381,6 +1429,8 @@ void OpenBCI_Radios_Class::bufferStreamAddChar(StreamPacketBuffer *buf, char new
                 buf->typeByte = newChar;
                 // Change the state to ready
                 buf->state = STREAM_STATE_READY;
+                // Serial.print(33); Serial.print(" state: "); Serial.print("READY-");
+                // Serial.println((streamPacketBuffer + streamPacketBufferHead)->state);
             } else {
                 // Reset the state machine
                 buf->state = STREAM_STATE_INIT;
@@ -1522,7 +1572,6 @@ void OpenBCI_Radios_Class::bufferStreamReset(StreamPacketBuffer *buf) {
 boolean OpenBCI_Radios_Class::bufferStreamSendToHost(StreamPacketBuffer *buf) {
 
     byte packetType = byteIdMakeStreamPacketType(buf->typeByte);
-    // Serial.print("Packet type: "); Serial.println(packetType);
 
     char byteId = byteIdMake(true,packetType,buf->data + 1, OPENBCI_MAX_DATA_BYTES_IN_PACKET); // 31 bytes
 

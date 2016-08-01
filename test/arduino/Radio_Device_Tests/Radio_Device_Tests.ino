@@ -34,12 +34,6 @@ void go() {
     test.end();
 }
 
-/********************************************/
-/********************************************/
-/*********    Process Char Tests    *********/
-/********************************************/
-/********************************************/
-
 void testBufferStreamAddChar() {
     test.describe("bufferStreamAddChar");
 
@@ -172,7 +166,7 @@ void testProcessCharSingleChar() {
     test.describe("processCharForSingleChar");
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // try to add a char
@@ -199,7 +193,7 @@ void testProcessCharStreamPacket() {
     test.it("should recognze a stream packet and wait 88us before allowing the stream packet to be sent with stop byte of 0xC0");
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // Write a stream packet with end byte 0xA0
@@ -223,7 +217,7 @@ void testProcessCharStreamPacket() {
     ///////////////////////////////////////////////////////////////////////////
     test.it("should recognze a stream packet and wait 88us before allowing the stream packet to be sent with stop byte of 0xC5");
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // Write a stream packet with end byte not 0xA0
@@ -250,7 +244,7 @@ void testProcessCharStreamPackets() {
     test.describe("processCharForStreamPackets");
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     int numberOfTrials = 9;
@@ -277,7 +271,7 @@ void testProcessCharNotStreamPacket() {
     test.describe("processCharForNotStreamPacket");
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // Write a stream packet
@@ -292,7 +286,7 @@ void testProcessCharNotStreamPacket() {
     test.assertEqualInt(radio.streamPacketBuffer->bytesIn,0,"0 bytes in",__LINE__);
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // Write a stream packet with a bad end byte
@@ -308,11 +302,11 @@ void testProcessCharOverflow() {
     test.describe("testProcessCharOverflow");
 
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 
     // Write the max number of bytes in buffers
-    int maxBytes = OPENBCI_MAX_NUMBER_OF_BUFFERS * OPENBCI_MAX_DATA_BYTES_IN_PACKET;
+    int maxBytes = OPENBCI_NUMBER_SERIAL_BUFFERS * OPENBCI_MAX_DATA_BYTES_IN_PACKET;
     // Write max bytes but stop 1 before
     for (int i = 0; i < maxBytes; i++) {
         radio.bufferSerialAddChar(0x00);
@@ -321,9 +315,9 @@ void testProcessCharOverflow() {
     // Verify that the emergency stop flag has NOT been deployed
     test.assertBoolean(radio.bufferSerial.overflowed,false,"Overflow emergency not hit",__LINE__);
     // Verify that there are 15 buffers filled
-    test.assertEqualByte(radio.bufferSerial.numberOfPacketsToSend,OPENBCI_MAX_NUMBER_OF_BUFFERS,"15 buffers",__LINE__);
+    test.assertEqualByte(radio.bufferSerial.numberOfPacketsToSend,OPENBCI_NUMBER_SERIAL_BUFFERS,"15 buffers",__LINE__);
     // Verify the write position
-    test.assertEqualByte((radio.bufferSerial.packetBuffer + OPENBCI_MAX_NUMBER_OF_BUFFERS - 1)->positionWrite,OPENBCI_MAX_PACKET_SIZE_BYTES,"32 bytes in buffer",__LINE__);
+    test.assertEqualByte((radio.bufferSerial.packetBuffer + OPENBCI_NUMBER_SERIAL_BUFFERS - 1)->positionWrite,OPENBCI_MAX_PACKET_SIZE_BYTES,"32 bytes in buffer",__LINE__);
 
     // Write one more byte to overflow the buffer
     radio.bufferSerialAddChar(0x00);
@@ -336,7 +330,7 @@ void testProcessCharOverflow() {
 
 void testProcessChar_CleanUp() {
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
 }
 
@@ -353,7 +347,7 @@ void testProcessRadioChar() {
 void testPacketToSend() {
     test.describe("testPacketToSend");
     // Clear the buffers
-    radio.bufferSerialReset(OPENBCI_MAX_NUMBER_OF_BUFFERS);
+    radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
     radio.bufferStreamReset(radio.streamPacketBuffer);
     // Set the buffers up to think there is a packet to be sent
     //  by triggering a serial read

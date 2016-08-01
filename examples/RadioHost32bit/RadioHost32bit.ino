@@ -74,10 +74,14 @@ void loop() {
         if (radio.lastTimeHostHeardFromDevice > 0) {
             // Is a packet in the TX buffer
             if (radio.packetInTXRadioBuffer == false) {
-                //packets in the serial buffer and there is 1 packet to send
-                if (radio.bufferSerial.numberOfPacketsSent == 0 && radio.bufferSerial.numberOfPacketsToSend == 1) {
-                    // process with a send to device
-                    radio.processOutboundBufferForTimeSync();
+                if (radio.commsFailureTimeout()) {
+                    radio.bufferSerialProcessCommsFailure();
+                } else {
+                    //packets in the serial buffer and there is 1 packet to send
+                    if (radio.bufferSerial.numberOfPacketsSent == 0 && radio.bufferSerial.numberOfPacketsToSend > 0) {
+                        // process with a send to device
+                        radio.processOutboundBufferForTimeSync();
+                    }
                 }
             } else {
                 // Comms time out?
@@ -89,14 +93,15 @@ void loop() {
                         radio.lastTimeHostHeardFromDevice = millis();
                         radio.channelNumberSaveAttempted = true;
                     } else {
-                        radio.processCommsFailure();
+                        radio.bufferSerialProcessCommsFailure();
                     }
                 }
             }
         } else { // lastTimeHostHeardFromDevice has not been changed
             // comms time out?
+            // We here if the device never polled the host
             if (radio.commsFailureTimeout()) {
-                radio.processCommsFailure();
+                radio.bufferSerialProcessCommsFailure();
             }
         }
     }
@@ -120,6 +125,7 @@ void RFduinoGZLL_onReceive(device_t device, int rssi, char *data, int len) {
     }
     // Send a time sync ack to driver?
     if (radio.sendSerialAck) {
+        radio.sendSerialAck = false;
         radio.printMessageToDriverFlag = true;
         radio.msgToPrint = radio.HOST_MESSAGE_SERIAL_ACK;
     }

@@ -1,3 +1,14 @@
+# v2.0.0-rc.5 - Release Candidate 5
+
+### Bug Fixes
+
+* Fixed bug where Serial buffer was not processed on comms down. Added over 50 auto tests to ensure proper operation.
+
+### Breaking Changes
+
+* Renamed `OPENBCI_MAX_NUMBER_OF_BUFFERS` to `OPENBCI_NUMBER_SERIAL_BUFFERS` to match new convention.
+* Renamed `processCommsFailure` with `bufferSerialProcessCommsFailure` to follow new convention.
+
 # v2.0.0-rc.4 - Release Candidate 4
 
 ### Enhancements
