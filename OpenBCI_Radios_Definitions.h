@@ -18,7 +18,7 @@
 #define OPENBCI_MAX_PACKET_SIZE_BYTES 32
 #define OPENBCI_MAX_PACKET_SIZE_STREAM_BYTES 33
 
-#define OPENBCI_TIMEOUT_PACKET_NRML_uS 3000 // The time to wait before determining a multipart packet is ready to be send
+#define OPENBCI_TIMEOUT_PACKET_NRML_uS 5000 // The time to wait before determining a multipart packet is ready to be send
 #define OPENBCI_TIMEOUT_PACKET_STREAM_uS 88 // Slightly longer than it takes to send a serial byte at 115200
 #define OPENBCI_TIMEOUT_PACKET_POLL_MS 48 // Poll time out length for sending null packet from device to host
 #define OPENBCI_TIMEOUT_COMMS_MS 270 // Comms failure time out length. Used only by Host.
@@ -28,11 +28,12 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH_MULTI 528
+#define OPENBCI_BUFFER_LENGTH_MULTI 500
 
+// Number of buffers
 #define OPENBCI_NUMBER_RADIO_BUFFERS 2
-#define OPENBCI_NUMBER_SERIAL_BUFFERS 16
-#define OPENBCI_NUMBER_STREAM_BUFFERS 10
+#define OPENBCI_NUMBER_SERIAL_BUFFERS 15
+#define OPENBCI_NUMBER_STREAM_BUFFERS 20 // This should be at least one greater than poll time divided by packet interval to allow for the ack counter.
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0
@@ -58,7 +59,7 @@
 #define RFDUINOGZLL_FLASH_MEM_ADDR 251
 
 // Max number of packets on the TX buffer
-#define RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER 3
+#define RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER 2
 
 // radio errors
 #define ERROR_RADIO_NONE 0x00

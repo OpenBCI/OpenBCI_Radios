@@ -115,6 +115,9 @@ void OpenBCI_Radios_Class::configure(uint8_t mode, uint32_t channelNumber) {
         bufferRadioClean(bufferRadio + 1);
         streamPacketBufferHead = 0;
         streamPacketBufferTail = 0;
+        for (int i = 0; i < OPENBCI_NUMBER_STREAM_BUFFERS; i++) {
+            bufferStreamReset(streamPacketBuffer + i);
+        }
         currentRadioBuffer = bufferRadio;
         currentRadioBufferNum = 0;
         bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
@@ -163,8 +166,6 @@ void OpenBCI_Radios_Class::configureDevice(void) {
     sendingMultiPacket = false;
     streamPacketsHaveHeads = true;
 
-    bufferStreamReset();
-
     pollRefresh();
 
 }
@@ -195,9 +196,6 @@ void OpenBCI_Radios_Class::configureHost(void) {
     channelNumberSaveAttempted = false;
     printMessageToDriverFlag = false;
     systemUp = false;
-    bufferStreamReset(streamPacketBuffer);
-    bufferStreamReset(streamPacketBuffer + 1);
-    bufferStreamReset(streamPacketBuffer + 2);
 
 }
 
@@ -1145,8 +1143,9 @@ void OpenBCI_Radios_Class::bufferRadioFlush(BufferRadio *buf) {
  * @author AJ Keller (@pushtheworldllc)
  */
 void OpenBCI_Radios_Class::bufferRadioFlushBuffers(void) {
-    bufferRadioProcessSingle(bufferRadio);
-    bufferRadioProcessSingle(bufferRadio + 1);
+    for (int i = 0; i < OPENBCI_NUMBER_RADIO_BUFFERS; i++) {
+        bufferRadioProcessSingle(bufferRadio + i);
+    }
 }
 
 /**
@@ -1489,15 +1488,14 @@ void OpenBCI_Radios_Class::bufferStreamAddChar(StreamPacketBuffer *buf, char new
 }
 
 boolean OpenBCI_Radios_Class::bufferStreamAddData(char *data) {
-    if (bufferStreamReadyForNewPacket(streamPacketBuffer)) {
-        bufferStreamStoreData(streamPacketBuffer, data);
-    } else if (bufferStreamReadyForNewPacket(streamPacketBuffer + 1)) {
-        bufferStreamStoreData((streamPacketBuffer + 1), data);
-    } else if (bufferStreamReadyForNewPacket(streamPacketBuffer + 2)) {
-        bufferStreamStoreData((streamPacketBuffer + 2), data);
-    } else {
-        return false;
+
+    bufferStreamStoreData(streamPacketBuffer + streamPacketBufferHead, data);
+
+    streamPacketBufferHead++;
+    if (streamPacketBufferHead > (OPENBCI_NUMBER_STREAM_BUFFERS - 1)) {
+        streamPacketBufferHead = 0;
     }
+
     return true;
 }
 
@@ -1512,16 +1510,25 @@ void OpenBCI_Radios_Class::bufferStreamFlush(StreamPacketBuffer *buf) {
 }
 
 void OpenBCI_Radios_Class::bufferStreamFlushBuffers(void) {
-    if (!bufferStreamReadyForNewPacket(streamPacketBuffer)) {
-        bufferStreamFlush(streamPacketBuffer);
-        bufferStreamReset(streamPacketBuffer);
-    } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 1)) {
-        bufferStreamFlush(streamPacketBuffer + 1);
-        bufferStreamReset(streamPacketBuffer + 1);
-    } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 2)) {
-        bufferStreamFlush(streamPacketBuffer + 2);
-        bufferStreamReset(streamPacketBuffer + 2);
+    if (streamPacketBufferTail != streamPacketBufferHead) {
+        bufferStreamFlush(streamPacketBuffer + streamPacketBufferTail);
+        bufferStreamReset(streamPacketBuffer + streamPacketBufferTail);
+        streamPacketBufferTail++;
+        if (streamPacketBufferTail > (OPENBCI_NUMBER_STREAM_BUFFERS - 1)) {
+            streamPacketBufferTail = 0;
+        }
     }
+    //
+    // if (!bufferStreamReadyForNewPacket(streamPacketBuffer)) {
+    //     bufferStreamFlush(streamPacketBuffer);
+    //     bufferStreamReset(streamPacketBuffer);
+    // } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 1)) {
+    //     bufferStreamFlush(streamPacketBuffer + 1);
+    //     bufferStreamReset(streamPacketBuffer + 1);
+    // } else if (!bufferStreamReadyForNewPacket(streamPacketBuffer + 2)) {
+    //     bufferStreamFlush(streamPacketBuffer + 2);
+    //     bufferStreamReset(streamPacketBuffer + 2);
+    // }
 }
 
 boolean OpenBCI_Radios_Class::bufferStreamReadyForNewPacket(StreamPacketBuffer *buf) {

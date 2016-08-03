@@ -25,9 +25,9 @@ var sampFunc = sample => {
         lastAckCount = sample.auxData[5];
     }
 
-    if (sample.auxData[4] > 0) {
-        console.log(`${sample.sampleNumber} was held by device ${sample.auxData[4]} time${sample.auxData[4] > 1 ? "s" : ""}`);
-    }
+    // if (sample.auxData[4] > 0) {
+    //     console.log(`${sample.sampleNumber} was held by device ${sample.auxData[4]} time${sample.auxData[4] > 1 ? "s" : ""}`);
+    // }
 
     if (sample.sampleNumber === sampleRecievedCounter) {
         // console.log(`\tgood`);
