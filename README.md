@@ -287,19 +287,20 @@ Writes to the serial port a message that matches a specific code.
 **_code_**
 
 * `_code_` {uint8_t} - The code to Serial.write().
-  * `OPENBCI_HOST_MSG_COMMS_DOWN` - Print the comms down message
+  * `HOST_MSG_COMMS_DOWN` - Print the comms down message
   * `HOST_MESSAGE_COMMS_DOWN_CHAN` - Print the message when the comms when down trying to change channels.
-  * `HOST_MESSAGE_COMMS_DOWN_POLL_TIME` - Print the messafe when the comms go down trying to change poll times.
-  * `OPENBCI_HOST_MSG_BAUD_FAST` - Baud rate swtiched to 230400
-  * `OPENBCI_HOST_MSG_BAUD_DEFAULT` - Baud rate swtiched to 115200
-  * `OPENBCI_HOST_MSG_SYS_UP` - Print the system up message
-  * `OPENBCI_HOST_MSG_SYS_DOWN` - Print the system down message
-  * `OPENBCI_HOST_MSG_CHAN` - Print the channel number message
-  * `OPENBCI_HOST_MSG_CHAN_OVERRIDE` - Print the host over ride message
-  * `OPENBCI_HOST_MSG_CHAN_VERIFY` - Print the need to verify the channel number you inputed message
-  * `OPENBCI_HOST_MSG_CHAN_GET_FAILURE` - The message to print when there is a comms timeout and to print just the Host channel number.
-  * `OPENBCI_HOST_MSG_CHAN_GET_SUCCESS` - The message to print when the Host and Device are communicating.
-  * `OPENBCI_HOST_MSG_POLL_TIME` - Prints the poll time when there is no comms.
+  * `HOST_MESSAGE_COMMS_DOWN_POLL_TIME` - Print the message when the comms go down trying to change poll times.
+  * `HOST_MSG_BAUD_FAST` - Baud rate switched to 230400
+  * `HOST_MSG_BAUD_DEFAULT` - Baud rate switched to 115200
+  * `HOST_MSG_BAUD_HYPER` - Baud rate switched to 921600
+  * `HOST_MSG_SYS_UP` - Print the system up message
+  * `HOST_MSG_SYS_DOWN` - Print the system down message
+  * `HOST_MSG_CHAN` - Print the channel number message
+  * `HOST_MSG_CHAN_OVERRIDE` - Print the host over ride message
+  * `HOST_MSG_CHAN_VERIFY` - Print the need to verify the channel number you inputed message
+  * `HOST_MSG_CHAN_GET_FAILURE` - The message to print when there is a comms timeout and to print just the Host channel number.
+  * `HOST_MSG_CHAN_GET_SUCCESS` - The message to print when the Host and Device are communicating.
+  * `HOST_MSG_POLL_TIME` - Prints the poll time when there is no comms.
   * `HOST_MESSAGE_SERIAL_ACK` - Writes a serial ack (',') to the Driver/PC
 
 ### processDeviceRadioCharData(data, len)

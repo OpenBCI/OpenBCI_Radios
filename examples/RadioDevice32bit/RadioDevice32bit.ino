@@ -31,9 +31,8 @@ void loop() {
         // Clear the buffer holding all serial data.
         radio.bufferSerialReset(OPENBCI_NUMBER_SERIAL_BUFFERS);
 
-        // TODO: What do we do with this now?
-        // // Clear the stream packet buffer
-        radio.bufferStreamReset(radio.streamPacketBuffer);
+        // Reset the stream buffer
+        radio.bufferStreamReset();
 
         // Send reset message to the board
         radio.resetPic32();
@@ -75,8 +74,6 @@ void loop() {
             if (radio.streamPacketBufferHead != radio.streamPacketBufferTail) {
                 if (radio.ackCounter < RFDUINOGZLL_MAX_PACKETS_ON_TX_BUFFER) {
                     radio.ackCounter++;
-                    // TODO: Remove line below for prod, this is good for debugging tho
-                    (radio.streamPacketBuffer + radio.streamPacketBufferTail)->data[31] = radio.ackCounter;
 
                     radio.bufferStreamSendToHost(radio.streamPacketBuffer + radio.streamPacketBufferTail);
 
@@ -94,13 +91,7 @@ void loop() {
             if (radio.bufferSerialTimeout() && radio.bufferSerial.numberOfPacketsSent == 0 ) {
                 // In order to do checksumming we must only send one packet at a time
                 //  this stands as the first time we are going to send a packet!
-                // if (radio.ackCounter < 1) {
-                //     radio.ackCounter++;
-                //     radio.sendPacketToHost();
-                // } else {
-                //     // Serial.println("Err: dropping packet");
-                // }
-
+                radio.sendPacketToHost();
             }
         }
 

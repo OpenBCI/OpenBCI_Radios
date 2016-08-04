@@ -1,3 +1,24 @@
+# v2.0.0-rc.7 - Release Candidate 7
+
+### Bug Fixes
+
+* Increased time it takes to time out a serial page write to 0.5ms from 5ms
+
+# v2.0.0-rc.6 - Release Candidate 6
+
+### New Features
+
+* New baud rate added, `Hyper` mode at a screaming `921600` baud! Get those packets off the serial port faster than ever!
+
+### Bug Fixes
+
+* Addressed problem of packet loss over distance with 20 packet stream packet ring of buffers!
+* Increased time it takes to time out a serial page write to 5ms from 3ms
+
+### Work in progress
+
+* Addresses issue of `Read Page Failure` on verify of over the air programming.
+
 # v2.0.0-rc.5 - Release Candidate 5
 
 ### Bug Fixes

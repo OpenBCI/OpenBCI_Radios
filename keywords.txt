@@ -8,7 +8,6 @@
 
 bufferSerial    KEYWORD1
 radio           KEYWORD1
-ringBuffer      KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
