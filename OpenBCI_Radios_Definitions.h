@@ -28,12 +28,12 @@
 #define OPENBCI_STREAM_BYTE_STOP 0xC0
 
 // Max buffer lengths
-#define OPENBCI_BUFFER_LENGTH_MULTI 500
+#define OPENBCI_BUFFER_LENGTH_MULTI 528 // 16 * 33
 
 // Number of buffers
 #define OPENBCI_NUMBER_RADIO_BUFFERS 1
-#define OPENBCI_NUMBER_SERIAL_BUFFERS 15
-#define OPENBCI_NUMBER_STREAM_BUFFERS 20 // This should be at least one greater than poll time divided by packet interval to allow for the ack counter.
+#define OPENBCI_NUMBER_SERIAL_BUFFERS 16
+#define OPENBCI_NUMBER_STREAM_BUFFERS 25 // This should be at least one greater than poll time divided by packet interval to allow for the ack counter.
 
 // These are the three different possible configuration modes for this library
 #define OPENBCI_MODE_DEVICE 0

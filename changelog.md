@@ -1,3 +1,10 @@
+# v2.0.0-rc.8 - Release Candidate 8
+
+### Bug Fixes
+
+* Removed `ackCounter` from `Device`
+* Removed `ruby` and `python` test files for cleaning
+
 # v2.0.0-rc.7 - Release Candidate 7
 
 ### Bug Fixes

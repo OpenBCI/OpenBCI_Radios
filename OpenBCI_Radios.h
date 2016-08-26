@@ -172,7 +172,7 @@ public:
     boolean     revertToDefaultPollTime(void);
     void        revertToPreviousChannelNumber(void);
     void        sendPacketToDevice(volatile device_t, boolean);
-    int         sendPacketToHost(void);
+    boolean     sendPacketToHost(void);
     void        sendPollMessageToHost(void);
     void        sendRadioMessageToHost(byte);
     void        sendStreamPackets(void);
