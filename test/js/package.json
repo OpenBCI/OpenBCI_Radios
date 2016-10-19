@@ -1,0 +1,19 @@
+{
+  "name": "radio-test",
+  "version": "0.0.1",
+  "description": "A serial test file for testing the OpenBCI Radio system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "AJ Keller",
+  "license": "ISC",
+  "dependencies": {
+    "openbci": "^1.2.3",
+    "robotjs": "^0.4.4",
+    "streamsearch": "^0.1.2"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0"
+  }
+}
