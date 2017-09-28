@@ -9,7 +9,7 @@
 * Since the Device must initiate communication, the
 * device "polls" the Host evey 63mS when not sending packets.
 * Host is connected to PC via USB VCP (FTDI).
-* Device is connectedd to uC (PIC32MX250F128B with UDB32-MX2-DIP).
+* Device is connected to uC (PIC32MX250F128B with UDB32-MX2-DIP).
 *
 * This software is provided as-is with no promise of workability
 * Use at your own risk, wysiwyg.
