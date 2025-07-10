@@ -15,7 +15,7 @@ For a general discussion of the OpenBCI Radio firmware please refer to software 
 
 ## Installation
 
-For [detailed installation and upload instructions](http://docs.openbci.com/tutorials/03-Upload_Code_to_OpenBCI_Dongle) please refer to our learning section on [openbci.com](http://www.openbci.com).
+For [detailed installation and upload instructions](https://docs.openbci.com/docs/02Cyton/CytonRadios) please refer to our learning section on [openbci.com](http://www.openbci.com).
 
 # Developing
 
