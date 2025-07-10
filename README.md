@@ -11,11 +11,11 @@ The OpenBCI board has an on-board RFDuino radio module acting as a "Device". The
 
 For a general discussion of the OpenBCI Radio firmware please refer to software section on the learning pages on [openbci.com](http://www.openbci.com).
 
-**IMPORTANT:** The `channelNumber` will be _stored_ into memory the first and only time from the `begin()` function into memory. Why? As of firmware `v2` channels can be changed over the air, that required us to retain the channel number during power cycle periods, i.e. turning the boards on and off. See our [learning docs](http://docs.openbci.com/software/01-OpenBCI_SDK#openbci-firmware-sdk-radio-configuration-commands) for the commands on how to change the channels over the air. Our main [Processing GUI](http://openbci.com/index.php/downloads) also contains tools to change channels along with a config utility just for this purpose.
+**IMPORTANT:** The `channelNumber` will be _stored_ into memory the first and only time from the `begin()` function into memory. Why? As of firmware `v2` channels can be changed over the air, that required us to retain the channel number during power cycle periods, i.e. turning the boards on and off. See our [learning docs](https://docs.openbci.com/Cyton/CytonSDK/#set-radio-system-channel-number) for the commands on how to change the channels over the air. Our main [Processing GUI](https://openbci.com/downloads) also contains tools to [change channels](https://docs.openbci.com/Cyton/CytonRadioChannel/) along with a config utility just for this purpose.
 
 ## Installation
 
-For [detailed installation and upload instructions](https://docs.openbci.com/docs/02Cyton/CytonRadios) please refer to our learning section on [openbci.com](http://www.openbci.com).
+Please refer to our [guide on detailed installation and upload instructions](https://docs.openbci.com/Cyton/CytonRadios/) for programming the OpenBCI [Cyton](https://shop.openbci.com/products/cyton-biosensing-board-8-channel) and [Cyton+Daisy](https://shop.openbci.com/products/cyton-daisy-biosensing-boards-16-channel).
 
 # Developing
 
